@@ -1,0 +1,50 @@
+
+Please completely rewrite the file: artifacts/wallst-fun/src/pages/viral-trends.tsx
+
+Requirements:
+
+1. 
+   - Rename the file to `scope.tsx` (or update routing if needed)
+   - Change the main page title and heading from "Viral Trends" to "Scope - and change the text "Viral Radar" on that page to "WallStSmith's Scope 🔥"
+   - Update any references inside the component accordingly.
+
+2. **Design & Layout**
+   - Keep a very similar dark modern layout and card grid style to the current wallst.fun pages (reference the overall aesthetic of wallst.fun).
+   - Make it look more premium:
+     - Larger, bolder headings with good typography
+     - Gradient rank badge (e.g. #1, #2 with purple/pink gradient)
+     - Smooth hover lift effect + subtle scale/transition
+     - Color-coded price change (bright green for positive, red for negative)
+     - Show small token thumbnail/image on the left of each card
+     - Display fields: Token Name, Symbol, Market Cap, 24h / recent % change, Bonding Progress % (for bonding tokens), and a "View on Pump.fun" button
+     - Add nice spacing, rounded cards, and a clean professional feel
+
+3. **Data Source - Live Moralis Pump.fun API**
+   - Use my Moralis API key:
+     eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJub25jZSI6IjJkOWY2ZmM0LTczZGEtNDEwZC1iYjVlLTk1N2VlMjI4OGU3NCIsIm9yZ0lkIjoiNTA2OTQ1IiwidXNlcklkIjoiNTIxNjE0IiwidHlwZUlkIjoiNjE1MTFhYTYtMTk5ZS00OWVkLThiODktNTc2YjI1NGMxOTkwIiwidHlwZSI6IlBST0pFQ1QiLCJpYXQiOjE3NzQzOTQxMTUsImV4cCI6NDkzMDE1NDExNX0.bPd42MqB0lwTbLivIX-4pFReN-F0LgB3rMplN-UsnHQ
+
+   - Fetch from BOTH endpoints (use fetch with proper headers including X-API-Key):
+     • https://solana-gateway.moralis.io/token/mainnet/exchange/pumpfun/bonding?limit=50
+     • https://solana-gateway.moralis.io/token/mainnet/exchange/pumpfun/graduated?limit=50
+
+   - Combine the results into one array.
+   - Sort primarily by **marketCap** descending.
+   - Prioritize / boost tokens that show strong positive momentum (higher recent price change or positive 24h change).
+   - Take the **top 12 tokens** for display.
+   - For bonding tokens, show **bondingCurveProgress** or **bondingProgress** as a percentage (e.g. "68% bonded").
+   - Use the `logo` field for small thumbnail images (fallback to a placeholder if missing).
+
+4. **Features to Add**
+   - Nice loading spinner / skeleton cards while fetching
+   - Auto-refresh the data every 30 seconds
+   - Manual "Refresh" button in the header
+   - Error state with clear message and Retry button
+   - Handle cases where logo is missing gracefully
+
+5. **Code Quality**
+   - Use modern React (hooks, TypeScript if the project uses it)
+   - Keep the same import style and overall component structure so it integrates easily
+   - Add proper typing for the token data
+   - Make the code clean, well-commented, and easy to maintain
+   - Avoid adding new heavy dependencies if possible
+

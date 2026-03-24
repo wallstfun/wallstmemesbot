@@ -1,0 +1,44 @@
+I have a Next.js / React project on Replit for wallst.fun.
+
+My current file is: artifacts/wallst-fun/src/pages/viral-trends.tsx
+
+Please completely rewrite the Viral Trends page with the following requirements:
+
+1. Change the page title and heading from "Viral Trends" to "WallStSmith's Scope 🔥"
+   - Also update the route/text if needed so that https://www.wallst.fun/viral-trends shows "WallStSmith's Scope"
+
+2. Keep a very similar overall layout and card style to the current page (dark theme, grid of cards, hover effects, etc.), but make it look more premium and modern:
+   - Bigger, bolder titles
+   - Nice rank number with gradient
+   - Color-coded price change (green for positive, red for negative)
+   - Show: Name, Symbol, Market Cap, 24h % change (or recent change), Bonding progress if available, and a "View on Pump.fun" button
+   - Add subtle animations or hover lift effect
+
+3. Replace the current hardcoded or old tokens with REAL trending tokens from Moralis Pump.fun API.
+
+   Use my Moralis API key:  
+   eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJub25jZSI6IjJkOWY2ZmM0LTczZGEtNDEwZC1iYjVlLTk1N2VlMjI4OGU3NCIsIm9yZ0lkIjoiNTA2OTQ1IiwidXNlcklkIjoiNTIxNjE0IiwidHlwZUlkIjoiNjE1MTFhYTYtMTk5ZS00OWVkLThiODktNTc2YjI1NGMxOTkwIiwidHlwZSI6IlBST0pFQ1QiLCJpYXQiOjE3NzQzOTQxMTUsImV4cCI6NDkzMDE1NDExNX0.bPd42MqB0lwTbLivIX-4pFReN-F0LgB3rMplN-UsnHQ
+
+   Fetch data like this:
+   - Call both bonding tokens and graduated tokens endpoints:
+     • https://solana-gateway.moralis.io/token/mainnet/exchange/pumpfun/bonding?limit=50
+     • https://solana-gateway.moralis.io/token/mainnet/exchange/pumpfun/graduated?limit=50
+   - Combine the results
+   - Sort primarily by market cap (descending)
+   - Prioritize / boost tokens that are currently increasing in market cap or have strong positive recent price change
+   - Take the top 6-9 tokens for display
+   - Show bonding progress % for bonding curve tokens if available
+
+4. Add:
+   - Loading state with nice spinner
+   - Auto-refresh every 60-90 seconds
+   - Error handling with retry button
+   - Refresh button
+
+5. Keep the same import style and component structure so it fits easily into the existing project.
+
+Please output the full updated file content for viral-trends.tsx that I can directly replace.
+
+Also suggest any small changes needed in package.json if we need extra dependencies (probably not).
+
+Make it look fire and professional like a real trading dashboard!
