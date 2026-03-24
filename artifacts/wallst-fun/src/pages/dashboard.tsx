@@ -23,35 +23,24 @@ export default function Dashboard() {
   useEffect(() => {
     const fetchPrice = async () => {
       try {
-        const url = 'https://price.jup.ag/v6/price?ids=SOL&api_key=429e13f2-25f8-4706-9326-24287fa313d4';
-        console.log('[wallst.fun] Fetching real SOL price from Jupiter API...');
+        console.log('[wallst.fun] Fetching SOL price from CoinGecko...');
+        
+        const res = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd');
+        const data = await res.json();
 
-        const response = await fetch(url, {
-          method: 'GET',
-          headers: { 'Accept': 'application/json' },
-          cache: 'no-store'
-        });
-
-        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-
-        const data = await response.json();
-        const price = data.data?.SOL?.price;
-
-        if (price && typeof price === 'number') {
-          setSolPrice(price);
+        if (data.solana?.usd) {
+          setSolPrice(data.solana.usd);
           setIsLive(true);
-          console.log('[wallst.fun] SOL price updated successfully:', price);
-        } else {
-          throw new Error('Invalid price data');
+          console.log('[wallst.fun] SOL price updated:', data.solana.usd);
         }
       } catch (error) {
-        console.error('[wallst.fun] Failed to fetch SOL price from Jupiter:', error);
+        console.error('[wallst.fun] Failed to fetch SOL price:', error);
         setIsLive(false);
       }
     };
 
     fetchPrice();
-    const interval = setInterval(fetchPrice, 15000);
+    const interval = setInterval(fetchPrice, 20000); // every 20 seconds
 
     return () => clearInterval(interval);
   }, []);
@@ -100,7 +89,7 @@ export default function Dashboard() {
           <div className="flex justify-between items-center mb-2">
             <span className="text-sm font-medium text-muted-foreground">SOL Price</span>
             <span className={`text-xs font-medium ${isLive ? 'text-gains' : 'text-losses'}`}>
-              ● Jupiter API • {isLive ? 'Live' : 'Fallback'}
+              ● CoinGecko • {isLive ? 'Live' : 'Fallback'}
             </span>
           </div>
           <div className="text-3xl font-bold font-mono text-foreground">
