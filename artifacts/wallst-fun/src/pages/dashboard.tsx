@@ -16,39 +16,34 @@ export default function Dashboard() {
   const tweets = useXFeed();
   const trends = useViralTrends();
 
-  // Direct Jupiter API fetch for SOL price
-  const [solPrice, setSolPrice] = useState(145.20);
-  const [isLive, setIsLive] = useState(false);
+  // Real SOL Price from Jupiter API
+  const [solPrice, setSolPrice] = useState<number>(145.20);
+  const [priceStatus, setPriceStatus] = useState<'live' | 'fallback'>('fallback');
 
   useEffect(() => {
-    const fetchPrice = async () => {
+    const fetchRealPrice = async () => {
       try {
-        console.log("[wallst.fun] Fetching SOL price from Jupiter API...");
-        const res = await fetch('https://price.jup.ag/v6/price?ids=SOL&api_key=429e13f2-25f8-4706-9326-24287fa313d4');
-        
-        if (!res.ok) {
-          throw new Error(`HTTP ${res.status}`);
-        }
+        console.log("[wallst.fun] Fetching real SOL price from Jupiter API...");
+        const response = await fetch(
+          'https://price.jup.ag/v6/price?ids=SOL&api_key=429e13f2-25f8-4706-9326-24287fa313d4'
+        );
+        const data = await response.json();
+        console.log("[wallst.fun] Jupiter API response:", data);
 
-        const data = await res.json();
-        console.log("[wallst.fun] Jupiter response:", data);
-        
         if (data.data?.SOL?.price) {
-          const price = data.data.SOL.price;
-          console.log(`[wallst.fun] ✓ SOL Price: $${price.toFixed(2)}`);
-          setSolPrice(price);
-          setIsLive(true);
-        } else {
-          throw new Error("Invalid price data");
+          console.log(`[wallst.fun] ✓ Real SOL price: $${data.data.SOL.price.toFixed(2)}`);
+          setSolPrice(data.data.SOL.price);
+          setPriceStatus('live');
         }
-      } catch (err) {
-        console.error("[wallst.fun] Jupiter fetch failed:", err);
-        setIsLive(false);
+      } catch (error) {
+        console.error('[wallst.fun] Failed to fetch SOL price from Jupiter:', error);
+        setPriceStatus('fallback');
       }
     };
 
-    fetchPrice();
-    const interval = setInterval(fetchPrice, 15000);
+    fetchRealPrice();
+    const interval = setInterval(fetchRealPrice, 15000);
+
     return () => clearInterval(interval);
   }, []);
 
@@ -91,24 +86,18 @@ export default function Dashboard() {
 
       {/* METRICS GRID */}
       <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* SOL Price — live from Jupiter API (https://price.jup.ag/v6/price?ids=SOL) */}
-        <Card className="hover:shadow-md transition-all duration-300 border-border/50">
-          <CardContent className="p-6">
-            <div className="flex justify-between items-start">
-              <div className="space-y-2">
-                <p className="text-sm font-medium text-muted-foreground">SOL Price</p>
-                <p className="text-2xl font-bold font-mono">${solPrice.toFixed(2)}</p>
-              </div>
-              <div className="p-2 bg-primary/10 rounded-lg">
-                <Activity className="w-5 h-5 text-primary" />
-              </div>
-            </div>
-            <div className={`text-xs mt-4 font-medium flex items-center gap-1 ${isLive ? 'text-gains' : 'text-muted-foreground'}`}>
-              <span className={`w-1.5 h-1.5 rounded-full inline-block ${isLive ? 'bg-gains animate-pulse' : 'bg-muted'}`}></span>
-              {isLive ? 'Jupiter API · Live' : 'Jupiter API · Fallback'}
-            </div>
-          </CardContent>
-        </Card>
+        {/* Real SOL Price from Jupiter API */}
+        <div className="bg-card p-6 rounded-xl border border-border/50 hover:shadow-md transition-all duration-300">
+          <div className="flex justify-between items-center mb-2">
+            <span className="text-sm font-medium text-muted-foreground">SOL Price</span>
+            <span className={`text-xs font-medium ${priceStatus === 'live' ? 'text-gains' : 'text-muted-foreground'}`}>
+              ● Jupiter API • {priceStatus === 'live' ? 'Live' : 'Fallback'}
+            </span>
+          </div>
+          <div className="text-3xl font-bold font-mono text-foreground">
+            ${solPrice.toFixed(2)}
+          </div>
+        </div>
 
         {[
           { title: "24H Win Rate", value: `${metrics.winRate.toFixed(1)}%`, icon: Target, trend: "Stable", neutral: false },
