@@ -4,17 +4,17 @@ import tailwindcss from "@tailwindcss/vite";
 import path from "path";
 import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
 
-// PORT validation — only for local dev server (Vercel doesn't need it)
-const port = process.env.NODE_ENV === "production"
-  ? 3000
-  : Number(process.env.PORT || 3000);
+// PORT is only needed for dev server — Vercel build doesn't require it
+const rawPort = process.env.PORT || '3000';
 
-if (process.env.NODE_ENV !== "production" && (Number.isNaN(port) || port <= 0)) {
-  throw new Error(`Invalid PORT value: "${process.env.PORT}"`);
+const port = Number(rawPort);
+
+if (Number.isNaN(port) || port <= 0) {
+  throw new Error(`Invalid PORT value: "${rawPort}"`);
 }
 
 // BASE_PATH is optional on Vercel
-const basePath = process.env.BASE_PATH || "";
+const basePath = process.env.BASE_PATH || '';
 
 export default defineConfig({
   base: basePath,
@@ -45,7 +45,7 @@ export default defineConfig({
   },
   root: path.resolve(import.meta.dirname),
   build: {
-    outDir: "dist",           // ← THIS WAS THE 404 CAUSE
+    outDir: "dist",                    
     emptyOutDir: true,
   },
   server: {
@@ -62,5 +62,4 @@ export default defineConfig({
     host: "0.0.0.0",
     allowedHosts: true,
   },
-});
 });
