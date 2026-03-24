@@ -4,20 +4,15 @@ import tailwindcss from "@tailwindcss/vite";
 import path from "path";
 import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
 
-// PORT is only needed for dev server — Vercel build doesn't require it
 const rawPort = process.env.PORT || '3000';
-
 const port = Number(rawPort);
 
 if (Number.isNaN(port) || port <= 0) {
   throw new Error(`Invalid PORT value: "${rawPort}"`);
 }
 
-// BASE_PATH is optional on Vercel
-const basePath = process.env.BASE_PATH || '';
-
 export default defineConfig({
-  base: basePath,
+  base: '/',                       // ← Changed to hard-coded '/'
   plugins: [
     react(),
     tailwindcss(),
@@ -45,7 +40,7 @@ export default defineConfig({
   },
   root: path.resolve(import.meta.dirname),
   build: {
-    outDir: "dist",                    
+    outDir: "dist",
     emptyOutDir: true,
   },
   server: {
