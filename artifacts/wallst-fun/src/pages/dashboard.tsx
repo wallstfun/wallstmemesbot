@@ -1,5 +1,5 @@
-import React from "react";
-import { useLiveMetrics, useLiveTrades, useChartData, useXFeed, useViralTrends, useSolPrice } from "@/hooks/use-simulated-data";
+import React, { useState, useEffect } from "react";
+import { useLiveMetrics, useLiveTrades, useChartData, useXFeed, useViralTrends } from "@/hooks/use-simulated-data";
 import { LiveIndicator } from "@/components/ui/LiveIndicator";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -15,7 +15,42 @@ export default function Dashboard() {
   const chartData = useChartData(7);
   const tweets = useXFeed();
   const trends = useViralTrends();
-  const { solPrice, isLive } = useSolPrice();
+
+  // Direct Jupiter API fetch for SOL price
+  const [solPrice, setSolPrice] = useState(145.20);
+  const [isLive, setIsLive] = useState(false);
+
+  useEffect(() => {
+    const fetchPrice = async () => {
+      try {
+        console.log("[wallst.fun] Fetching SOL price from Jupiter API...");
+        const res = await fetch('https://price.jup.ag/v6/price?ids=SOL&api_key=429e13f2-25f8-4706-9326-24287fa313d4');
+        
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}`);
+        }
+
+        const data = await res.json();
+        console.log("[wallst.fun] Jupiter response:", data);
+        
+        if (data.data?.SOL?.price) {
+          const price = data.data.SOL.price;
+          console.log(`[wallst.fun] ✓ SOL Price: $${price.toFixed(2)}`);
+          setSolPrice(price);
+          setIsLive(true);
+        } else {
+          throw new Error("Invalid price data");
+        }
+      } catch (err) {
+        console.error("[wallst.fun] Jupiter fetch failed:", err);
+        setIsLive(false);
+      }
+    };
+
+    fetchPrice();
+    const interval = setInterval(fetchPrice, 15000);
+    return () => clearInterval(interval);
+  }, []);
 
   const isProfitable = metrics.dailyPnl >= 0;
 

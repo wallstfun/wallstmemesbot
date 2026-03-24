@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { Moon, Sun, Terminal, Activity, Briefcase, MessageSquare, TrendingUp, User, Menu, X } from "lucide-react";
-import { useLiveMetrics, useSolPrice } from "@/hooks/use-simulated-data";
+import { useLiveMetrics } from "@/hooks/use-simulated-data";
 
 // Replace with actual Solana wallet address (public-facing, masked)
 export const WALLET_FULL = "Hw7yc27h6Lws6YsQmdLoj4M7psyFHRhosFwoGuSESmTh";
@@ -33,7 +33,6 @@ export function RootLayout({ children }: { children: React.ReactNode }) {
   });
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const metrics = useLiveMetrics();
-  const { solPrice } = useSolPrice();
 
   useEffect(() => {
     const root = window.document.documentElement;
@@ -55,7 +54,7 @@ export function RootLayout({ children }: { children: React.ReactNode }) {
           <span className="inline-flex items-center gap-8 px-8">
             <span className="font-bold">SYSTEM STATUS:&nbsp;<span className="text-gains">ONLINE</span></span>
             <span className="text-muted-foreground">///</span>
-            <span>SOL/USD:&nbsp;<span className="font-bold">${solPrice.toFixed(2)}</span></span>
+            <span>SOL/USD:&nbsp;<span className="font-bold">${metrics.solPrice.toFixed(2)}</span></span>
             <span className="text-muted-foreground">///</span>
             <span>AGENT BAL:&nbsp;<span className="font-bold">{metrics.solBalance.toFixed(2)} SOL</span></span>
             <span className="text-muted-foreground">///</span>
@@ -72,7 +71,7 @@ export function RootLayout({ children }: { children: React.ReactNode }) {
           <span className="inline-flex items-center gap-8 px-8">
             <span className="font-bold">SYSTEM STATUS:&nbsp;<span className="text-gains">ONLINE</span></span>
             <span className="text-muted-foreground">///</span>
-            <span>SOL/USD:&nbsp;<span className="font-bold">${solPrice.toFixed(2)}</span></span>
+            <span>SOL/USD:&nbsp;<span className="font-bold">${metrics.solPrice.toFixed(2)}</span></span>
             <span className="text-muted-foreground">///</span>
             <span>AGENT BAL:&nbsp;<span className="font-bold">{metrics.solBalance.toFixed(2)} SOL</span></span>
             <span className="text-muted-foreground">///</span>
