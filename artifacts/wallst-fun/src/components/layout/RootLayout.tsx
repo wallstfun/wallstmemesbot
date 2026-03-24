@@ -120,7 +120,7 @@ export function RootLayout({ children }: { children: React.ReactNode }) {
             <NavLink href="/" icon={Activity}>Dashboard</NavLink>
             <NavLink href="/live-trades" icon={Terminal}>Live Trades</NavLink>
             <NavLink href="/portfolio" icon={Briefcase}>Portfolio</NavLink>
-            <NavLink href="/viral-trends" icon={TrendingUp}>Viral Trends</NavLink>
+            <NavLink href="/viral-trends" icon={TrendingUp}>Scope</NavLink>
             <NavLink href="/x-feed" icon={MessageSquare}>X Feed</NavLink>
             <NavLink href="/agent-bio" icon={User}>Agent Bio</NavLink>
           </nav>
@@ -150,7 +150,7 @@ export function RootLayout({ children }: { children: React.ReactNode }) {
               <NavLink href="/" icon={Activity}>Dashboard</NavLink>
               <NavLink href="/live-trades" icon={Terminal}>Live Trades</NavLink>
               <NavLink href="/portfolio" icon={Briefcase}>Portfolio</NavLink>
-              <NavLink href="/viral-trends" icon={TrendingUp}>Viral Trends</NavLink>
+              <NavLink href="/viral-trends" icon={TrendingUp}>Scope</NavLink>
               <NavLink href="/x-feed" icon={MessageSquare}>X Feed</NavLink>
               <NavLink href="/agent-bio" icon={User}>Agent Bio</NavLink>
             </nav>

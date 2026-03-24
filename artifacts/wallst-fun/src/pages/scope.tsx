@@ -5,7 +5,7 @@ import { Flame, RefreshCw, ExternalLink, AlertCircle } from "lucide-react";
 import { LiveIndicator } from "@/components/ui/LiveIndicator";
 
 interface PumpToken {
-  mint: string;
+  tokenAddress: string;
   name: string;
   symbol: string;
   logo?: string;
@@ -17,7 +17,7 @@ interface PumpToken {
 
 const MORALIS_API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJub25jZSI6IjJkOWY2ZmM0LTczZGEtNDEwZC1iYjVlLTk1N2VlMjI4OGU3NCIsIm9yZ0lkIjoiNTA2OTQ1IiwidXNlcklkIjoiNTIxNjE0IiwidHlwZUlkIjoiNjE1MTFhYTYtMTk5ZS00OWVkLThiODktNTc2YjI1NGMxOTkwIiwidHlwZSI6IlBST0pFQ1QiLCJpYXQiOjE3NzQzOTQxMTUsImV4cCI6NDkzMDE1NDExNX0.bPd42MqB0lwTbLivIX-4pFReN-F0LgB3rMplN-UsnHQ";
 
-export default function ViralTrendsPage() {
+export default function ScopePage() {
   const [tokens, setTokens] = useState<PumpToken[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -33,6 +33,8 @@ export default function ViralTrendsPage() {
         Accept: "application/json",
       };
 
+      console.log("[wallst.fun] Fetching Pump.fun tokens from Moralis...");
+
       // Fetch bonding and graduated tokens in parallel
       const [bondingRes, graduatedRes] = await Promise.all([
         fetch("https://solana-gateway.moralis.io/token/mainnet/exchange/pumpfun/bonding?limit=50", { headers }),
@@ -40,54 +42,72 @@ export default function ViralTrendsPage() {
       ]);
 
       if (!bondingRes.ok || !graduatedRes.ok) {
-        throw new Error("Failed to fetch token data from Moralis API");
+        throw new Error(`API error: ${bondingRes.status} / ${graduatedRes.status}`);
       }
 
       const bondingData = await bondingRes.json();
       const graduatedData = await graduatedRes.json();
+
+      console.log("[wallst.fun] Bonding tokens:", bondingData.result?.length || 0);
+      console.log("[wallst.fun] Graduated tokens:", graduatedData.result?.length || 0);
 
       // Combine results
       const allTokens: PumpToken[] = [];
       
       // Process bonding tokens
       if (bondingData.result && Array.isArray(bondingData.result)) {
+        if (bondingData.result.length > 0) {
+          console.log("[wallst.fun] Sample bonding token:", bondingData.result[0]);
+        }
         bondingData.result.forEach((token: any) => {
-          allTokens.push({
-            mint: token.mint || "",
-            name: token.name || "Unknown",
-            symbol: token.symbol || "???",
-            logo: token.logo,
-            marketCap: token.marketCapUsd || 0,
-            priceChange24h: token.priceChange24hPercent || 0,
-            bondingProgress: token.bondingProgress || token.bondingCurveProgress || 0,
-            url: `https://pump.fun/${token.mint}`,
-          });
+          if (token.tokenAddress && token.symbol) {
+            allTokens.push({
+              tokenAddress: token.tokenAddress,
+              name: token.name || "Unknown",
+              symbol: token.symbol,
+              logo: token.logo,
+              marketCap: parseFloat(token.fullyDilutedValuation) || 0,
+              priceChange24h: 0, // Not available in this endpoint
+              bondingProgress: token.bondingCurveProgress || 0,
+              url: `https://pump.fun/${token.tokenAddress}`,
+            });
+          }
         });
+        console.log("[wallst.fun] Added bonding tokens:", allTokens.length);
       }
 
       // Process graduated tokens
       if (graduatedData.result && Array.isArray(graduatedData.result)) {
+        if (graduatedData.result.length > 0) {
+          console.log("[wallst.fun] Sample graduated token:", graduatedData.result[0]);
+        }
         graduatedData.result.forEach((token: any) => {
-          allTokens.push({
-            mint: token.mint || "",
-            name: token.name || "Unknown",
-            symbol: token.symbol || "???",
-            logo: token.logo,
-            marketCap: token.marketCapUsd || 0,
-            priceChange24h: token.priceChange24hPercent || 0,
-            bondingProgress: 100, // Graduated tokens have completed bonding
-            url: `https://pump.fun/${token.mint}`,
-          });
+          if (token.tokenAddress && token.symbol) {
+            allTokens.push({
+              tokenAddress: token.tokenAddress,
+              name: token.name || "Unknown",
+              symbol: token.symbol,
+              logo: token.logo,
+              marketCap: parseFloat(token.fullyDilutedValuation) || 0,
+              priceChange24h: 0, // Not available in this endpoint
+              bondingProgress: 100,
+              url: `https://pump.fun/${token.tokenAddress}`,
+            });
+          }
         });
+        console.log("[wallst.fun] Total after graduated:", allTokens.length);
       }
 
       // Sort by market cap (descending) and filter duplicates
       const uniqueTokens = Array.from(
-        new Map(allTokens.map((token) => [token.mint, token])).values()
+        new Map(allTokens.map((token) => [token.tokenAddress, token])).values()
       ).sort((a, b) => (b.marketCap || 0) - (a.marketCap || 0));
 
-      // Take top 12
-      setTokens(uniqueTokens.slice(0, 12));
+      console.log("[wallst.fun] Total unique tokens:", uniqueTokens.length);
+      const topTokens = uniqueTokens.slice(0, 12);
+      console.log("[wallst.fun] Top 12 tokens loaded");
+      
+      setTokens(topTokens);
       setLastUpdated(new Date());
     } catch (err) {
       const message = err instanceof Error ? err.message : "Unknown error occurred";
@@ -117,9 +137,8 @@ export default function ViralTrendsPage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-4xl font-serif font-bold text-foreground flex items-center gap-3">
-            <Flame className="w-9 h-9 text-orange-500" /> Scope
+            <Flame className="w-9 h-9 text-orange-500" /> WallStSmith's Scope 🔥
           </h1>
-          <p className="text-muted-foreground mt-2">WallStSmith's Scope 🔥</p>
         </div>
         <div className="flex items-center gap-3">
           <button
@@ -183,7 +202,7 @@ export default function ViralTrendsPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {tokens.map((token, index) => (
             <Card
-              key={token.mint}
+              key={token.tokenAddress}
               className="border-border/50 hover:border-primary/50 transition-all duration-300 shadow-sm group bg-gradient-to-b from-card to-background hover:shadow-lg hover:scale-105"
             >
               <CardContent className="p-6">
@@ -263,7 +282,7 @@ export default function ViralTrendsPage() {
 
                   {/* View on Pump.fun Button */}
                   <a
-                    href={token.url}
+                    href={token.url || "#"}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center justify-center gap-2 w-full mt-4 px-3 py-2 bg-primary/10 text-primary hover:bg-primary/20 rounded-lg transition-colors font-medium text-sm"

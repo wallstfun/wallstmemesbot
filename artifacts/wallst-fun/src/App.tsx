@@ -8,7 +8,7 @@ import Dashboard from "@/pages/dashboard";
 import LiveTradesPage from "@/pages/live-trades";
 import PortfolioPage from "@/pages/portfolio";
 import XFeedPage from "@/pages/x-feed";
-import ViralTrendsPage from "@/pages/viral-trends";
+import ScopePage from "@/pages/scope";
 import AgentBioPage from "@/pages/agent-bio";
 import NotFound from "@/pages/not-found";
 
@@ -22,7 +22,7 @@ function Router() {
         <Route path="/live-trades" component={LiveTradesPage} />
         <Route path="/portfolio" component={PortfolioPage} />
         <Route path="/x-feed" component={XFeedPage} />
-        <Route path="/viral-trends" component={ViralTrendsPage} />
+        <Route path="/viral-trends" component={ScopePage} />
         <Route path="/agent-bio" component={AgentBioPage} />
         <Route component={NotFound} />
       </Switch>
