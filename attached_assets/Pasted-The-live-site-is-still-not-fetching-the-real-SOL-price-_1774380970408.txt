@@ -1,0 +1,62 @@
+The live site is still not fetching the real SOL price from Jupiter. The console shows "ERR_NAME_NOT_RESOLVED" and fetch failures.
+
+Please replace the SOL price logic with this more robust version directly in the dashboard component.
+
+Go to the main dashboard file (likely src/pages/dashboard.tsx) and replace the SOL Price card with this exact code:
+
+```tsx
+const [solPrice, setSolPrice] = useState(145.20);
+const [isLive, setIsLive] = useState(false);
+
+useEffect(() => {
+  const fetchPrice = async () => {
+    try {
+      const url = 'https://price.jup.ag/v6/price?ids=SOL&api_key=429e13f2-25f8-4706-9326-24287fa313d4';
+      console.log('[wallst.fun] Fetching real SOL price from Jupiter API...');
+
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: { 'Accept': 'application/json' },
+        cache: 'no-store'
+      });
+
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+
+      const data = await response.json();
+      const price = data.data?.SOL?.price;
+
+      if (price && typeof price === 'number') {
+        setSolPrice(price);
+        setIsLive(true);
+        console.log('[wallst.fun] SOL price updated successfully:', price);
+      } else {
+        throw new Error('Invalid price data');
+      }
+    } catch (error) {
+      console.error('[wallst.fun] Failed to fetch SOL price from Jupiter:', error);
+      setIsLive(false);
+    }
+  };
+
+  fetchPrice();
+  const interval = setInterval(fetchPrice, 15000);
+
+  return () => clearInterval(interval);
+}, []);
+
+return (
+  <div className="bg-[#1a1f2e] p-4 rounded-xl border border-gray-800">
+    <div className="flex justify-between items-center mb-1">
+      <span className="text-gray-400 text-sm">SOL Price</span>
+      <span className={`text-xs ${isLive ? 'text-green-400' : 'text-red-400'}`}>
+        ● Jupiter API • {isLive ? 'Live' : 'Fallback'}
+      </span>
+    </div>
+    <div className="text-3xl font-semibold text-white">
+      ${solPrice.toFixed(2)}
+    </div>
+  </div>
+);
+
+Make sure this code completely replaces the old SOL Price card. Remove any old hooks if they are still being used.
+

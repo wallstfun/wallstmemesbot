@@ -17,32 +17,41 @@ export default function Dashboard() {
   const trends = useViralTrends();
 
   // Real SOL Price from Jupiter API
-  const [solPrice, setSolPrice] = useState<number>(145.20);
-  const [priceStatus, setPriceStatus] = useState<'live' | 'fallback'>('fallback');
+  const [solPrice, setSolPrice] = useState(145.20);
+  const [isLive, setIsLive] = useState(false);
 
   useEffect(() => {
-    const fetchRealPrice = async () => {
+    const fetchPrice = async () => {
       try {
-        console.log("[wallst.fun] Fetching real SOL price from Jupiter API...");
-        const response = await fetch(
-          'https://price.jup.ag/v6/price?ids=SOL&api_key=429e13f2-25f8-4706-9326-24287fa313d4'
-        );
-        const data = await response.json();
-        console.log("[wallst.fun] Jupiter API response:", data);
+        const url = 'https://price.jup.ag/v6/price?ids=SOL&api_key=429e13f2-25f8-4706-9326-24287fa313d4';
+        console.log('[wallst.fun] Fetching real SOL price from Jupiter API...');
 
-        if (data.data?.SOL?.price) {
-          console.log(`[wallst.fun] ✓ Real SOL price: $${data.data.SOL.price.toFixed(2)}`);
-          setSolPrice(data.data.SOL.price);
-          setPriceStatus('live');
+        const response = await fetch(url, {
+          method: 'GET',
+          headers: { 'Accept': 'application/json' },
+          cache: 'no-store'
+        });
+
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+
+        const data = await response.json();
+        const price = data.data?.SOL?.price;
+
+        if (price && typeof price === 'number') {
+          setSolPrice(price);
+          setIsLive(true);
+          console.log('[wallst.fun] SOL price updated successfully:', price);
+        } else {
+          throw new Error('Invalid price data');
         }
       } catch (error) {
         console.error('[wallst.fun] Failed to fetch SOL price from Jupiter:', error);
-        setPriceStatus('fallback');
+        setIsLive(false);
       }
     };
 
-    fetchRealPrice();
-    const interval = setInterval(fetchRealPrice, 15000);
+    fetchPrice();
+    const interval = setInterval(fetchPrice, 15000);
 
     return () => clearInterval(interval);
   }, []);
@@ -90,8 +99,8 @@ export default function Dashboard() {
         <div className="bg-card p-6 rounded-xl border border-border/50 hover:shadow-md transition-all duration-300">
           <div className="flex justify-between items-center mb-2">
             <span className="text-sm font-medium text-muted-foreground">SOL Price</span>
-            <span className={`text-xs font-medium ${priceStatus === 'live' ? 'text-gains' : 'text-muted-foreground'}`}>
-              ● Jupiter API • {priceStatus === 'live' ? 'Live' : 'Fallback'}
+            <span className={`text-xs font-medium ${isLive ? 'text-gains' : 'text-losses'}`}>
+              ● Jupiter API • {isLive ? 'Live' : 'Fallback'}
             </span>
           </div>
           <div className="text-3xl font-bold font-mono text-foreground">
