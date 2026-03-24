@@ -22,6 +22,7 @@ export default function ScopePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
 
   const fetchTokens = async () => {
     setLoading(true);
@@ -130,6 +131,16 @@ export default function ScopePage() {
     if (cap >= 1000000) return `$${(cap / 1000000).toFixed(1)}M`;
     if (cap >= 1000) return `$${(cap / 1000).toFixed(1)}K`;
     return `$${cap.toFixed(0)}`;
+  };
+
+  const shortenAddress = (address: string) => {
+    return `${address.slice(0, 6)}...${address.slice(-4)}`;
+  };
+
+  const copyToClipboard = (address: string) => {
+    navigator.clipboard.writeText(address);
+    setCopiedAddress(address);
+    setTimeout(() => setCopiedAddress(null), 2000);
   };
 
   return (
@@ -257,6 +268,24 @@ export default function ScopePage() {
                       {formatMarketCap(token.marketCap)}
                     </div>
                   </div>
+
+                  {/* Contract Address */}
+                  <button
+                    onClick={() => copyToClipboard(token.tokenAddress)}
+                    className="w-full bg-muted/20 p-3 rounded-lg border border-border/50 hover:border-primary/30 hover:bg-muted/40 transition-all text-left group"
+                  >
+                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">
+                      Contract Address
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="font-mono text-xs font-bold text-foreground group-hover:text-primary transition-colors">
+                        {shortenAddress(token.tokenAddress)}
+                      </span>
+                      <span className="text-xs font-medium text-muted-foreground group-hover:text-primary transition-colors">
+                        {copiedAddress === token.tokenAddress ? "✓ Copied" : "Copy"}
+                      </span>
+                    </div>
+                  </button>
 
                   {/* Bonding Progress */}
                   <div className="bg-muted/20 p-3 rounded-lg border border-border/50">
