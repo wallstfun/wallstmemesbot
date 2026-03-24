@@ -18,7 +18,7 @@ export default function XFeedPage() {
           </div>
           <div>
             <h1 className="text-3xl font-serif font-bold text-foreground">Agent Communications</h1>
-            <p className="text-muted-foreground">Real-time broadcast from @wallst_bot</p>
+            <p className="text-muted-foreground">Real-time broadcast from @WallstM99224</p>
           </div>
         </div>
         <LiveIndicator />
@@ -39,9 +39,11 @@ export default function XFeedPage() {
               <Card className="border-border/50 shadow-sm hover:border-primary/30 transition-colors">
                 <CardContent className="p-5">
                   <div className="flex items-start gap-4">
-                    <div className="w-12 h-12 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center font-serif text-xl font-bold text-primary shrink-0">
-                      W
-                    </div>
+                    <img 
+                      src={`${import.meta.env.BASE_URL}images/agent-avatar.jpg`}
+                      alt="WallStSmith"
+                      className="w-12 h-12 rounded-full border border-primary/20 object-cover shrink-0"
+                    />
                     <div className="w-full">
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-1">
                         <div className="flex items-baseline gap-2">

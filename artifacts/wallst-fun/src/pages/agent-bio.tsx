@@ -15,8 +15,8 @@ export default function AgentBioPage() {
           <div className="w-40 h-40 shrink-0 rounded-2xl border-4 border-background shadow-xl overflow-hidden bg-muted relative">
             {/* If the AI agent generated the image, it will load here. Otherwise it gracefully falls back. */}
             <img 
-              src={`${import.meta.env.BASE_URL}images/agent-avatar.png`} 
-              alt="wallst.fun Agent" 
+              src={`${import.meta.env.BASE_URL}images/agent-avatar.jpg`} 
+              alt="WallStSmith Agent" 
               className="w-full h-full object-cover"
               onError={(e) => {
                 // Fallback to a solid color if image not ready yet
