@@ -1,5 +1,5 @@
 import React from "react";
-import { useLiveMetrics, useLiveTrades, useChartData, useXFeed, useViralTrends } from "@/hooks/use-simulated-data";
+import { useLiveMetrics, useLiveTrades, useChartData, useXFeed, useViralTrends, useSolPrice } from "@/hooks/use-simulated-data";
 import { LiveIndicator } from "@/components/ui/LiveIndicator";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -15,6 +15,7 @@ export default function Dashboard() {
   const chartData = useChartData(7);
   const tweets = useXFeed();
   const trends = useViralTrends();
+  const { solPrice, loading: solLoading } = useSolPrice();
 
   const isProfitable = metrics.dailyPnl >= 0;
 
@@ -26,14 +27,14 @@ export default function Dashboard() {
         <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -mr-20 -mt-20"></div>
         <div className="relative z-10 flex-1">
           <div className="flex items-center gap-3 mb-2">
-            <Badge variant="outline" className="font-mono text-xs bg-background/50 backdrop-blur">AGENT-01</Badge>
+            <Badge variant="outline" className="font-mono text-xs bg-background/50 backdrop-blur">Deployed</Badge>
             <LiveIndicator text="AUTONOMOUS MODE ACTIVE" />
           </div>
           <h1 className="text-3xl md:text-4xl font-serif font-bold text-foreground mt-2">
-            Autonomous Memecoin Agent
+            AgentSMITH
           </h1>
           <p className="text-muted-foreground mt-2 max-w-xl">
-            Scanning Solana liquidity pools, sentiment analysis, and viral trends to execute high-frequency algorithmic meme trades. No human intervention.
+            An autonomous trading agent deployed to scan Solana liquidity pools, sentiment analysis, and viral trends to execute high-frequency algorithmic memecoin trades and document progress on X. No human intervention.
           </p>
         </div>
         
@@ -55,10 +56,30 @@ export default function Dashboard() {
 
       {/* METRICS GRID */}
       <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* SOL Price — live from Jupiter API (https://price.jup.ag/v6/price?ids=SOL) */}
+        <Card className="hover:shadow-md transition-all duration-300 border-border/50">
+          <CardContent className="p-6">
+            <div className="flex justify-between items-start">
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-muted-foreground">SOL Price</p>
+                <p className="text-2xl font-bold font-mono">
+                  {solLoading ? <span className="text-muted-foreground text-base">Loading...</span> : `$${solPrice.toFixed(2)}`}
+                </p>
+              </div>
+              <div className="p-2 bg-primary/10 rounded-lg">
+                <Activity className="w-5 h-5 text-primary" />
+              </div>
+            </div>
+            <div className="text-xs mt-4 font-medium text-gains flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-gains inline-block animate-pulse"></span>
+              Jupiter API · Live
+            </div>
+          </CardContent>
+        </Card>
+
         {[
-          { title: "SOL Price", value: `$${metrics.solPrice.toFixed(2)}`, icon: Activity, trend: "+2.4%" },
-          { title: "24H Win Rate", value: `${metrics.winRate.toFixed(1)}%`, icon: Target, trend: "Stable" },
-          { title: "Active Trades", value: metrics.totalTrades.toString(), icon: Zap, trend: "+12" },
+          { title: "24H Win Rate", value: `${metrics.winRate.toFixed(1)}%`, icon: Target, trend: "Stable", neutral: false },
+          { title: "Active Trades", value: metrics.totalTrades.toString(), icon: Zap, trend: "+12", neutral: false },
           { title: "Network Congestion", value: "Low", icon: Activity, trend: "400 TPS", neutral: true },
         ].map((m, i) => (
           <Card key={i} className="hover:shadow-md transition-all duration-300 border-border/50">

@@ -69,12 +69,45 @@ const TWEET_TEMPLATES = [
   "Solana network fees are negligible. Perfect environment for HFT meme trading.",
 ];
 
+// Replace with Jupiter API fetch for real-time SOL price
+// Endpoint: https://price.jup.ag/v6/price?ids=SOL
+// API key stored in JUPITER_API_KEY env var (for backend/server use)
+export function useSolPrice() {
+  const [solPrice, setSolPrice] = useState<number>(145.20);
+  const [change24h, setChange24h] = useState<number | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchPrice = async () => {
+      try {
+        const res = await fetch("https://price.jup.ag/v6/price?ids=SOL");
+        if (!res.ok) throw new Error("Failed to fetch SOL price");
+        const data = await res.json();
+        const price = data?.data?.SOL?.price;
+        if (typeof price === "number") {
+          setSolPrice(price);
+        }
+      } catch {
+        // Silently fallback to simulated price on error
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPrice();
+    const interval = setInterval(fetchPrice, 15000);
+    return () => clearInterval(interval);
+  }, []);
+
+  return { solPrice, change24h, loading };
+}
+
 export function useLiveMetrics() {
   const [metrics, setMetrics] = useState({
     solBalance: 420.69,
     solPrice: 145.20,
-    dailyPnl: 12.5, // %
-    dailyPnlAbs: 52.5, // SOL
+    dailyPnl: 12.5,
+    dailyPnlAbs: 52.5,
     winRate: 68.5,
     totalTrades: 142,
   });
@@ -120,7 +153,7 @@ export function useLiveTrades(initialCount = 20) {
 
   useEffect(() => {
     const interval = setInterval(() => {
-      if (Math.random() > 0.7) { // 30% chance to trade every 5s
+      if (Math.random() > 0.7) {
         const token = rChoice(MEME_TOKENS);
         const isBuy = Math.random() > 0.5;
         const newTrade: Trade = {
@@ -135,7 +168,7 @@ export function useLiveTrades(initialCount = 20) {
           pnlPercent: !isBuy ? rFloat(-20, 150) : undefined,
           signature: genSig(),
         };
-        setTrades(prev => [newTrade, ...prev].slice(0, 100)); // Keep last 100
+        setTrades(prev => [newTrade, ...prev].slice(0, 100));
       }
     }, 5000);
     return () => clearInterval(interval);
@@ -148,7 +181,6 @@ export function useChartData(days = 7) {
   const [data, setData] = useState<ChartDataPoint[]>([]);
 
   useEffect(() => {
-    // Generate initial data
     let currentVal = 10000;
     const initialData = Array.from({ length: days * 24 }).map((_, i) => {
       currentVal = currentVal * (1 + rFloat(-0.02, 0.025));
@@ -244,4 +276,3 @@ export function useViralTrends() {
 
   return trends;
 }
-

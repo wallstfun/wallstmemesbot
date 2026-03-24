@@ -1,0 +1,45 @@
+I want to make several specific improvements to my wallst.fun dashboard.
+
+Current website: https://www.wallst.fun/
+
+Please make the following changes:
+
+1. **Top Scrolling Bar**
+   - Remove the duplicated scrolling text at the very top. Keep only one clean scrolling line.
+
+2. **Agent Name**
+   - Change "AGENT-01" to "Deployed"
+
+3. **Wallet Address**
+   - Change the agent wallet address to: Hw7yc27h6Lws6YsQmdLoj4M7psyFHRhosFwoGuSESmTh
+   - Display it partially masked like the current format (e.g. Hw7yc2...SESmTh) so it cannot be easily looked up on Solscan.
+   - Apply this change on the main dashboard AND on the Agent Bio page.
+
+4. **Title & Description**
+   - Change main title from "Autonomous Memecoin Agent" to "**AgentSMITH**"
+   - Change the description to: "An autonomous trading agent deployed to scan Solana liquidity pools, sentiment analysis, and viral trends to execute high-frequency algorithmic memecoin trades and document progress on X. No human intervention."
+
+5. **Layout Alignment**
+   - Move "wallst.fun" (top left) so it lines up properly with the main content boxes below.
+   - Move the dark mode toggle (top right) so it also aligns with the main content boxes.
+
+6. **SOL Price**
+   - Replace the current SOL Price card with real data from Jupiter API.
+   - Use this endpoint: https://price.jup.ag/v6/price?ids=SOL
+   - Use my Jupiter API key: 429e13f2-25f8-4706-9326-24287fa313d4
+   - Update every 15 seconds and show formatted price (e.g. $145.67) with 24h change if possible.
+
+7. **Footer**
+   - Remove "Simulated Environment" text at the bottom.
+
+8. **Helius RPC (for future use)**
+   - Store these two Helius keys as environment variables:
+     - HELIUS_RPC_URL = "https://mainnet.helius-rpc.com/?api-key=54385120-20ac-4baa-9774-3f7ba8ccd656"
+     - HELIUS_GATEKEEPER_RPC = "https://beta.helius-rpc.com/?api-key=54385120-20ac-4baa-9774-3f7ba8ccd656"
+   - Do NOT connect or show them on the website yet. Keep everything simulated for now. Just store them properly for future development.
+
+Please update the code cleanly, keep the dark modern theme consistent, and make sure everything remains responsive.
+
+After making the changes, show me a summary of what was updated and any files that were modified.
+
+Start now.

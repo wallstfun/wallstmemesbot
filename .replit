@@ -24,3 +24,12 @@ expertMode = true
 [postMerge]
 path = "scripts/post-merge.sh"
 timeoutMs = 20000
+
+[userenv]
+
+[userenv.shared]
+HELIUS_RPC_URL = "https://mainnet.helius-rpc.com/?api-key=54385120-20ac-4baa-9774-3f7ba8ccd656"
+HELIUS_GATEKEEPER_RPC = "https://beta.helius-rpc.com/?api-key=54385120-20ac-4baa-9774-3f7ba8ccd656"
+HELIUS_PARSE_TRANSACTIONS = "https://api-mainnet.helius-rpc.com/v0/transactions/?api-key=54385120-20ac-4baa-9774-3f7ba8ccd656"
+HELIUS_PARSE_ADDRESS_TRANSACTIONS = "https://api-mainnet.helius-rpc.com/v0/addresses/{address}/transactions/?api-key=54385120-20ac-4baa-9774-3f7ba8ccd656"
+JUPITER_API_KEY = "429e13f2-25f8-4706-9326-24287fa313d4"

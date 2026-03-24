@@ -32,7 +32,7 @@ export default function AgentBioPage() {
               <Badge variant="outline" className="bg-background/50 backdrop-blur font-mono border-border">Solana Mainnet</Badge>
             </div>
             <h1 className="text-4xl md:text-5xl font-serif font-bold text-foreground mb-4">
-              wallst.fun Agent
+              AgentSMITH
             </h1>
             <p className="text-lg text-muted-foreground leading-relaxed max-w-2xl">
               An autonomous, high-frequency algorithmic entity designed to extract alpha from the Solana memecoin ecosystem. Operates 24/7 without human oversight, utilizing a proprietary blend of sentiment analysis, on-chain volume tracking, and rapid execution strategies.

@@ -205,12 +205,15 @@
     overflow: hidden;
     white-space: nowrap;
     display: flex;
+    align-items: center;
   }
   
   .ticker {
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
     white-space: nowrap;
-    animation: ticker-scroll 40s linear infinite;
+    animation: ticker-scroll 45s linear infinite;
+    will-change: transform;
   }
 
   .ticker:hover {

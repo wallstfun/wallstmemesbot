@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { Moon, Sun, Terminal, Activity, Briefcase, MessageSquare, TrendingUp, User, Menu, X } from "lucide-react";
-import { useLiveMetrics } from "@/hooks/use-simulated-data";
+import { useLiveMetrics, useSolPrice } from "@/hooks/use-simulated-data";
 
-export const WALLET = "6sYk2G...9qRzP";
+// Replace with actual Solana wallet address (public-facing, masked)
+export const WALLET_FULL = "Hw7yc27h6Lws6YsQmdLoj4M7psyFHRhosFwoGuSESmTh";
+export const WALLET = "Hw7yc2...SESmTh";
 
 const NavLink = ({ href, icon: Icon, children }: { href: string; icon: React.ElementType; children: React.ReactNode }) => {
   const [location] = useLocation();
@@ -25,51 +27,70 @@ const NavLink = ({ href, icon: Icon, children }: { href: string; icon: React.Ele
 };
 
 export function RootLayout({ children }: { children: React.ReactNode }) {
-  const [isDark, setIsDark] = useState(true);
+  const [isDark, setIsDark] = useState(() => {
+    const saved = localStorage.getItem("wallst-theme");
+    return saved ? saved === "dark" : true;
+  });
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const metrics = useLiveMetrics();
+  const { solPrice } = useSolPrice();
 
   useEffect(() => {
-    // Enforce theme on mount
     const root = window.document.documentElement;
     if (isDark) {
       root.classList.add("dark");
     } else {
       root.classList.remove("dark");
     }
+    localStorage.setItem("wallst-theme", isDark ? "dark" : "light");
   }, [isDark]);
 
   const toggleTheme = () => setIsDark(!isDark);
 
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground transition-colors duration-300">
-      {/* WSJ Style Ticker */}
-      <div className="bg-card border-b border-border h-8 flex items-center overflow-hidden text-xs font-mono select-none relative z-50">
-        <div className="flex w-[200%] ticker">
-          <div className="flex items-center space-x-8 px-4 w-1/2 justify-around">
-             <span className="font-bold">SYSTEM STATUS: <span className="text-gains">ONLINE</span></span>
-             <span>SOL/USD: ${(metrics.solPrice).toFixed(2)}</span>
-             <span>AGENT BAL: {metrics.solBalance.toFixed(2)} SOL</span>
-             <span>24H P&L: <span className={metrics.dailyPnl >= 0 ? "text-gains" : "text-losses"}>{metrics.dailyPnl >= 0 ? "+" : ""}{metrics.dailyPnl.toFixed(2)}%</span></span>
-             <span>WIN RATE: {metrics.winRate.toFixed(1)}%</span>
-             <span>ACTIVE TRADES: {metrics.totalTrades}</span>
-             <span className="font-bold text-muted-foreground">wallst.fun /// agent</span>
-          </div>
-          <div className="flex items-center space-x-8 px-4 w-1/2 justify-around">
-             <span className="font-bold">SYSTEM STATUS: <span className="text-gains">ONLINE</span></span>
-             <span>SOL/USD: ${(metrics.solPrice).toFixed(2)}</span>
-             <span>AGENT BAL: {metrics.solBalance.toFixed(2)} SOL</span>
-             <span>24H P&L: <span className={metrics.dailyPnl >= 0 ? "text-gains" : "text-losses"}>{metrics.dailyPnl >= 0 ? "+" : ""}{metrics.dailyPnl.toFixed(2)}%</span></span>
-             <span>WIN RATE: {metrics.winRate.toFixed(1)}%</span>
-             <span>ACTIVE TRADES: {metrics.totalTrades}</span>
-             <span className="font-bold text-muted-foreground">wallst.fun /// agent</span>
-          </div>
+      {/* WSJ Style Ticker — single seamless scrolling line */}
+      <div className="ticker-wrap bg-card border-b border-border h-8 text-xs font-mono select-none relative z-50">
+        <div className="ticker">
+          <span className="inline-flex items-center gap-8 px-8">
+            <span className="font-bold">SYSTEM STATUS:&nbsp;<span className="text-gains">ONLINE</span></span>
+            <span className="text-muted-foreground">///</span>
+            <span>SOL/USD:&nbsp;<span className="font-bold">${solPrice.toFixed(2)}</span></span>
+            <span className="text-muted-foreground">///</span>
+            <span>AGENT BAL:&nbsp;<span className="font-bold">{metrics.solBalance.toFixed(2)} SOL</span></span>
+            <span className="text-muted-foreground">///</span>
+            <span>24H P&amp;L:&nbsp;<span className={`font-bold ${metrics.dailyPnl >= 0 ? "text-gains" : "text-losses"}`}>{metrics.dailyPnl >= 0 ? "+" : ""}{metrics.dailyPnl.toFixed(2)}%</span></span>
+            <span className="text-muted-foreground">///</span>
+            <span>WIN RATE:&nbsp;<span className="font-bold">{metrics.winRate.toFixed(1)}%</span></span>
+            <span className="text-muted-foreground">///</span>
+            <span>ACTIVE TRADES:&nbsp;<span className="font-bold">{metrics.totalTrades}</span></span>
+            <span className="text-muted-foreground">///</span>
+            <span className="font-bold text-muted-foreground">wallst.fun /// AgentSMITH</span>
+            <span className="text-muted-foreground px-8">///</span>
+          </span>
+          {/* Duplicate for seamless infinite scroll loop */}
+          <span className="inline-flex items-center gap-8 px-8">
+            <span className="font-bold">SYSTEM STATUS:&nbsp;<span className="text-gains">ONLINE</span></span>
+            <span className="text-muted-foreground">///</span>
+            <span>SOL/USD:&nbsp;<span className="font-bold">${solPrice.toFixed(2)}</span></span>
+            <span className="text-muted-foreground">///</span>
+            <span>AGENT BAL:&nbsp;<span className="font-bold">{metrics.solBalance.toFixed(2)} SOL</span></span>
+            <span className="text-muted-foreground">///</span>
+            <span>24H P&amp;L:&nbsp;<span className={`font-bold ${metrics.dailyPnl >= 0 ? "text-gains" : "text-losses"}`}>{metrics.dailyPnl >= 0 ? "+" : ""}{metrics.dailyPnl.toFixed(2)}%</span></span>
+            <span className="text-muted-foreground">///</span>
+            <span>WIN RATE:&nbsp;<span className="font-bold">{metrics.winRate.toFixed(1)}%</span></span>
+            <span className="text-muted-foreground">///</span>
+            <span>ACTIVE TRADES:&nbsp;<span className="font-bold">{metrics.totalTrades}</span></span>
+            <span className="text-muted-foreground">///</span>
+            <span className="font-bold text-muted-foreground">wallst.fun /// AgentSMITH</span>
+            <span className="text-muted-foreground px-8">///</span>
+          </span>
         </div>
       </div>
 
-      {/* Header */}
+      {/* Header — aligned with main content max-w-7xl */}
       <header className="sticky top-0 z-40 w-full glass-panel border-b">
-        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+        <div className="container mx-auto px-4 max-w-7xl h-16 flex items-center justify-between">
           <Link href="/" className="flex items-baseline gap-1 group">
             <span className="font-serif text-2xl font-bold tracking-tight text-foreground group-hover:text-primary transition-colors">wallst</span>
             <span className="font-sans text-xl font-medium text-muted-foreground">.fun</span>
@@ -125,7 +146,7 @@ export function RootLayout({ children }: { children: React.ReactNode }) {
 
       {/* Footer */}
       <footer className="border-t border-border bg-card py-8 mt-auto">
-        <div className="container mx-auto px-4 flex flex-col md:flex-row items-center justify-between gap-4">
+        <div className="container mx-auto px-4 max-w-7xl flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-baseline gap-1 opacity-50 hover:opacity-100 transition-opacity">
             <span className="font-serif text-lg font-bold">wallst</span>
             <span className="font-sans text-md">.fun</span>
@@ -133,13 +154,11 @@ export function RootLayout({ children }: { children: React.ReactNode }) {
           
           <div className="text-sm text-muted-foreground flex items-center gap-4 font-mono">
             <span>Agent Wallet: {WALLET}</span>
-            <span className="text-border">|</span>
-            <span>Simulated Environment</span>
           </div>
           
           <div className="flex gap-4">
-            <a href="#" className="text-muted-foreground hover:text-primary transition-colors"><MessageSquare className="w-5 h-5" /></a>
-            <a href="#" className="text-muted-foreground hover:text-primary transition-colors"><Terminal className="w-5 h-5" /></a>
+            <a href={`https://x.com/wallst_bot`} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors"><MessageSquare className="w-5 h-5" /></a>
+            <a href={`https://solscan.io/account/${WALLET_FULL}`} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors"><Terminal className="w-5 h-5" /></a>
           </div>
         </div>
       </footer>
