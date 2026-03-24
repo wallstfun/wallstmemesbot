@@ -1,0 +1,15 @@
+packages:
+  "recharts": "For the daily P&L Area charts and portfolio visualization"
+  "framer-motion": "For smooth entry animations and data updates"
+  "date-fns": "For formatting timestamps on trades and tweets"
+  "lucide-react": "For UI icons across the dashboard"
+
+images:
+  - path: "artifacts/wallst-fun/public/images/agent-avatar.png"
+    description: "A mysterious, sophisticated AI agent avatar, wearing a high-end tailored suit, neon glowing eyes, cyberpunk meets wall street, dark atmospheric lighting, highly detailed, 8k"
+    aspect_ratio: "1:1"
+
+notes:
+  - "App is purely frontend simulation of real-time trading data."
+  - "Using setInterval in custom hooks to simulate websocket/live updates."
+  - "Dark mode is default."

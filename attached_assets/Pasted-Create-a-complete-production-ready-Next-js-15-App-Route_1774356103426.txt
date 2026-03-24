@@ -1,0 +1,33 @@
+Create a complete, production-ready Next.js 15 (App Router) website for wallst.fun using TypeScript, Tailwind CSS, shadcn/ui components, next-themes for light/dark mode toggle, Recharts for charts, and lucide-react icons. The theme must be a sophisticated blend of Wall Street Journal (clean professional finance layout, navy/blue-white-black palette, columnar news-style sections) and xprince.pro (modern minimalist dashboard with live trade feed, wallet metrics, real-time updating sections) but with a non-cheesy Wall Street Bets edge — think high-end finance terminal: dark navy background default, gold accents only on gains, clean sans-serif typography (Inter or system-ui), no emojis, no rockets, no memes in UI.
+
+Project requirements:
+- Responsive, mobile-first, fully accessible.
+- Default to dark mode with prominent top-right toggle (sun/moon icon) that persists.
+- Use Tailwind dark: prefix everywhere.
+- Fake wallet address and X username as constants at top (e.g. const WALLET = "YOUR_SOLANA_WALLET_HERE"; const X_USERNAME = "yourbot";). Add clear comments where to replace with real API calls.
+
+Pages / Layout:
+- Root layout with header: logo "wallst.fun" (bold serif "wallst" + .fun in sans), navigation links: Dashboard, Live Trades, Portfolio, X Feed, Viral Trends, Agent Bio.
+- Top market ticker bar (WSJ style): SOL price, bot SOL balance, daily P&L (green/red), 24h win rate.
+- Hero section: large "Autonomous Memecoin Trading Agent" headline, short professional bio (placeholder text), current SOL balance big number, daily P&L chart (small Recharts area chart).
+
+Main Dashboard (homepage):
+- Grid layout:
+  1. Key Metrics cards (4-column on desktop): SOL Balance, Today’s P&L (with % and absolute), Win Rate, Total Trades (last 24h).
+  2. Live Trades table: columns = Timestamp, Action (Buy/Sell), Token Ticker + name, Amount (SOL), Value (USD), Tx Signature (link to Solscan). Table updates every 5 seconds with fake new rows (use setInterval in a client component). Green/red rows for profit/loss on each trade.
+  3. Daily P&L Overview: Recharts line/area chart (7-day) with tooltip. Fake data that refreshes.
+  4. Real-time X Feed section: list of latest 5 tweets (avatar, text, timestamp, like/retweet counts). Use fake data + setInterval to simulate new tweets at top. Comment: "Replace with X API fetch or embedded timeline".
+  5. Trending Memes / Viral Stories section (exactly like frenzy.fun): horizontal scroll or grid of cards. Each card: TikTok-style viral ID (e.g. 9aq..9Bj), Title, Creator @handle + followers, Engagement (views/likes), Financials (Current Value, Volume, ATH, % change). Green/red % change. Fake data that refreshes every 30 seconds with new cards sliding in. Comment: "Replace with Apify/Birdeye/Supabase realtime fetch".
+
+- Footer: minimal, copyright, links to X and Solana wallet (obfuscated).
+
+Additional Features:
+- All data sections must feel live: use React hooks (useState + useEffect with setInterval) for fake real-time updates. Add subtle "LIVE" pulsing dot on sections that update.
+- Professional table styling (shadcn Table), cards with subtle borders/shadows, hover effects.
+- Dark mode uses slate-950 background, slate-100 text; light mode uses white background, slate-900 text. Accent color: emerald-500 for gains, rose-500 for losses.
+- SEO: proper meta title "wallst.fun | Autonomous Memecoin Trading Agent", description, Open Graph tags.
+- Include a README.md with exact instructions: "1. Replace wallet/X constants. 2. Add Helius/Zerion/Birdeye API keys in .env. 3. Implement Supabase realtime for production live data. 4. Deploy to Vercel."
+
+Generate the FULL project structure with all necessary files: app/layout.tsx, app/page.tsx, components/ folder with Header, Ticker, MetricsGrid, LiveTradesTable, PnLChart, XFeed, ViralTrends, etc. Use proper TypeScript interfaces. Make it look expensive, clean, and institutional — exactly what a serious Wall Street Bets-inspired finance site should feel like. Do not add any cartoonish elements.
+
+Start building the entire codebase now.

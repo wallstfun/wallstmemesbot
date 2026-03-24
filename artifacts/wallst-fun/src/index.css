@@ -1,0 +1,232 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,600&display=swap');
+@import "tailwindcss";
+@import "tw-animate-css";
+@plugin "@tailwindcss/typography";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+  --color-card-border: hsl(var(--card-border));
+
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+  --color-popover-border: hsl(var(--popover-border));
+
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-primary-border: var(--primary-border);
+
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-secondary-border: var(--secondary-border);
+
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-muted-border: var(--muted-border);
+
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-accent-border: var(--accent-border);
+
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+  --color-destructive-border: var(--destructive-border);
+
+  --color-chart-1: hsl(var(--chart-1));
+  --color-chart-2: hsl(var(--chart-2));
+  --color-chart-3: hsl(var(--chart-3));
+  --color-chart-4: hsl(var(--chart-4));
+  --color-chart-5: hsl(var(--chart-5));
+
+  --font-sans: 'Inter', sans-serif;
+  --font-serif: 'Playfair Display', serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+/* LIGHT MODE */
+:root {
+  --background: 0 0% 100%;
+  --foreground: 222 47% 11%;
+  
+  --border: 214 32% 91%;
+  --input: 214 32% 91%;
+  --ring: 222 84% 4.9%;
+
+  --card: 0 0% 100%;
+  --card-foreground: 222 47% 11%;
+  --card-border: 214 32% 91%;
+
+  --popover: 0 0% 100%;
+  --popover-foreground: 222 47% 11%;
+  --popover-border: 214 32% 91%;
+
+  --primary: 222 47% 11%;
+  --primary-foreground: 210 40% 98%;
+
+  --secondary: 210 40% 96%;
+  --secondary-foreground: 222 47% 11%;
+
+  --muted: 210 40% 96%;
+  --muted-foreground: 215 16% 47%;
+
+  --accent: 210 40% 96%;
+  --accent-foreground: 222 47% 11%;
+
+  --destructive: 346 87% 60%;
+  --destructive-foreground: 210 40% 98%;
+
+  /* Custom Gains/Losses for Finance Dashboard */
+  --gains: 158 64% 52%;
+  --losses: 346 87% 60%;
+
+  --chart-1: 158 64% 52%;
+  --chart-2: 215 16% 47%;
+  --chart-3: 222 47% 11%;
+  --chart-4: 346 87% 60%;
+  --chart-5: 210 40% 96%;
+
+  --radius: 0.5rem;
+
+  --button-outline: rgba(0,0,0, .10);
+  --badge-outline: rgba(0,0,0, .05);
+  --opaque-button-border-intensity: -8;
+  --elevate-1: rgba(0,0,0, .03);
+  --elevate-2: rgba(0,0,0, .08);
+
+  --shadow-2xs: 0px 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-xs: 0px 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-sm: 0px 1px 3px rgba(0, 0, 0, 0.1), 0px 1px 2px rgba(0, 0, 0, 0.06);
+  --shadow: 0px 4px 6px -1px rgba(0, 0, 0, 0.1), 0px 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0px 4px 6px -1px rgba(0, 0, 0, 0.1), 0px 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0px 10px 15px -3px rgba(0, 0, 0, 0.1), 0px 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --shadow-xl: 0px 20px 25px -5px rgba(0, 0, 0, 0.1), 0px 10px 10px -5px rgba(0, 0, 0, 0.04);
+  --shadow-2xl: 0px 25px 50px -12px rgba(0, 0, 0, 0.25);
+}
+
+.dark {
+  --background: 222 47% 8%; /* Very dark slate, almost black */
+  --foreground: 210 40% 98%;
+
+  --border: 217 33% 17%;
+  --input: 217 33% 17%;
+  --ring: 212.7 26.8% 83.9%;
+
+  --card: 222 47% 11%; /* Slightly lighter slate for cards */
+  --card-foreground: 210 40% 98%;
+  --card-border: 217 33% 17%;
+
+  --popover: 222 47% 11%;
+  --popover-foreground: 210 40% 98%;
+  --popover-border: 217 33% 17%;
+
+  --primary: 210 40% 98%;
+  --primary-foreground: 222 47% 11%;
+
+  --secondary: 217 33% 17%;
+  --secondary-foreground: 210 40% 98%;
+
+  --muted: 217 33% 17%;
+  --muted-foreground: 215 20.2% 65.1%;
+
+  --accent: 217 33% 17%;
+  --accent-foreground: 210 40% 98%;
+
+  --destructive: 346 87% 60%; /* Rose */
+  --destructive-foreground: 210 40% 98%;
+
+  /* Custom Gains/Losses for Finance Dashboard */
+  --gains: 158 64% 52%; /* Emerald */
+  --losses: 346 87% 60%;
+
+  --chart-1: 158 64% 52%;
+  --chart-2: 215 20.2% 65.1%;
+  --chart-3: 210 40% 98%;
+  --chart-4: 346 87% 60%;
+  --chart-5: 217 33% 17%;
+
+  --button-outline: rgba(255,255,255, .10);
+  --badge-outline: rgba(255,255,255, .10);
+  --opaque-button-border-intensity: 9;
+  --elevate-1: rgba(255,255,255, .05);
+  --elevate-2: rgba(255,255,255, .10);
+
+  --shadow-2xs: 0px 1px 2px rgba(0, 0, 0, 0.5);
+  --shadow-xs: 0px 1px 2px rgba(0, 0, 0, 0.5);
+  --shadow-sm: 0px 1px 3px rgba(0, 0, 0, 0.5), 0px 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow: 0px 4px 6px -1px rgba(0, 0, 0, 0.5), 0px 2px 4px -1px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0px 4px 6px -1px rgba(0, 0, 0, 0.5), 0px 2px 4px -1px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0px 10px 15px -3px rgba(0, 0, 0, 0.5), 0px 4px 6px -2px rgba(0, 0, 0, 0.3);
+  --shadow-xl: 0px 20px 25px -5px rgba(0, 0, 0, 0.5), 0px 10px 10px -5px rgba(0, 0, 0, 0.2);
+  --shadow-2xl: 0px 25px 50px -12px rgba(0, 0, 0, 0.6);
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply font-sans antialiased bg-background text-foreground selection:bg-primary/20 selection:text-primary;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-semibold tracking-tight;
+  }
+}
+
+@layer utilities {
+  .text-gains {
+    color: hsl(var(--gains));
+  }
+  .text-losses {
+    color: hsl(var(--losses));
+  }
+  .bg-gains {
+    background-color: hsl(var(--gains));
+  }
+  .bg-losses {
+    background-color: hsl(var(--losses));
+  }
+  
+  .ticker-wrap {
+    overflow: hidden;
+    white-space: nowrap;
+    display: flex;
+  }
+  
+  .ticker {
+    display: inline-block;
+    white-space: nowrap;
+    animation: ticker-scroll 40s linear infinite;
+  }
+
+  .ticker:hover {
+    animation-play-state: paused;
+  }
+  
+  @keyframes ticker-scroll {
+    0% {
+      transform: translate3d(0, 0, 0);
+    }
+    100% {
+      transform: translate3d(-50%, 0, 0);
+    }
+  }
+
+  .glass-panel {
+    @apply bg-background/80 backdrop-blur-md border-border;
+  }
+}

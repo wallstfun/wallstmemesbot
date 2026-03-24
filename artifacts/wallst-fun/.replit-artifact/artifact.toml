@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "wallst.fun | Autonomous Memecoin Trading Agent"
+version = "1.0.0"
+id = "artifacts/wallst-fun"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 23153
+
+[services.development]
+run = "pnpm --filter @workspace/wallst-fun run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/wallst-fun", "run", "build" ]
+publicDir = "artifacts/wallst-fun/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "23153"
+BASE_PATH = "/"
