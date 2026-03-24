@@ -17,10 +17,24 @@ export default function Dashboard() {
   const trends = useViralTrends();
 
   // Real SOL Price from CoinGecko API
-  const [solPrice, setSolPrice] = useState(0);
+  const [solPrice, setSolPrice] = useState(() => {
+    // Load from localStorage on mount
+    const cached = localStorage.getItem('wallst-sol-price');
+    if (cached) {
+      try {
+        const { price } = JSON.parse(cached);
+        return price || 0;
+      } catch (e) {
+        return 0;
+      }
+    }
+    return 0;
+  });
   const [isLive, setIsLive] = useState(false);
 
   useEffect(() => {
+    let retryTimeout: NodeJS.Timeout | null = null;
+
     const fetchPrice = async () => {
       try {
         console.log('[wallst.fun] Fetching SOL price from CoinGecko...');
@@ -34,17 +48,38 @@ export default function Dashboard() {
           console.log('[wallst.fun] SOL price updated:', data.solana.usd);
           // Update the ticker in RootLayout via localStorage
           localStorage.setItem('wallst-sol-price', JSON.stringify({ price: data.solana.usd, timestamp: Date.now() }));
+        } else {
+          throw new Error('Invalid price data');
         }
       } catch (error) {
         console.error('[wallst.fun] Failed to fetch SOL price:', error);
         setIsLive(false);
+        // Retry once after 8 seconds on failure
+        retryTimeout = setTimeout(() => {
+          console.log('[wallst.fun] Retrying SOL price fetch...');
+          fetchPrice();
+        }, 8000);
       }
     };
 
-    fetchPrice();
-    const interval = setInterval(fetchPrice, 35000); // every 35 seconds
+    // Load cached price on mount
+    const cached = localStorage.getItem('wallst-sol-price');
+    if (cached) {
+      try {
+        const { price } = JSON.parse(cached);
+        if (price) setSolPrice(price);
+      } catch (e) {
+        // Ignore parse errors
+      }
+    }
 
-    return () => clearInterval(interval);
+    fetchPrice();
+    const interval = setInterval(fetchPrice, 60000); // every 60 seconds (well under 30 calls/min rate limit)
+
+    return () => {
+      clearInterval(interval);
+      if (retryTimeout) clearTimeout(retryTimeout);
+    };
   }, []);
 
   const isProfitable = metrics.dailyPnl >= 0;
@@ -94,7 +129,7 @@ export default function Dashboard() {
               ${solPrice > 0 ? solPrice.toFixed(2) : '—'}
             </p>
             <p className={`text-xs font-medium ${isLive ? 'text-gains' : 'text-losses'}`}>
-              ● CoinGecko • {isLive ? 'Live' : 'Fallback'}
+              ● CoinGecko • {isLive ? 'Live' : 'Last updated'}
             </p>
           </div>
         </div>
