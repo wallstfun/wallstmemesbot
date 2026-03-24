@@ -64,7 +64,7 @@ export function RootLayout({ children }: { children: React.ReactNode }) {
             <span className="text-muted-foreground">///</span>
             <span>ACTIVE TRADES:&nbsp;<span className="font-bold">{metrics.totalTrades}</span></span>
             <span className="text-muted-foreground">///</span>
-            <span className="font-bold text-muted-foreground">wallst.fun /// AgentSMITH</span>
+            <span className="font-bold text-muted-foreground">wallst.fun /// WallStSmith</span>
             <span className="text-muted-foreground px-8">///</span>
           </span>
           {/* Duplicate for seamless infinite scroll loop */}
@@ -81,7 +81,7 @@ export function RootLayout({ children }: { children: React.ReactNode }) {
             <span className="text-muted-foreground">///</span>
             <span>ACTIVE TRADES:&nbsp;<span className="font-bold">{metrics.totalTrades}</span></span>
             <span className="text-muted-foreground">///</span>
-            <span className="font-bold text-muted-foreground">wallst.fun /// AgentSMITH</span>
+            <span className="font-bold text-muted-foreground">wallst.fun /// WallStSmith</span>
             <span className="text-muted-foreground px-8">///</span>
           </span>
         </div>

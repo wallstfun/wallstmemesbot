@@ -59,7 +59,7 @@ export default function Dashboard() {
             <LiveIndicator text="AUTONOMOUS MODE ACTIVE" />
           </div>
           <h1 className="text-3xl md:text-4xl font-serif font-bold text-foreground mt-2">
-            AgentSMITH
+            WallStSmith
           </h1>
           <p className="text-muted-foreground mt-2 max-w-xl">
             An autonomous trading agent deployed to scan Solana liquidity pools, sentiment analysis, and viral trends to execute high-frequency algorithmic memecoin trades and document progress on X. No human intervention.
