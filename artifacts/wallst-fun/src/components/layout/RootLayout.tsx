@@ -32,7 +32,27 @@ export function RootLayout({ children }: { children: React.ReactNode }) {
     return saved ? saved === "dark" : true;
   });
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [solPrice, setSolPrice] = useState(0);
   const metrics = useLiveMetrics();
+
+  // Read SOL price from dashboard's CoinGecko fetch
+  useEffect(() => {
+    const checkPrice = () => {
+      const stored = localStorage.getItem('wallst-sol-price');
+      if (stored) {
+        try {
+          const { price } = JSON.parse(stored);
+          setSolPrice(price);
+        } catch (e) {
+          // Silently ignore parse errors
+        }
+      }
+    };
+    
+    checkPrice();
+    const interval = setInterval(checkPrice, 5000); // Check every 5 seconds
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     const root = window.document.documentElement;
@@ -54,7 +74,7 @@ export function RootLayout({ children }: { children: React.ReactNode }) {
           <span className="inline-flex items-center gap-8 px-8">
             <span className="font-bold">SYSTEM STATUS:&nbsp;<span className="text-gains">ONLINE</span></span>
             <span className="text-muted-foreground">///</span>
-            <span>SOL/USD:&nbsp;<span className="font-bold">${metrics.solPrice.toFixed(2)}</span></span>
+            <span>SOL/USD:&nbsp;<span className="font-bold">${solPrice > 0 ? solPrice.toFixed(2) : '—'}</span></span>
             <span className="text-muted-foreground">///</span>
             <span>AGENT BAL:&nbsp;<span className="font-bold">{metrics.solBalance.toFixed(2)} SOL</span></span>
             <span className="text-muted-foreground">///</span>
@@ -71,7 +91,7 @@ export function RootLayout({ children }: { children: React.ReactNode }) {
           <span className="inline-flex items-center gap-8 px-8">
             <span className="font-bold">SYSTEM STATUS:&nbsp;<span className="text-gains">ONLINE</span></span>
             <span className="text-muted-foreground">///</span>
-            <span>SOL/USD:&nbsp;<span className="font-bold">${metrics.solPrice.toFixed(2)}</span></span>
+            <span>SOL/USD:&nbsp;<span className="font-bold">${solPrice > 0 ? solPrice.toFixed(2) : '—'}</span></span>
             <span className="text-muted-foreground">///</span>
             <span>AGENT BAL:&nbsp;<span className="font-bold">{metrics.solBalance.toFixed(2)} SOL</span></span>
             <span className="text-muted-foreground">///</span>

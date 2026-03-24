@@ -16,8 +16,8 @@ export default function Dashboard() {
   const tweets = useXFeed();
   const trends = useViralTrends();
 
-  // Real SOL Price from Jupiter API
-  const [solPrice, setSolPrice] = useState(145.20);
+  // Real SOL Price from CoinGecko API
+  const [solPrice, setSolPrice] = useState(0);
   const [isLive, setIsLive] = useState(false);
 
   useEffect(() => {
@@ -32,6 +32,8 @@ export default function Dashboard() {
           setSolPrice(data.solana.usd);
           setIsLive(true);
           console.log('[wallst.fun] SOL price updated:', data.solana.usd);
+          // Update the ticker in RootLayout via localStorage
+          localStorage.setItem('wallst-sol-price', JSON.stringify({ price: data.solana.usd, timestamp: Date.now() }));
         }
       } catch (error) {
         console.error('[wallst.fun] Failed to fetch SOL price:', error);
@@ -40,7 +42,7 @@ export default function Dashboard() {
     };
 
     fetchPrice();
-    const interval = setInterval(fetchPrice, 20000); // every 20 seconds
+    const interval = setInterval(fetchPrice, 35000); // every 35 seconds
 
     return () => clearInterval(interval);
   }, []);
@@ -84,16 +86,16 @@ export default function Dashboard() {
 
       {/* METRICS GRID */}
       <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Real SOL Price from Jupiter API */}
+        {/* Real SOL Price from CoinGecko API */}
         <div className="bg-card p-6 rounded-xl border border-border/50 hover:shadow-md transition-all duration-300">
-          <div className="flex justify-between items-center mb-2">
-            <span className="text-sm font-medium text-muted-foreground">SOL Price</span>
-            <span className={`text-xs font-medium ${isLive ? 'text-gains' : 'text-losses'}`}>
+          <div className="space-y-3">
+            <p className="text-sm font-medium text-muted-foreground">SOL Price</p>
+            <p className="text-3xl font-bold font-mono text-foreground">
+              ${solPrice > 0 ? solPrice.toFixed(2) : '—'}
+            </p>
+            <p className={`text-xs font-medium ${isLive ? 'text-gains' : 'text-losses'}`}>
               ● CoinGecko • {isLive ? 'Live' : 'Fallback'}
-            </span>
-          </div>
-          <div className="text-3xl font-bold font-mono text-foreground">
-            ${solPrice.toFixed(2)}
+            </p>
           </div>
         </div>
 
