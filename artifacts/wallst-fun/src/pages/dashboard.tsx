@@ -15,7 +15,7 @@ export default function Dashboard() {
   const chartData = useChartData(7);
   const tweets = useXFeed();
   const trends = useViralTrends();
-  const { solPrice, loading: solLoading } = useSolPrice();
+  const { solPrice, isLive } = useSolPrice();
 
   const isProfitable = metrics.dailyPnl >= 0;
 
@@ -62,17 +62,15 @@ export default function Dashboard() {
             <div className="flex justify-between items-start">
               <div className="space-y-2">
                 <p className="text-sm font-medium text-muted-foreground">SOL Price</p>
-                <p className="text-2xl font-bold font-mono">
-                  {solLoading ? <span className="text-muted-foreground text-base">Loading...</span> : `$${solPrice.toFixed(2)}`}
-                </p>
+                <p className="text-2xl font-bold font-mono">${solPrice.toFixed(2)}</p>
               </div>
               <div className="p-2 bg-primary/10 rounded-lg">
                 <Activity className="w-5 h-5 text-primary" />
               </div>
             </div>
-            <div className="text-xs mt-4 font-medium text-gains flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-gains inline-block animate-pulse"></span>
-              Jupiter API · Live
+            <div className={`text-xs mt-4 font-medium flex items-center gap-1 ${isLive ? 'text-gains' : 'text-muted-foreground'}`}>
+              <span className={`w-1.5 h-1.5 rounded-full inline-block ${isLive ? 'bg-gains animate-pulse' : 'bg-muted'}`}></span>
+              {isLive ? 'Jupiter API · Live' : 'Jupiter API · Fallback'}
             </div>
           </CardContent>
         </Card>

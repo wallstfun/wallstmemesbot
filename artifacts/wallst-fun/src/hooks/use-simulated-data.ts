@@ -69,37 +69,66 @@ const TWEET_TEMPLATES = [
   "Solana network fees are negligible. Perfect environment for HFT meme trading.",
 ];
 
-// Replace with Jupiter API fetch for real-time SOL price
+// Live SOL price from Jupiter API
 // Endpoint: https://price.jup.ag/v6/price?ids=SOL
-// API key stored in JUPITER_API_KEY env var (for backend/server use)
+// Updates every 15 seconds
 export function useSolPrice() {
   const [solPrice, setSolPrice] = useState<number>(145.20);
-  const [change24h, setChange24h] = useState<number | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [isLive, setIsLive] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
     const fetchPrice = async () => {
       try {
-        const res = await fetch("https://price.jup.ag/v6/price?ids=SOL");
-        if (!res.ok) throw new Error("Failed to fetch SOL price");
-        const data = await res.json();
-        const price = data?.data?.SOL?.price;
-        if (typeof price === "number") {
-          setSolPrice(price);
+        // Jupiter API endpoint with API key
+        const url = "https://price.jup.ag/v6/price?ids=SOL&api_key=429e13f2-25f8-4706-9326-24287fa313d4";
+        console.log("[wallst.fun] Fetching SOL price from Jupiter API...");
+        
+        const res = await fetch(url, {
+          method: "GET",
+          headers: {
+            "Accept": "application/json",
+          },
+        });
+
+        if (!res.ok) {
+          throw new Error(`Jupiter API returned status ${res.status}`);
         }
-      } catch {
-        // Silently fallback to simulated price on error
+
+        const data = await res.json();
+        console.log("[wallst.fun] Jupiter API response:", data);
+
+        // Extract price from nested structure: data.data.SOL.price
+        const price = data?.data?.SOL?.price;
+        
+        if (typeof price === "number" && price > 0) {
+          console.log(`[wallst.fun] ✓ SOL price updated: $${price.toFixed(2)}`);
+          setSolPrice(price);
+          setIsLive(true);
+        } else {
+          console.warn("[wallst.fun] Invalid price data received:", price);
+          setIsLive(false);
+        }
+      } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        console.error("[wallst.fun] ✗ Failed to fetch SOL price from Jupiter API:", errorMsg);
+        console.error("[wallst.fun] Using fallback price until next successful fetch");
+        setIsLive(false);
       } finally {
         setLoading(false);
       }
     };
 
+    // Fetch immediately on mount
     fetchPrice();
+
+    // Fetch every 15 seconds
     const interval = setInterval(fetchPrice, 15000);
+    
     return () => clearInterval(interval);
   }, []);
 
-  return { solPrice, change24h, loading };
+  return { solPrice, isLive, loading };
 }
 
 export function useLiveMetrics() {
