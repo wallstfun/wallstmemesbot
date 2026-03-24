@@ -11,6 +11,8 @@ interface PumpToken {
   logo?: string;
   marketCap?: number;
   priceChange24h?: number;
+  priceChange1m?: number;
+  priceUsd?: number;
   bondingProgress?: number;
   url?: string;
 }
@@ -19,6 +21,7 @@ const MORALIS_API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJub25jZSI6IjJkOW
 
 export default function ScopePage() {
   const [tokens, setTokens] = useState<PumpToken[]>([]);
+  const [prevTokens, setPrevTokens] = useState<Map<string, number>>(new Map());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
@@ -62,13 +65,19 @@ export default function ScopePage() {
         }
         bondingData.result.forEach((token: any) => {
           if (token.tokenAddress && token.symbol) {
+            const priceUsd = parseFloat(token.priceUsd) || 0;
+            const prevPrice = prevTokens.get(token.tokenAddress);
+            const priceChange1m = prevPrice ? ((priceUsd - prevPrice) / prevPrice) * 100 : 0;
+            
             allTokens.push({
               tokenAddress: token.tokenAddress,
               name: token.name || "Unknown",
               symbol: token.symbol,
               logo: token.logo,
               marketCap: parseFloat(token.fullyDilutedValuation) || 0,
-              priceChange24h: 0, // Not available in this endpoint
+              priceChange24h: 0,
+              priceChange1m: priceChange1m,
+              priceUsd: priceUsd,
               bondingProgress: token.bondingCurveProgress || 0,
               url: `https://pump.fun/${token.tokenAddress}`,
             });
@@ -84,13 +93,19 @@ export default function ScopePage() {
         }
         graduatedData.result.forEach((token: any) => {
           if (token.tokenAddress && token.symbol) {
+            const priceUsd = parseFloat(token.priceUsd) || 0;
+            const prevPrice = prevTokens.get(token.tokenAddress);
+            const priceChange1m = prevPrice ? ((priceUsd - prevPrice) / prevPrice) * 100 : 0;
+            
             allTokens.push({
               tokenAddress: token.tokenAddress,
               name: token.name || "Unknown",
               symbol: token.symbol,
               logo: token.logo,
               marketCap: parseFloat(token.fullyDilutedValuation) || 0,
-              priceChange24h: 0, // Not available in this endpoint
+              priceChange24h: 0,
+              priceChange1m: priceChange1m,
+              priceUsd: priceUsd,
               bondingProgress: 100,
               url: `https://pump.fun/${token.tokenAddress}`,
             });
@@ -108,6 +123,15 @@ export default function ScopePage() {
       const topTokens = uniqueTokens.slice(0, 12);
       console.log("[wallst.fun] Top 12 tokens loaded");
       
+      // Update prev prices for next fetch
+      const newPrevTokens = new Map<string, number>();
+      topTokens.forEach(token => {
+        if (token.priceUsd) {
+          newPrevTokens.set(token.tokenAddress, token.priceUsd);
+        }
+      });
+      setPrevTokens(newPrevTokens);
+      
       setTokens(topTokens);
       setLastUpdated(new Date());
     } catch (err) {
@@ -119,10 +143,10 @@ export default function ScopePage() {
     }
   };
 
-  // Auto-refresh every 30 seconds
+  // Auto-refresh every 60 seconds (1 minute)
   useEffect(() => {
     fetchTokens();
-    const interval = setInterval(fetchTokens, 30000);
+    const interval = setInterval(fetchTokens, 60000);
     return () => clearInterval(interval);
   }, []);
 
@@ -148,7 +172,7 @@ export default function ScopePage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-4xl font-serif font-bold text-foreground flex items-center gap-3">
-            <Flame className="w-9 h-9 text-orange-500" /> WallStSmith's Scope 🔥
+            <Flame className="w-9 h-9 text-orange-500" /> WallStSmith's Scope 👀
           </h1>
         </div>
         <div className="flex items-center gap-3">
@@ -244,17 +268,17 @@ export default function ScopePage() {
                     </div>
                   </div>
 
-                  {/* Price Change Badge */}
+                  {/* Price Change Badge (1m) */}
                   <Badge
-                    variant={token.priceChange24h >= 0 ? "default" : "destructive"}
+                    variant={token.priceChange1m >= 0 ? "default" : "destructive"}
                     className={
-                      token.priceChange24h >= 0
+                      token.priceChange1m >= 0
                         ? "bg-gains/10 text-gains hover:bg-gains/20 font-semibold"
                         : "bg-losses/10 text-losses hover:bg-losses/20 font-semibold"
                     }
                   >
-                    {token.priceChange24h >= 0 ? "+" : ""}
-                    {token.priceChange24h.toFixed(1)}%
+                    {token.priceChange1m >= 0 ? "+" : ""}
+                    {token.priceChange1m.toFixed(2)}%
                   </Badge>
                 </div>
 
@@ -295,12 +319,11 @@ export default function ScopePage() {
                     <div className="flex items-center gap-2">
                       <div className="flex-1 bg-background rounded-full h-2 overflow-hidden border border-border/50">
                         <div
-                          className={`h-full transition-all ${
-                            token.bondingProgress >= 100
-                              ? "bg-gradient-to-r from-gains to-gains/60"
-                              : "bg-gradient-to-r from-primary to-primary/60"
-                          }`}
-                          style={{ width: `${Math.min(token.bondingProgress, 100)}%` }}
+                          className="h-full transition-all"
+                          style={{
+                            background: `linear-gradient(to right, rgb(16, 185, 129) 0%, rgb(16, 185, 129) ${Math.min(token.bondingProgress, 100)}%, rgb(59, 130, 246) ${Math.min(token.bondingProgress, 100)}%, rgb(59, 130, 246) 100%)`,
+                            width: '100%'
+                          }}
                         ></div>
                       </div>
                       <span className="text-xs font-mono font-bold whitespace-nowrap">
