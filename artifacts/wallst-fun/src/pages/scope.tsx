@@ -19,7 +19,7 @@ interface Token {
 }
 
 const MIN_MCAP = 20_000;
-const POLL_MS = 10 * 60 * 1000; // 10 minutes
+const POLL_MS = 4 * 60 * 1000; // 4 minutes
 
 async function fetchDexScreener(): Promise<Token[]> {
   const boostRes = await fetch("https://api.dexscreener.com/token-boosts/top/v1");
@@ -171,7 +171,7 @@ export default function ScopePage() {
           Last updated: {secondsAgo}s ago ({lastUpdated.toLocaleTimeString()})
           &nbsp;·&nbsp;
           <span className="text-gains/70">
-            sorted by trending rank · DexScreener · ≥$20K mcap only · auto-refreshes every 10m
+            sorted by trending rank · DexScreener · ≥$20K mcap only · auto-refreshes every 4m
           </span>
         </p>
       )}

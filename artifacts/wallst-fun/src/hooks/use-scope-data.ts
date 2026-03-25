@@ -15,7 +15,7 @@ export interface PumpToken {
 }
 
 const MIN_MCAP = 20_000;
-const POLL_INTERVAL = 10 * 60 * 1000; // 10 minutes
+const POLL_INTERVAL = 4 * 60 * 1000; // 4 minutes
 
 // Module-level cache — shared across all hook instances to prevent duplicate fetches
 let moduleCache: PumpToken[] = [];
