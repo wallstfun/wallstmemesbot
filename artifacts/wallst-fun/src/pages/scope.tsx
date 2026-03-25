@@ -19,15 +19,9 @@ interface PumpToken {
 
 const MORALIS_API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJub25jZSI6IjJkOWY2ZmM0LTczZGEtNDEwZC1iYjVlLTk1N2VlMjI4OGU3NCIsIm9yZ0lkIjoiNTA2OTQ1IiwidXNlcklkIjoiNTIxNjE0IiwidHlwZUlkIjoiNjE1MTFhYTYtMTk5ZS00OWVkLThiODktNTc2YjI1NGMxOTkwIiwidHlwZSI6IlBST0pFQ1QiLCJpYXQiOjE3NzQzOTQxMTUsImV4cCI6NDkzMDE1NDExNX0.bPd42MqB0lwTbLivIX-4pFReN-F0LgB3rMplN-UsnHQ";
 
-interface TokenMarketCapHistory {
-  currentMarketCap: number;
-  marketCapFrom5MinAgo: number | undefined;
-  lastRotationTime: number;
-}
-
 export default function ScopePage() {
   const [tokens, setTokens] = useState<PumpToken[]>([]);
-  const marketCapHistoryRef = useRef<Map<string, TokenMarketCapHistory>>(new Map());
+  const previousMarketCaps = useRef<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
@@ -124,44 +118,6 @@ export default function ScopePage() {
 
       const topTokens = uniqueTokens.slice(0, 12);
       
-      // Update market cap history for 5-minute change calculation
-      const now = Date.now();
-      const FIVE_MINUTES = 5 * 60 * 1000;
-      
-      allTokens.forEach(token => {
-        if (token.marketCap) {
-          const existing = marketCapHistoryRef.current.get(token.tokenAddress);
-          
-          if (!existing) {
-            // First time seeing this token
-            marketCapHistoryRef.current.set(token.tokenAddress, {
-              currentMarketCap: token.marketCap,
-              marketCapFrom5MinAgo: undefined,
-              lastRotationTime: now,
-            });
-          } else {
-            // Check if 5 minutes have passed since last rotation
-            const timeSinceRotation = now - existing.lastRotationTime;
-            
-            if (timeSinceRotation >= FIVE_MINUTES) {
-              // Rotate: current becomes 5-min-ago
-              marketCapHistoryRef.current.set(token.tokenAddress, {
-                currentMarketCap: token.marketCap,
-                marketCapFrom5MinAgo: existing.currentMarketCap,
-                lastRotationTime: now,
-              });
-            } else {
-              // Just update current
-              marketCapHistoryRef.current.set(token.tokenAddress, {
-                currentMarketCap: token.marketCap,
-                marketCapFrom5MinAgo: existing.marketCapFrom5MinAgo,
-                lastRotationTime: existing.lastRotationTime,
-              });
-            }
-          }
-        }
-      });
-      
       setTokens(topTokens);
       setLastUpdated(new Date());
     } catch (err) {
@@ -193,29 +149,29 @@ export default function ScopePage() {
     return () => clearInterval(updateTimer);
   }, [lastUpdated]);
 
-  // Recalculate 5-minute market cap % change every 3 seconds
+  // Calculate 1-minute market cap % change after every fetch
   useEffect(() => {
-    const updateTimer = setInterval(() => {
-      setTokens(prevTokens => {
-        return prevTokens.map(token => {
-          const history = marketCapHistoryRef.current.get(token.tokenAddress);
-          
-          if (!history || history.marketCapFrom5MinAgo === undefined) {
-            // No 5-minute-ago data yet
-            return { ...token, priceChange1m: NaN };
-          }
-          
-          // Calculate 5-minute % change
-          const priceChange5m = 
-            ((history.currentMarketCap - history.marketCapFrom5MinAgo) / history.marketCapFrom5MinAgo) * 100;
-          
-          return { ...token, priceChange1m: priceChange5m };
-        });
-      });
-    }, 3000);
+    if (tokens.length === 0) return;
 
-    return () => clearInterval(updateTimer);
-  }, []);
+    setTokens(prevTokens => {
+      const updatedTokens = prevTokens.map(token => {
+        const currentMC = token.marketCap || 0;
+        const prevMC = previousMarketCaps.current[token.tokenAddress];
+
+        let change = NaN;
+        if (prevMC !== undefined && prevMC > 0) {
+          change = ((currentMC - prevMC) / prevMC) * 100;
+        }
+
+        // Always update the previous market cap for next time
+        previousMarketCaps.current[token.tokenAddress] = currentMC;
+
+        return { ...token, priceChange1m: change };
+      });
+
+      return updatedTokens;
+    });
+  }, [lastUpdated]); // Trigger after each fetch (lastUpdated changes once per fetch)
 
   const formatMarketCap = (cap: number | undefined) => {
     if (!cap || cap === 0) return "—";
