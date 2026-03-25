@@ -493,7 +493,7 @@ export default function Dashboard() {
                 )}
               </div>
               <div className="p-3 border-t border-border/50 bg-background/50 text-center">
-                <Link href="/viral-trends" className="text-xs text-primary font-medium hover:underline flex items-center justify-center w-full gap-1">
+                <Link href="/scope" className="text-xs text-primary font-medium hover:underline flex items-center justify-center w-full gap-1">
                   View Full Scope <ExternalLink className="w-3 h-3" />
                 </Link>
               </div>

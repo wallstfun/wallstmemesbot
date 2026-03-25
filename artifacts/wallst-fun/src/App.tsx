@@ -22,7 +22,7 @@ function Router() {
         <Route path="/live-trades" component={LiveTradesPage} />
         <Route path="/portfolio" component={PortfolioPage} />
         <Route path="/x-feed" component={XFeedPage} />
-        <Route path="/viral-trends" component={ScopePage} />
+        <Route path="/scope" component={ScopePage} />
         <Route path="/agent-bio" component={AgentBioPage} />
         <Route component={NotFound} />
       </Switch>
