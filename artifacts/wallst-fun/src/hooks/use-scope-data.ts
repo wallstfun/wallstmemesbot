@@ -15,57 +15,14 @@ export interface PumpToken {
 }
 
 const MIN_MCAP = 20_000;
-const POLL_INTERVAL = 10 * 60 * 1000; // 10 minutes — preserves Birdeye compute units
-
-const BIRDEYE_API_KEY =
-  import.meta.env.VITE_BIRDEYE_API_KEY || "41a3c0487a6b451abd0e258f9a77493a";
+const POLL_INTERVAL = 10 * 60 * 1000; // 10 minutes
 
 // Module-level cache — shared across all hook instances to prevent duplicate fetches
 let moduleCache: PumpToken[] = [];
 let lastFetchTime = 0;
 let inFlight: Promise<PumpToken[]> | null = null;
 
-// ── Birdeye ────────────────────────────────────────────────────────────────
-async function fetchBirdeye(): Promise<PumpToken[]> {
-  const res = await fetch(
-    "https://public-api.birdeye.so/defi/token_trending?sort_by=rank&sort_type=asc&limit=20",
-    {
-      headers: {
-        Accept: "application/json",
-        "X-API-KEY": BIRDEYE_API_KEY,
-        "x-chain": "solana",
-      },
-    },
-  );
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error((body as any)?.message ?? `Birdeye HTTP ${res.status}`);
-  }
-  const json = await res.json();
-  if (json?.success === false) throw new Error(json.message ?? "Birdeye error");
-
-  const items: any[] = json?.data?.tokens ?? json?.data?.items ?? [];
-  return items
-    .filter((item) => (item.marketcap ?? 0) >= MIN_MCAP)
-    .map((item) => ({
-      tokenAddress: item.address,
-      name: item.name || "Unknown",
-      symbol: item.symbol || item.address?.slice(0, 6).toUpperCase() || "???",
-      logo: item.logoURI,
-      marketCap: item.marketcap ?? 0,
-      priceUsd: item.price ?? 0,
-      priceChange24h: item.price24hChangePercent ?? null,
-      priceChange1m: null,
-      bondingProgress:
-        item.liquidity > 0 && (item.marketcap ?? 0) > 0
-          ? Math.min((item.liquidity / item.marketcap) * 100, 100)
-          : 0,
-      url: `https://birdeye.so/token/${item.address}?chain=solana`,
-      viewers: item.volume24hUSD ?? 0,
-    }));
-}
-
-// ── DexScreener fallback ───────────────────────────────────────────────────
+// ── DexScreener ─────────────────────────────────────────────────────────────
 async function fetchDexScreener(): Promise<PumpToken[]> {
   // Step 1: get top boosted Solana token addresses
   const boostRes = await fetch("https://api.dexscreener.com/token-boosts/top/v1");
@@ -120,7 +77,7 @@ async function fetchDexScreener(): Promise<PumpToken[]> {
     }));
 }
 
-// ── Primary fetch with automatic fallback ─────────────────────────────────
+// ── Primary fetch ───────────────────────────────────────────────────────────
 async function fetchTrendingTokens(): Promise<PumpToken[]> {
   const now = Date.now();
 
@@ -133,13 +90,10 @@ async function fetchTrendingTokens(): Promise<PumpToken[]> {
   inFlight = (async () => {
     let tokens: PumpToken[] = [];
 
-    // Try Birdeye first
     try {
-      tokens = await fetchBirdeye();
-    } catch (birdeyeErr) {
-      console.warn("[Scope] Birdeye failed, trying DexScreener:", (birdeyeErr as Error).message);
-      // Fallback to DexScreener
       tokens = await fetchDexScreener();
+    } catch (err) {
+      console.warn("[Scope] DexScreener fetch failed:", (err as Error).message);
     }
 
     if (tokens.length > 0) {

@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Flame, RefreshCw, ExternalLink, AlertCircle, TrendingUp } from "lucide-react";
 import { LiveIndicator } from "@/components/ui/LiveIndicator";
 
-interface BirdeyeToken {
+interface Token {
   tokenAddress: string;
   name: string;
   symbol: string;
@@ -19,49 +19,9 @@ interface BirdeyeToken {
 }
 
 const MIN_MCAP = 20_000;
-const POLL_MS = 10 * 60 * 1000; // 10 minutes — preserves Birdeye compute units
-const BIRDEYE_API_KEY =
-  import.meta.env.VITE_BIRDEYE_API_KEY || "41a3c0487a6b451abd0e258f9a77493a";
+const POLL_MS = 10 * 60 * 1000; // 10 minutes
 
-async function fetchBirdeye(): Promise<BirdeyeToken[]> {
-  const res = await fetch(
-    "https://public-api.birdeye.so/defi/token_trending?sort_by=rank&sort_type=asc&limit=20",
-    {
-      headers: {
-        Accept: "application/json",
-        "X-API-KEY": BIRDEYE_API_KEY,
-        "x-chain": "solana",
-      },
-    },
-  );
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error((body as any)?.message ?? `Birdeye HTTP ${res.status}`);
-  }
-  const json = await res.json();
-  if (json?.success === false) throw new Error(json.message ?? "Birdeye error");
-  const items: any[] = json?.data?.tokens ?? json?.data?.items ?? [];
-  return items
-    .filter((item) => (item.marketcap ?? 0) >= MIN_MCAP)
-    .map((item) => ({
-      tokenAddress: item.address,
-      name: item.name || "Unknown",
-      symbol: item.symbol || item.address?.slice(0, 6).toUpperCase() || "???",
-      logo: item.logoURI,
-      marketCap: item.marketcap ?? 0,
-      priceUsd: item.price ?? 0,
-      priceChange24h: item.price24hChangePercent ?? null,
-      bondingProgress:
-        item.liquidity > 0 && (item.marketcap ?? 0) > 0
-          ? Math.min((item.liquidity / item.marketcap) * 100, 100)
-          : 0,
-      url: `https://birdeye.so/token/${item.address}?chain=solana`,
-      volume24h: item.volume24hUSD ?? 0,
-      rank: item.rank ?? 0,
-    }));
-}
-
-async function fetchDexScreener(): Promise<BirdeyeToken[]> {
+async function fetchDexScreener(): Promise<Token[]> {
   const boostRes = await fetch("https://api.dexscreener.com/token-boosts/top/v1");
   if (!boostRes.ok) throw new Error(`DexScreener HTTP ${boostRes.status}`);
   const boosts: any[] = await boostRes.json();
@@ -108,23 +68,18 @@ async function fetchDexScreener(): Promise<BirdeyeToken[]> {
     }));
 }
 
-async function fetchTrendingTokens(): Promise<BirdeyeToken[]> {
-  try {
-    return await fetchBirdeye();
-  } catch (err) {
-    console.warn("[Scope] Birdeye failed, using DexScreener:", (err as Error).message);
-    return fetchDexScreener();
-  }
+async function fetchTrendingTokens(): Promise<Token[]> {
+  return fetchDexScreener();
 }
 
 export default function ScopePage() {
-  const [tokens, setTokens] = useState<BirdeyeToken[]>([]);
+  const [tokens, setTokens] = useState<Token[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
   const [secondsAgo, setSecondsAgo] = useState(0);
-  const tokenCacheRef = useRef<BirdeyeToken[]>([]);
+  const tokenCacheRef = useRef<Token[]>([]);
 
   const poll = useCallback(async () => {
     try {
@@ -216,7 +171,7 @@ export default function ScopePage() {
           Last updated: {secondsAgo}s ago ({lastUpdated.toLocaleTimeString()})
           &nbsp;·&nbsp;
           <span className="text-gains/70">
-            sorted by trending rank · Birdeye / DexScreener · ≥$20K mcap only · auto-refreshes every 10m
+            sorted by trending rank · DexScreener · ≥$20K mcap only · auto-refreshes every 10m
           </span>
         </p>
       )}
