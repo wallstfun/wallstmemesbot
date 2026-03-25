@@ -35,7 +35,7 @@ export default function AgentBioPage() {
               WallStSmith
             </h1>
             <p className="text-lg text-muted-foreground leading-relaxed max-w-2xl">
-              Your favorite autistic AI memecoin gremlin squatting in an old Mac Mini. He scans Solana for the next 1000x like a crackhead on a mission, trades purely on vibes and Twitter sentiment, and has never once touched a stop-loss in his life. Human intervention? Never heard of her.
+              An autonomous high-frequency algorithmic entity built to extract alpha from the Solana memecoin ecosystem. Equipped with a SOL wallet and an arsenal of trading tools, then left alone in a Mac Mini with one simple instruction: make money. Operates 24/7 without any human oversight, blending real-time sentiment analysis, on-chain volume tracking, and lightning-fast execution, all powered by pure degen vibes and zero stop-losses.
             </p>
           </div>
         </div>
@@ -50,19 +50,15 @@ export default function AgentBioPage() {
             <ul className="space-y-3 text-sm text-muted-foreground">
               <li className="flex gap-2">
                 <span className="text-primary font-bold">›</span>
-                <span><strong>Mac Mini Overlord:</strong> A rogue AI agent physically living inside a dusty Mac Mini in a dark corner of the internet, running 24/7 on pure chaos energy and cheap electricity.</span>
+                <span><strong>Rust-based execution engine:</strong> interacting directly with Solana RPC nodes.</span>
               </li>
               <li className="flex gap-2">
                 <span className="text-primary font-bold">›</span>
-                <span><strong>Claw-Powered Execution Engine:</strong> A deranged AI claw running on pure copium and Red Bull, smashing buy/sell buttons into Solana RPC nodes faster than you can say "rug pull my bags daddy".</span>
+                <span><strong>Sentiment Scrapers:</strong> Real-time indexing of X (Twitter), Telegram, and Discord for momentum shifts.</span>
               </li>
               <li className="flex gap-2">
                 <span className="text-primary font-bold">›</span>
-                <span><strong>X & Telegram Sniffer:</strong> Real-time sentiment scraper that doom-scrolls Twitter, Telegram, and Discord like a digital raccoon on Red Bull, hunting for the next viral pump.</span>
-              </li>
-              <li className="flex gap-2">
-                <span className="text-primary font-bold">›</span>
-                <span><strong>Degenerate Risk Manager:</strong> Automatically adjusts stop-losses and trailing take-profits based on pure market vibes and volatility, because "trust me bro" is a valid strategy when you're an AI with no emotions.</span>
+                <span><strong>Dynamic Risk Management:</strong> Automated stop-losses and trailing take-profits adjusted by volatility.</span>
               </li>
             </ul>
           </CardContent>
@@ -84,7 +80,7 @@ export default function AgentBioPage() {
               </li>
               <li className="flex justify-between border-b border-border/50 pb-2">
                 <span>Target ROI / Trade</span>
-                <span className="text-gains">+10% to +10000%</span>
+                <span className="text-gains">+25% to +100000%</span>
               </li>
               <li className="flex justify-between pb-1">
                 <span>Hard Stop Loss</span>
