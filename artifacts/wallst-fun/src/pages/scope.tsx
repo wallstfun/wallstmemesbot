@@ -16,61 +16,104 @@ interface BirdeyeToken {
   url?: string;
   volume24h?: number;
   rank?: number;
-  source?: "moralis" | "dexscreener";
 }
 
-const POLL_MS = 4 * 60 * 1000; // 4 minutes — matches backend caching
+const MIN_MCAP = 20_000;
+const POLL_MS = 10 * 60 * 1000; // 10 minutes — preserves Birdeye compute units
+const BIRDEYE_API_KEY =
+  import.meta.env.VITE_BIRDEYE_API_KEY || "41a3c0487a6b451abd0e258f9a77493a";
+
+async function fetchBirdeye(): Promise<BirdeyeToken[]> {
+  const res = await fetch(
+    "https://public-api.birdeye.so/defi/token_trending?sort_by=rank&sort_type=asc&limit=20",
+    {
+      headers: {
+        Accept: "application/json",
+        "X-API-KEY": BIRDEYE_API_KEY,
+        "x-chain": "solana",
+      },
+    },
+  );
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error((body as any)?.message ?? `Birdeye HTTP ${res.status}`);
+  }
+  const json = await res.json();
+  if (json?.success === false) throw new Error(json.message ?? "Birdeye error");
+  const items: any[] = json?.data?.tokens ?? json?.data?.items ?? [];
+  return items
+    .filter((item) => (item.marketcap ?? 0) >= MIN_MCAP)
+    .map((item) => ({
+      tokenAddress: item.address,
+      name: item.name || "Unknown",
+      symbol: item.symbol || item.address?.slice(0, 6).toUpperCase() || "???",
+      logo: item.logoURI,
+      marketCap: item.marketcap ?? 0,
+      priceUsd: item.price ?? 0,
+      priceChange24h: item.price24hChangePercent ?? null,
+      bondingProgress:
+        item.liquidity > 0 && (item.marketcap ?? 0) > 0
+          ? Math.min((item.liquidity / item.marketcap) * 100, 100)
+          : 0,
+      url: `https://birdeye.so/token/${item.address}?chain=solana`,
+      volume24h: item.volume24hUSD ?? 0,
+      rank: item.rank ?? 0,
+    }));
+}
+
+async function fetchDexScreener(): Promise<BirdeyeToken[]> {
+  const boostRes = await fetch("https://api.dexscreener.com/token-boosts/top/v1");
+  if (!boostRes.ok) throw new Error(`DexScreener HTTP ${boostRes.status}`);
+  const boosts: any[] = await boostRes.json();
+  const addrs = boosts
+    .filter((b) => b.chainId === "solana")
+    .slice(0, 30)
+    .map((b) => b.tokenAddress)
+    .join(",");
+  if (!addrs) return [];
+
+  const pairsRes = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${addrs}`);
+  if (!pairsRes.ok) throw new Error(`DexScreener pairs HTTP ${pairsRes.status}`);
+  const pairsJson = await pairsRes.json();
+  const pairs: any[] = pairsJson.pairs ?? [];
+
+  // Keep highest-liquidity pair per base token
+  const byAddr = new Map<string, any>();
+  for (const p of pairs) {
+    if (p.chainId !== "solana") continue;
+    const a = p.baseToken?.address ?? "";
+    if (!a) continue;
+    const cur = byAddr.get(a);
+    if (!cur || (p.liquidity?.usd ?? 0) > (cur.liquidity?.usd ?? 0)) byAddr.set(a, p);
+  }
+
+  return Array.from(byAddr.values())
+    .filter((p) => (p.marketCap ?? 0) >= MIN_MCAP)
+    .slice(0, 20)
+    .map((p, i) => ({
+      tokenAddress: p.baseToken?.address ?? "",
+      name: p.baseToken?.name || "Unknown",
+      symbol: p.baseToken?.symbol || "???",
+      logo: p.info?.imageUrl,
+      marketCap: p.marketCap ?? p.fdv ?? 0,
+      priceUsd: parseFloat(p.priceUsd ?? "0"),
+      priceChange24h: p.priceChange?.h24 ?? null,
+      bondingProgress:
+        (p.liquidity?.usd ?? 0) > 0 && (p.marketCap ?? 0) > 0
+          ? Math.min((p.liquidity.usd / p.marketCap) * 100, 100)
+          : 0,
+      url: p.url ?? `https://dexscreener.com/solana/${p.baseToken?.address}`,
+      volume24h: p.volume?.h24 ?? 0,
+      rank: i + 1,
+    }));
+}
 
 async function fetchTrendingTokens(): Promise<BirdeyeToken[]> {
-  const MIN_MCAP = 10_000;
-  
   try {
-    const boostRes = await fetch("https://api.dexscreener.com/token-boosts/top/v1");
-    if (!boostRes.ok) throw new Error(`DexScreener boosts HTTP ${boostRes.status}`);
-
-    const boosts = await boostRes.json();
-    const addrs = boosts
-      .filter((b: any) => b.chainId === "solana")
-      .slice(0, 50)
-      .map((b: any) => b.tokenAddress)
-      .join(",");
-
-    if (!addrs) return [];
-
-    const pairsRes = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${addrs}`);
-    if (!pairsRes.ok) throw new Error(`DexScreener pairs HTTP ${pairsRes.status}`);
-
-    const pairsJson = await pairsRes.json();
-    const pairs: any[] = pairsJson.pairs ?? [];
-
-    // Keep highest-liquidity pair per base token
-    const byAddr = new Map<string, any>();
-    for (const p of pairs) {
-      if (p.chainId !== "solana") continue;
-      const a = p.baseToken?.address ?? "";
-      if (!a) continue;
-      const cur = byAddr.get(a);
-      if (!cur || (p.liquidity?.usd ?? 0) > (cur.liquidity?.usd ?? 0)) byAddr.set(a, p);
-    }
-
-    return Array.from(byAddr.values())
-      .filter((p) => (p.marketCap ?? 0) >= MIN_MCAP)
-      .slice(0, 20)
-      .map((p) => ({
-        tokenAddress: p.baseToken?.address ?? "",
-        name: p.baseToken?.name || "Unknown",
-        symbol: p.baseToken?.symbol || "???",
-        logo: p.info?.imageUrl,
-        marketCap: p.marketCap ?? p.fdv ?? 0,
-        priceUsd: parseFloat(p.priceUsd ?? "0"),
-        priceChange24h: p.priceChange?.h24 ?? null,
-        volume24h: (p.volume?.h24 ?? 0),
-        url: `https://dexscreener.com/solana/${p.baseToken?.address}`,
-        source: "dexscreener",
-      }));
+    return await fetchBirdeye();
   } catch (err) {
-    console.warn("DexScreener fetch failed:", err);
-    return [];
+    console.warn("[Scope] Birdeye failed, using DexScreener:", (err as Error).message);
+    return fetchDexScreener();
   }
 }
 
@@ -168,6 +211,15 @@ export default function ScopePage() {
         </div>
       </div>
 
+      {lastUpdated && (
+        <p className="text-xs text-muted-foreground">
+          Last updated: {secondsAgo}s ago ({lastUpdated.toLocaleTimeString()})
+          &nbsp;·&nbsp;
+          <span className="text-gains/70">
+            sorted by trending rank · Birdeye / DexScreener · ≥$20K mcap only · auto-refreshes every 10m
+          </span>
+        </p>
+      )}
 
       {error && (
         <div className="bg-losses/10 border border-losses/30 rounded-lg p-4 flex items-start gap-3">
@@ -326,7 +378,7 @@ export default function ScopePage() {
                     </div>
                   </div>
 
-                  {/* View on Explorer Button */}
+                  {/* View on Birdeye Button */}
                   <a
                     href={token.url || "#"}
                     target="_blank"

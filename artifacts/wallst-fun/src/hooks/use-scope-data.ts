@@ -12,84 +12,147 @@ export interface PumpToken {
   bondingProgress?: number;
   url?: string;
   viewers?: number;
-  source?: "moralis" | "dexscreener";
 }
 
-const POLL_INTERVAL = 4 * 60 * 1000; // 4 minutes — matches backend caching
+const MIN_MCAP = 20_000;
+const POLL_INTERVAL = 10 * 60 * 1000; // 10 minutes — preserves Birdeye compute units
+
+const BIRDEYE_API_KEY =
+  import.meta.env.VITE_BIRDEYE_API_KEY || "41a3c0487a6b451abd0e258f9a77493a";
 
 // Module-level cache — shared across all hook instances to prevent duplicate fetches
 let moduleCache: PumpToken[] = [];
 let lastFetchTime = 0;
 let inFlight: Promise<PumpToken[]> | null = null;
 
-// ── DexScreener API (Direct) ────────────────────────────────────────────────
+// ── Birdeye ────────────────────────────────────────────────────────────────
+async function fetchBirdeye(): Promise<PumpToken[]> {
+  const res = await fetch(
+    "https://public-api.birdeye.so/defi/token_trending?sort_by=rank&sort_type=asc&limit=20",
+    {
+      headers: {
+        Accept: "application/json",
+        "X-API-KEY": BIRDEYE_API_KEY,
+        "x-chain": "solana",
+      },
+    },
+  );
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error((body as any)?.message ?? `Birdeye HTTP ${res.status}`);
+  }
+  const json = await res.json();
+  if (json?.success === false) throw new Error(json.message ?? "Birdeye error");
+
+  const items: any[] = json?.data?.tokens ?? json?.data?.items ?? [];
+  return items
+    .filter((item) => (item.marketcap ?? 0) >= MIN_MCAP)
+    .map((item) => ({
+      tokenAddress: item.address,
+      name: item.name || "Unknown",
+      symbol: item.symbol || item.address?.slice(0, 6).toUpperCase() || "???",
+      logo: item.logoURI,
+      marketCap: item.marketcap ?? 0,
+      priceUsd: item.price ?? 0,
+      priceChange24h: item.price24hChangePercent ?? null,
+      priceChange1m: null,
+      bondingProgress:
+        item.liquidity > 0 && (item.marketcap ?? 0) > 0
+          ? Math.min((item.liquidity / item.marketcap) * 100, 100)
+          : 0,
+      url: `https://birdeye.so/token/${item.address}?chain=solana`,
+      viewers: item.volume24hUSD ?? 0,
+    }));
+}
+
+// ── DexScreener fallback ───────────────────────────────────────────────────
+async function fetchDexScreener(): Promise<PumpToken[]> {
+  // Step 1: get top boosted Solana token addresses
+  const boostRes = await fetch("https://api.dexscreener.com/token-boosts/top/v1");
+  if (!boostRes.ok) throw new Error(`DexScreener boosts HTTP ${boostRes.status}`);
+  const boosts: any[] = await boostRes.json();
+
+  const solanaAddresses = boosts
+    .filter((b) => b.chainId === "solana")
+    .slice(0, 30)
+    .map((b) => b.tokenAddress);
+
+  if (solanaAddresses.length === 0) return [];
+
+  // Step 2: fetch pair data (price, marketCap, etc.) for those addresses
+  const pairsRes = await fetch(
+    `https://api.dexscreener.com/latest/dex/tokens/${solanaAddresses.join(",")}`,
+  );
+  if (!pairsRes.ok) throw new Error(`DexScreener pairs HTTP ${pairsRes.status}`);
+  const pairsJson = await pairsRes.json();
+  const pairs: any[] = pairsJson.pairs ?? [];
+
+  // Group by base token address, keep highest-liquidity pair per token
+  const byAddress = new Map<string, any>();
+  for (const pair of pairs) {
+    if (pair.chainId !== "solana") continue;
+    const addr = pair.baseToken?.address ?? "";
+    if (!addr) continue;
+    const existing = byAddress.get(addr);
+    if (!existing || (pair.liquidity?.usd ?? 0) > (existing.liquidity?.usd ?? 0)) {
+      byAddress.set(addr, pair);
+    }
+  }
+
+  return Array.from(byAddress.values())
+    .filter((p) => (p.marketCap ?? 0) >= MIN_MCAP)
+    .slice(0, 20)
+    .map((p) => ({
+      tokenAddress: p.baseToken?.address ?? "",
+      name: p.baseToken?.name || "Unknown",
+      symbol: p.baseToken?.symbol || "???",
+      logo: p.info?.imageUrl,
+      marketCap: p.marketCap ?? p.fdv ?? 0,
+      priceUsd: parseFloat(p.priceUsd ?? "0"),
+      priceChange24h: p.priceChange?.h24 ?? null,
+      priceChange1m: null,
+      bondingProgress:
+        (p.liquidity?.usd ?? 0) > 0 && (p.marketCap ?? 0) > 0
+          ? Math.min(((p.liquidity.usd) / p.marketCap) * 100, 100)
+          : 0,
+      url: p.url ?? `https://dexscreener.com/solana/${p.baseToken?.address}`,
+      viewers: p.volume?.h24 ?? 0,
+    }));
+}
+
+// ── Primary fetch with automatic fallback ─────────────────────────────────
 async function fetchTrendingTokens(): Promise<PumpToken[]> {
-  const MIN_MCAP = 10_000;
+  const now = Date.now();
 
-  try {
-    const boostRes = await fetch("https://api.dexscreener.com/token-boosts/top/v1");
-    if (!boostRes.ok) throw new Error(`DexScreener boosts HTTP ${boostRes.status}`);
+  if (moduleCache.length > 0 && now - lastFetchTime < POLL_INTERVAL) {
+    return moduleCache;
+  }
 
-    const boosts = await boostRes.json();
-    const addrs = boosts
-      .filter((b: any) => b.chainId === "solana")
-      .slice(0, 50)
-      .map((b: any) => b.tokenAddress)
-      .join(",");
+  if (inFlight) return inFlight;
 
-    if (!addrs) return [];
+  inFlight = (async () => {
+    let tokens: PumpToken[] = [];
 
-    const pairsRes = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${addrs}`);
-    if (!pairsRes.ok) throw new Error(`DexScreener pairs HTTP ${pairsRes.status}`);
-
-    const pairsJson = await pairsRes.json();
-    const pairs: any[] = pairsJson.pairs ?? [];
-
-    // Keep highest-liquidity pair per base token
-    const byAddr = new Map<string, any>();
-    for (const p of pairs) {
-      if (p.chainId !== "solana") continue;
-      const a = p.baseToken?.address ?? "";
-      if (!a) continue;
-      const cur = byAddr.get(a);
-      if (!cur || (p.liquidity?.usd ?? 0) > (cur.liquidity?.usd ?? 0)) byAddr.set(a, p);
+    // Try Birdeye first
+    try {
+      tokens = await fetchBirdeye();
+    } catch (birdeyeErr) {
+      console.warn("[Scope] Birdeye failed, trying DexScreener:", (birdeyeErr as Error).message);
+      // Fallback to DexScreener
+      tokens = await fetchDexScreener();
     }
 
-    const tokens = Array.from(byAddr.values())
-      .filter((p) => (p.marketCap ?? 0) >= MIN_MCAP)
-      .slice(0, 20)
-      .map((p) => ({
-        tokenAddress: p.baseToken?.address ?? "",
-        name: p.baseToken?.name || "Unknown",
-        symbol: p.baseToken?.symbol || "???",
-        logo: p.info?.imageUrl,
-        marketCap: p.marketCap ?? p.fdv ?? 0,
-        priceUsd: parseFloat(p.priceUsd ?? "0"),
-        priceChange24h: p.priceChange?.h24 ?? null,
-        volume24h: (p.volume?.h24 ?? 0),
-        url: `https://dexscreener.com/solana/${p.baseToken?.address}`,
-        source: "dexscreener",
-      }));
+    if (tokens.length > 0) {
+      moduleCache = tokens;
+      lastFetchTime = Date.now();
+    }
 
-    // Map to PumpToken interface
-    return tokens.map((item) => ({
-      tokenAddress: item.tokenAddress || "",
-      name: item.name || "Unknown",
-      symbol: item.symbol || "???",
-      logo: item.logo,
-      marketCap: item.marketCap ?? 0,
-      priceUsd: item.priceUsd ?? 0,
-      priceChange24h: item.priceChange24h ?? null,
-      priceChange1m: null,
-      bondingProgress: 0,
-      url: item.url || "#",
-      viewers: item.volume24h ?? 0,
-      source: item.source,
-    }));
-  } catch (err) {
-    console.warn("DexScreener fetch failed:", err);
-    return [];
-  }
+    return tokens.length > 0 ? tokens : moduleCache;
+  })().finally(() => {
+    inFlight = null;
+  });
+
+  return inFlight;
 }
 
 // ── Hook ──────────────────────────────────────────────────────────────────

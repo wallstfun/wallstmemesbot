@@ -11,6 +11,7 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { format, formatDistanceToNow } from "date-fns";
 import { ArrowUpRight, ArrowDownRight, Wallet, Activity, Target, Zap, ExternalLink, Heart, Repeat2, MessageCircle, Eye, MessageSquare, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useXFeedReal } from "@/hooks/use-x-feed";
 
 function fmt(n: number): string {
   if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + "M";
@@ -19,12 +20,61 @@ function fmt(n: number): string {
 }
 
 function LatestTweet() {
+  const { tweets, loading } = useXFeedReal(1);
+  const tweet = tweets[0];
+
+  if (loading && !tweet) {
+    return (
+      <div className="flex items-center justify-center h-full gap-2 text-muted-foreground text-sm p-4">
+        <Loader2 className="w-4 h-4 animate-spin" /> Loading…
+      </div>
+    );
+  }
+
+  if (!tweet) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full gap-2 text-muted-foreground p-4">
+        <MessageSquare className="w-6 h-6 opacity-30" />
+        <p className="text-xs">No posts yet</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="flex flex-col items-center justify-center h-full gap-3 text-muted-foreground p-4">
-      <MessageSquare className="w-8 h-8 opacity-40" />
-      <div className="text-center">
-        <p className="text-sm font-medium">X Feed Coming Soon</p>
-        <p className="text-xs text-muted-foreground/70 mt-1">Setup in progress for @WallstM99224</p>
+    <div className="p-4 flex flex-col gap-3 h-full">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <img
+            src={`${import.meta.env.BASE_URL}images/agent-avatar.jpg`}
+            alt="WallStSmith"
+            className="w-7 h-7 rounded-full border border-primary/20 object-cover"
+            onError={(e) => { e.currentTarget.style.display = "none"; }}
+          />
+          <div>
+            <span className="text-xs font-bold text-foreground">WallStSmith</span>
+            <span className="text-xs text-muted-foreground ml-1">@WallstM99224</span>
+          </div>
+        </div>
+        <a
+          href={tweet.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-[10px] text-muted-foreground hover:text-primary transition-colors flex items-center gap-1"
+        >
+          {formatDistanceToNow(tweet.timestamp, { addSuffix: true })}
+          <ExternalLink className="w-2.5 h-2.5" />
+        </a>
+      </div>
+
+      <p className="text-sm text-foreground/90 leading-relaxed flex-1 overflow-hidden line-clamp-5">
+        {tweet.text}
+      </p>
+
+      <div className="flex items-center gap-4 text-xs text-muted-foreground font-mono border-t border-border/30 pt-2">
+        <span className="flex items-center gap-1"><MessageCircle className="w-3 h-3" /> {fmt(tweet.replies)}</span>
+        <span className="flex items-center gap-1"><Repeat2 className="w-3 h-3" /> {fmt(tweet.retweets)}</span>
+        <span className="flex items-center gap-1"><Heart className="w-3 h-3" /> {fmt(tweet.likes)}</span>
+        {tweet.views > 0 && <span className="flex items-center gap-1"><Eye className="w-3 h-3" /> {fmt(tweet.views)}</span>}
       </div>
     </div>
   );
@@ -41,6 +91,7 @@ export default function Dashboard() {
 
   // Real SOL Price from CoinGecko API
   const [solPrice, setSolPrice] = useState(() => {
+    // Load from localStorage on mount
     const cached = localStorage.getItem('wallst-sol-price');
     if (cached) {
       try {
@@ -52,7 +103,6 @@ export default function Dashboard() {
     }
     return 0;
   });
-  const [priceChange1h, setPriceChange1h] = useState(0);
   const [isLive, setIsLive] = useState(false);
 
   useEffect(() => {
@@ -62,21 +112,22 @@ export default function Dashboard() {
       try {
         console.log('[wallst.fun] Fetching SOL price from CoinGecko...');
         
-        const res = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd&include_market_cap=false&include_24hr_vol=false&include_24hr_change=true');
+        const res = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd');
         const data = await res.json();
 
         if (data.solana?.usd) {
           setSolPrice(data.solana.usd);
-          setPriceChange1h(data.solana?.usd_24h_change ?? 0);
           setIsLive(true);
           console.log('[wallst.fun] SOL price updated:', data.solana.usd);
-          localStorage.setItem('wallst-sol-price', JSON.stringify({ price: data.solana.usd, change1h: data.solana?.usd_24h_change ?? 0, timestamp: Date.now() }));
+          // Update the ticker in RootLayout via localStorage
+          localStorage.setItem('wallst-sol-price', JSON.stringify({ price: data.solana.usd, timestamp: Date.now() }));
         } else {
           throw new Error('Invalid price data');
         }
       } catch (error) {
         console.error('[wallst.fun] Failed to fetch SOL price:', error);
         setIsLive(false);
+        // Retry once after 8 seconds on failure
         retryTimeout = setTimeout(() => {
           console.log('[wallst.fun] Retrying SOL price fetch...');
           fetchPrice();
@@ -84,19 +135,19 @@ export default function Dashboard() {
       }
     };
 
+    // Load cached price on mount
     const cached = localStorage.getItem('wallst-sol-price');
     if (cached) {
       try {
-        const { price, change1h } = JSON.parse(cached);
+        const { price } = JSON.parse(cached);
         if (price) setSolPrice(price);
-        if (change1h !== undefined) setPriceChange1h(change1h);
       } catch (e) {
         // Ignore parse errors
       }
     }
 
     fetchPrice();
-    const interval = setInterval(fetchPrice, 60000);
+    const interval = setInterval(fetchPrice, 60000); // every 60 seconds (well under 30 calls/min rate limit)
 
     return () => {
       clearInterval(interval);
@@ -176,16 +227,9 @@ export default function Dashboard() {
             <p className="text-3xl font-bold font-mono text-foreground">
               ${solPrice > 0 ? solPrice.toFixed(2) : '—'}
             </p>
-            <div className="flex items-center justify-between">
-              <p className="text-xs font-medium text-gains">
-                ● CoinGecko • {isLive ? 'Live' : 'Last updated'}
-              </p>
-              {priceChange1h !== 0 && (
-                <span className={`text-xs font-medium ${priceChange1h >= 0 ? 'text-gains' : 'text-losses'}`}>
-                  {priceChange1h >= 0 ? '+' : ''}{priceChange1h.toFixed(2)}%
-                </span>
-              )}
-            </div>
+            <p className={`text-xs font-medium ${isLive ? 'text-gains' : 'text-losses'}`}>
+              ● CoinGecko • {isLive ? 'Live' : 'Last updated'}
+            </p>
           </div>
         </div>
 
