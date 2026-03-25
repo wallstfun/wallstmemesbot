@@ -164,16 +164,11 @@ export function RootLayout({ children }: { children: React.ReactNode }) {
 
       {/* Footer */}
       <footer className="border-t border-border bg-card py-8 mt-auto">
-        <div className="container mx-auto px-4 max-w-7xl flex flex-col md:flex-row items-center justify-between gap-4">
+        <div className="container mx-auto px-4 max-w-7xl flex items-center justify-center gap-4">
           <div className="flex items-baseline gap-1 opacity-50 hover:opacity-100 transition-opacity">
             <span className="font-serif text-lg font-bold">wallst</span>
             <span className="font-sans text-md">.fun</span>
           </div>
-          
-          <div className="text-sm text-muted-foreground flex items-center gap-4 font-mono">
-            <span>Agent Wallet: {WALLET}</span>
-          </div>
-          
         </div>
       </footer>
     </div>
