@@ -67,7 +67,10 @@ export default function ScopePage() {
           if (token.tokenAddress && token.symbol) {
             const priceUsd = parseFloat(token.priceUsd) || 0;
             const prevPrice = prevTokensRef.current.get(token.tokenAddress);
-            const priceChange1m = prevPrice ? ((priceUsd - prevPrice) / prevPrice) * 100 : 0;
+            // Use NaN to represent "first fetch" (no previous price)
+            const priceChange1m = prevPrice !== undefined 
+              ? ((priceUsd - prevPrice) / prevPrice) * 100 
+              : NaN;
             
             allTokens.push({
               tokenAddress: token.tokenAddress,
@@ -95,7 +98,10 @@ export default function ScopePage() {
           if (token.tokenAddress && token.symbol) {
             const priceUsd = parseFloat(token.priceUsd) || 0;
             const prevPrice = prevTokensRef.current.get(token.tokenAddress);
-            const priceChange1m = prevPrice ? ((priceUsd - prevPrice) / prevPrice) * 100 : 0;
+            // Use NaN to represent "first fetch" (no previous price)
+            const priceChange1m = prevPrice !== undefined 
+              ? ((priceUsd - prevPrice) / prevPrice) * 100 
+              : NaN;
             
             allTokens.push({
               tokenAddress: token.tokenAddress,
@@ -119,9 +125,7 @@ export default function ScopePage() {
         new Map(allTokens.map((token) => [token.tokenAddress, token])).values()
       ).sort((a, b) => (b.marketCap || 0) - (a.marketCap || 0));
 
-      console.log("[wallst.fun] Total unique tokens:", uniqueTokens.length);
       const topTokens = uniqueTokens.slice(0, 12);
-      console.log("[wallst.fun] Top 12 tokens loaded");
       
       // Update prev prices for next fetch (using ref for immediate availability)
       // Save ALL tokens' prices, not just top 12
@@ -270,17 +274,23 @@ export default function ScopePage() {
                   </div>
 
                   {/* Price Change Badge (1m) */}
-                  <Badge
-                    variant={token.priceChange1m >= 0 ? "default" : "destructive"}
-                    className={
-                      token.priceChange1m >= 0
-                        ? "bg-gains/10 text-gains hover:bg-gains/20 font-semibold"
-                        : "bg-losses/10 text-losses hover:bg-losses/20 font-semibold"
-                    }
-                  >
-                    {token.priceChange1m >= 0 ? "+" : ""}
-                    {token.priceChange1m.toFixed(2)}%
-                  </Badge>
+                  {Number.isNaN(token.priceChange1m) ? (
+                    <Badge variant="outline" className="bg-muted/10 text-muted-foreground font-semibold">
+                      —
+                    </Badge>
+                  ) : (
+                    <Badge
+                      variant={token.priceChange1m >= 0 ? "default" : "destructive"}
+                      className={
+                        token.priceChange1m >= 0
+                          ? "bg-gains/10 text-gains hover:bg-gains/20 font-semibold"
+                          : "bg-losses/10 text-losses hover:bg-losses/20 font-semibold"
+                      }
+                    >
+                      {token.priceChange1m >= 0 ? "+" : ""}
+                      {token.priceChange1m.toFixed(2)}%
+                    </Badge>
+                  )}
                 </div>
 
                 <div className="space-y-3">
