@@ -1,28 +1,20 @@
-import { NextResponse } from 'next/server';
+import express from 'express';
+import cors from 'cors';
 
-export const dynamic = 'force-dynamic';
+const app = express();
+const PORT = process.env.PORT || 3001;
+
+app.use(cors());
+app.use(express.json());
 
 const MORALIS_API_KEY = process.env.MORALIS_API_KEY;
 const MIN_MCAP = 10_000;
 const CACHE_TTL = 4 * 60 * 1000; // 4 minutes
 
-interface TrendingToken {
-  tokenAddress: string;
-  name: string;
-  symbol: string;
-  logo?: string;
-  marketCap?: number;
-  priceChange24h?: number | null;
-  priceUsd?: number;
-  volume24h?: number;
-  url?: string;
-  source: 'moralis' | 'dexscreener';
-}
-
-let cachedTokens: TrendingToken[] = [];
+let cachedTokens = [];
 let lastFetchTime = 0;
 
-async function fetchMoralis(): Promise<TrendingToken[]> {
+async function fetchMoralis() {
   if (!MORALIS_API_KEY) {
     console.warn('MORALIS_API_KEY not set, skipping Moralis fetch');
     return [];
@@ -34,8 +26,8 @@ async function fetchMoralis(): Promise<TrendingToken[]> {
       'https://solana-gateway.moralis.io/token/mainnet/trending',
     ];
 
-    let res: Response | null = null;
-    let lastError: Error | null = null;
+    let res = null;
+    let lastError = null;
 
     for (const endpoint of endpoints) {
       try {
@@ -47,19 +39,19 @@ async function fetchMoralis(): Promise<TrendingToken[]> {
         });
         if (res.ok) break;
       } catch (e) {
-        lastError = e as Error;
+        lastError = e;
       }
     }
 
     if (!res || !res.ok) {
       const body = await res?.json().catch(() => ({}));
       throw new Error(
-        `Moralis HTTP ${res?.status ?? 0}: ${(body as any)?.message ?? lastError?.message ?? 'Unknown error'}`
+        `Moralis HTTP ${res?.status ?? 0}: ${body?.message ?? lastError?.message ?? 'Unknown error'}`
       );
     }
 
     const json = await res.json();
-    const items: any[] = json?.tokens ?? json?.data ?? [];
+    const items = json?.tokens ?? json?.data ?? [];
 
     return items
       .filter((item) => (item.marketCap ?? 0) >= MIN_MCAP)
@@ -74,7 +66,7 @@ async function fetchMoralis(): Promise<TrendingToken[]> {
         priceChange24h: item.priceChange24h ?? null,
         volume24h: item.volume24h ?? 0,
         url: `https://moralis.io/token/${item.address}?chain=solana`,
-        source: 'moralis' as const,
+        source: 'moralis',
       }));
   } catch (err) {
     console.warn('Moralis fetch failed:', err);
@@ -82,12 +74,12 @@ async function fetchMoralis(): Promise<TrendingToken[]> {
   }
 }
 
-async function fetchDexScreener(): Promise<TrendingToken[]> {
+async function fetchDexScreener() {
   try {
     const boostRes = await fetch('https://api.dexscreener.com/token-boosts/top/v1');
     if (!boostRes.ok) throw new Error(`DexScreener boosts HTTP ${boostRes.status}`);
 
-    const boosts: any[] = await boostRes.json();
+    const boosts = await boostRes.json();
     const addrs = boosts
       .filter((b) => b.chainId === 'solana')
       .slice(0, 50)
@@ -100,10 +92,10 @@ async function fetchDexScreener(): Promise<TrendingToken[]> {
     if (!pairsRes.ok) throw new Error(`DexScreener pairs HTTP ${pairsRes.status}`);
 
     const pairsJson = await pairsRes.json();
-    const pairs: any[] = pairsJson.pairs ?? [];
+    const pairs = pairsJson.pairs ?? [];
 
     // Keep highest-liquidity pair per base token
-    const byAddr = new Map<string, any>();
+    const byAddr = new Map();
     for (const p of pairs) {
       if (p.chainId !== 'solana') continue;
       const a = p.baseToken?.address ?? '';
@@ -123,9 +115,9 @@ async function fetchDexScreener(): Promise<TrendingToken[]> {
         marketCap: p.marketCap ?? p.fdv ?? 0,
         priceUsd: parseFloat(p.priceUsd ?? '0'),
         priceChange24h: p.priceChange?.h24 ?? null,
-        volume24h: (p.volume?.h24 ?? 0) as number,
+        volume24h: (p.volume?.h24 ?? 0),
         url: `https://dexscreener.com/solana/${p.baseToken?.address}`,
-        source: 'dexscreener' as const,
+        source: 'dexscreener',
       }));
   } catch (err) {
     console.warn('DexScreener fetch failed:', err);
@@ -133,7 +125,7 @@ async function fetchDexScreener(): Promise<TrendingToken[]> {
   }
 }
 
-async function fetchTrendingTokens(): Promise<TrendingToken[]> {
+async function fetchTrendingTokens() {
   const now = Date.now();
 
   // Return cached data if still fresh
@@ -145,12 +137,18 @@ async function fetchTrendingTokens(): Promise<TrendingToken[]> {
   console.log('Fetching fresh trending tokens from Moralis and DexScreener');
 
   // Fetch both in parallel
-  const [moralisTokens, dexscreenerTokens] = await Promise.all([fetchMoralis(), fetchDexScreener()]);
+  const [moralisTokens, dexscreenerTokens] = await Promise.all([
+    fetchMoralis(),
+    fetchDexScreener(),
+  ]);
 
   // Mix: if Moralis has tokens, use top 10 from each; otherwise use top 20 from DexScreener
-  let mixed: TrendingToken[] = [];
+  let mixed = [];
   if (moralisTokens.length > 0) {
-    mixed = [...moralisTokens.slice(0, 10), ...dexscreenerTokens.slice(0, 10)];
+    mixed = [
+      ...moralisTokens.slice(0, 10),
+      ...dexscreenerTokens.slice(0, 10),
+    ];
     console.log(
       `Mixing Moralis (${moralisTokens.length}) and DexScreener (${dexscreenerTokens.length}) tokens`
     );
@@ -160,7 +158,7 @@ async function fetchTrendingTokens(): Promise<TrendingToken[]> {
   }
 
   // Deduplicate by tokenAddress (keep first occurrence)
-  const seen = new Set<string>();
+  const seen = new Set();
   const deduped = mixed.filter((token) => {
     if (seen.has(token.tokenAddress)) return false;
     seen.add(token.tokenAddress);
@@ -174,10 +172,10 @@ async function fetchTrendingTokens(): Promise<TrendingToken[]> {
   return cachedTokens;
 }
 
-export async function GET() {
+app.get('/api/tokens/trending', async (req, res) => {
   try {
     const tokens = await fetchTrendingTokens();
-    return NextResponse.json({
+    res.json({
       tokens,
       count: tokens.length,
       cached: Date.now() - lastFetchTime < CACHE_TTL,
@@ -185,6 +183,14 @@ export async function GET() {
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     console.error('Failed to fetch trending tokens:', err);
-    return NextResponse.json({ error: message, tokens: cachedTokens || [] }, { status: 200 });
+    res.status(200).json({ error: message, tokens: cachedTokens || [] });
   }
-}
+});
+
+app.get('/api/healthz', (req, res) => {
+  res.json({ status: 'ok' });
+});
+
+app.listen(PORT, () => {
+  console.log(`[wallst.fun] Server listening on port ${PORT}`);
+});
