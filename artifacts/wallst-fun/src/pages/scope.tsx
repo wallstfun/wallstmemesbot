@@ -1,120 +1,80 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Flame, RefreshCw, ExternalLink, AlertCircle, MessageCircle } from "lucide-react";
+import { Flame, RefreshCw, ExternalLink, AlertCircle, TrendingUp } from "lucide-react";
 import { LiveIndicator } from "@/components/ui/LiveIndicator";
 
-interface PumpToken {
+interface BirdeyeToken {
   tokenAddress: string;
   name: string;
   symbol: string;
   logo?: string;
   marketCap?: number;
-  priceChange1m?: number | null;
+  priceChange24h?: number | null;
   priceUsd?: number;
   bondingProgress?: number;
   url?: string;
-  viewers?: number;
-  lastReply?: number;
-}
-
-interface McapSnapshot {
-  mcap: number;
-  ts: number;
+  volume24h?: number;
+  rank?: number;
 }
 
 const MIN_MCAP = 20_000;
-const PUMP_FUN_URL =
-  "/proxy/pumpfun/coins?offset=0&limit=50&sort=market_cap&order=DESC&includeNsfw=false";
+const BIRDEYE_URL =
+  "/proxy/birdeye/defi/token_trending?sort_by=rank&sort_type=asc&limit=20";
 
-function compute1mChange(
-  history: McapSnapshot[],
-  currentMcap: number,
-  now: number
-): number | null {
-  if (history.length < 2 || currentMcap <= 0) return null;
-  const target = now - 60_000;
-  const candidate = [...history]
-    .filter((h) => h.ts <= target + 20_000 && h.ts >= target - 20_000)
-    .sort((a, b) => Math.abs(a.ts - target) - Math.abs(b.ts - target))[0];
-  if (!candidate || candidate.mcap <= 0) return null;
-  return ((currentMcap - candidate.mcap) / candidate.mcap) * 100;
-}
-
-async function fetchPumpFunCoins(): Promise<PumpToken[]> {
-  const res = await fetch(PUMP_FUN_URL, {
+async function fetchBirdeyeTrending(): Promise<BirdeyeToken[]> {
+  const res = await fetch(BIRDEYE_URL, {
     headers: { Accept: "application/json" },
   });
-  if (!res.ok) throw new Error(`Pump.fun API error: ${res.status}`);
-  const coins: any[] = await res.json();
+  if (!res.ok) throw new Error(`Birdeye API error: ${res.status}`);
+  const json = await res.json();
+  const items: any[] = json?.data?.tokens ?? json?.data?.items ?? [];
 
-  const tokens: PumpToken[] = [];
-  for (const coin of coins ?? []) {
-    const mcap = coin.usd_market_cap ?? 0;
+  const tokens: BirdeyeToken[] = [];
+  for (const item of items) {
+    const mcap = item.marketcap ?? 0;
     if (mcap < MIN_MCAP) continue;
-    const supply = coin.total_supply > 0 ? coin.total_supply : 1_000_000_000;
-    const priceUsd = mcap / supply;
+
     tokens.push({
-      tokenAddress: coin.mint,
-      name: coin.name || "Unknown",
-      symbol: coin.symbol || coin.mint?.slice(0, 6).toUpperCase() || "???",
-      logo: coin.image_uri,
+      tokenAddress: item.address,
+      name: item.name || "Unknown",
+      symbol: item.symbol || item.address?.slice(0, 6).toUpperCase() || "???",
+      logo: item.logoURI,
       marketCap: mcap,
-      priceUsd,
-      bondingProgress: coin.complete ? 100 : (coin.bonding_curve_progress ?? 0),
-      url: `https://pump.fun/${coin.mint}`,
-      priceChange1m: null,
-      viewers: coin.reply_count ?? 0,
-      lastReply: coin.last_reply ?? 0,
+      priceUsd: item.price ?? 0,
+      priceChange24h: item.price24hChangePercent ?? null,
+      bondingProgress:
+        item.liquidity > 0 && mcap > 0
+          ? Math.min((item.liquidity / mcap) * 100, 100)
+          : 0,
+      url: `https://birdeye.so/token/${item.address}?chain=solana`,
+      volume24h: item.volume24hUSD ?? 0,
+      rank: item.rank ?? 0,
     });
   }
-  // Sort by most recently replied-to (mindshare proxy)
-  tokens.sort((a, b) => (b.lastReply ?? 0) - (a.lastReply ?? 0));
+
   return tokens;
 }
 
 export default function ScopePage() {
-  const [tokens, setTokens] = useState<PumpToken[]>([]);
+  const [tokens, setTokens] = useState<BirdeyeToken[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
   const [secondsAgo, setSecondsAgo] = useState(0);
-
-  const mcapHistoryRef = useRef<Record<string, McapSnapshot[]>>({});
-  const tokenCacheRef = useRef<PumpToken[]>([]);
+  const tokenCacheRef = useRef<BirdeyeToken[]>([]);
 
   const poll = useCallback(async () => {
     try {
-      let fresh = await fetchPumpFunCoins().catch(() => null);
+      let fresh = await fetchBirdeyeTrending().catch(() => null);
       if (!fresh || fresh.length === 0) {
         fresh = tokenCacheRef.current.length > 0 ? tokenCacheRef.current : null;
       }
       if (!fresh) throw new Error("No data available");
 
       tokenCacheRef.current = fresh;
-      const top12 = fresh.slice(0, 12);
-      const now = Date.now();
-
-      setTokens(
-        top12.map((token) => {
-          const mcap = token.marketCap ?? 0;
-          if (mcap > 0) {
-            const hist = mcapHistoryRef.current[token.tokenAddress] ?? [];
-            hist.push({ mcap, ts: now });
-            mcapHistoryRef.current[token.tokenAddress] = hist.filter(
-              (h) => now - h.ts <= 120_000
-            );
-          }
-          const priceChange1m = compute1mChange(
-            mcapHistoryRef.current[token.tokenAddress] ?? [],
-            mcap,
-            now
-          );
-          return { ...token, priceChange1m };
-        })
-      );
-
+      setTokens(fresh);
       setLastUpdated(new Date());
       setError(null);
     } catch (err) {
@@ -127,14 +87,12 @@ export default function ScopePage() {
     }
   }, []);
 
-  // Poll every 10 seconds — feeds both live prices and 1m change history
   useEffect(() => {
     poll();
-    const interval = setInterval(poll, 10_000);
+    const interval = setInterval(poll, 30_000);
     return () => clearInterval(interval);
   }, [poll]);
 
-  // "X seconds ago" counter
   useEffect(() => {
     if (!lastUpdated) return;
     const t = setInterval(() => {
@@ -145,9 +103,18 @@ export default function ScopePage() {
 
   const formatMarketCap = (cap: number | undefined) => {
     if (!cap || cap === 0) return "—";
+    if (cap >= 1_000_000_000) return `$${(cap / 1_000_000_000).toFixed(2)}B`;
     if (cap >= 1_000_000) return `$${(cap / 1_000_000).toFixed(1)}M`;
     if (cap >= 1_000) return `$${(cap / 1_000).toFixed(1)}K`;
     return `$${cap.toFixed(0)}`;
+  };
+
+  const formatVolume = (vol: number | undefined) => {
+    if (!vol || vol === 0) return "—";
+    if (vol >= 1_000_000_000) return `$${(vol / 1_000_000_000).toFixed(2)}B`;
+    if (vol >= 1_000_000) return `$${(vol / 1_000_000).toFixed(1)}M`;
+    if (vol >= 1_000) return `$${(vol / 1_000).toFixed(1)}K`;
+    return `$${vol.toFixed(0)}`;
   };
 
   const shortenAddress = (address: string) =>
@@ -186,7 +153,9 @@ export default function ScopePage() {
         <p className="text-xs text-muted-foreground">
           Last updated: {secondsAgo}s ago ({lastUpdated.toLocaleTimeString()})
           &nbsp;·&nbsp;
-          <span className="text-gains/70">sorted by mindshare (latest replies) · ≥$20K mcap only · auto-refreshes every 10s</span>
+          <span className="text-gains/70">
+            sorted by trending rank · Birdeye · ≥$20K mcap only · auto-refreshes every 30s
+          </span>
         </p>
       )}
 
@@ -252,6 +221,9 @@ export default function ScopePage() {
                           src={token.logo}
                           alt={token.symbol}
                           className="w-8 h-8 rounded-full object-cover"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).style.display = "none";
+                          }}
                         />
                       ) : (
                         <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-xs font-bold text-muted-foreground">
@@ -265,34 +237,34 @@ export default function ScopePage() {
                     </div>
                   </div>
 
-                  {/* 1m Price Change Badge */}
-                  {token.priceChange1m == null ? (
+                  {/* 24h Price Change Badge */}
+                  {token.priceChange24h == null ? (
                     <Badge variant="outline" className="bg-muted/10 text-muted-foreground font-semibold text-xs">
-                      1m: —
+                      24h: —
                     </Badge>
                   ) : (
                     <Badge
                       className={
-                        token.priceChange1m >= 0
+                        token.priceChange24h >= 0
                           ? "bg-gains/10 text-gains hover:bg-gains/20 font-semibold text-xs"
                           : "bg-losses/10 text-losses hover:bg-losses/20 font-semibold text-xs"
                       }
                     >
-                      {token.priceChange1m >= 0 ? "+" : ""}
-                      {token.priceChange1m.toFixed(2)}% 1m
+                      {token.priceChange24h >= 0 ? "+" : ""}
+                      {token.priceChange24h.toFixed(2)}% 24h
                     </Badge>
                   )}
                 </div>
 
                 <div className="space-y-3">
-                  {/* Viewers + Market Cap */}
+                  {/* 24H Vol + Market Cap */}
                   <div className="grid grid-cols-2 gap-2">
                     <div className="bg-primary/5 border border-primary/20 p-3 rounded-lg">
                       <div className="text-[10px] uppercase tracking-wider text-primary/70 font-semibold mb-1 flex items-center gap-1">
-                        <MessageCircle className="w-3 h-3" /> Replies
+                        <TrendingUp className="w-3 h-3" /> 24H VOL
                       </div>
                       <div className="font-mono text-sm font-bold text-primary">
-                        {(token.viewers ?? 0) > 0 ? (token.viewers ?? 0).toLocaleString() : "—"}
+                        {formatVolume(token.volume24h)}
                       </div>
                     </div>
                     <div className="bg-muted/20 p-3 rounded-lg border border-border/50">
@@ -323,10 +295,10 @@ export default function ScopePage() {
                     </div>
                   </button>
 
-                  {/* Bonding Progress */}
+                  {/* Liquidity Depth */}
                   <div className="bg-muted/20 p-3 rounded-lg border border-border/50">
                     <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-2">
-                      Bonding Progress
+                      Liquidity Depth
                     </div>
                     <div className="flex items-center gap-2">
                       <div className="flex-1 bg-background rounded-full h-2 overflow-hidden border border-border/50">
@@ -344,14 +316,14 @@ export default function ScopePage() {
                     </div>
                   </div>
 
-                  {/* View on Pump.fun Button */}
+                  {/* View on Birdeye Button */}
                   <a
                     href={token.url || "#"}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center justify-center gap-2 w-full mt-4 px-3 py-2 bg-primary/10 text-primary hover:bg-primary/20 rounded-lg transition-colors font-medium text-sm"
                   >
-                    View on Pump.fun
+                    View on Birdeye
                     <ExternalLink className="w-3 h-3" />
                   </a>
                 </div>

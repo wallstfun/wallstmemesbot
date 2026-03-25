@@ -54,6 +54,16 @@ export default defineConfig({
         rewrite: (p) => p.replace(/^\/proxy\/pumpfun/, ""),
         secure: true,
       },
+      "/proxy/birdeye": {
+        target: "https://public-api.birdeye.so",
+        changeOrigin: true,
+        rewrite: (p) => p.replace(/^\/proxy\/birdeye/, ""),
+        secure: true,
+        headers: {
+          "X-API-KEY": process.env.BIRDEYE_API_KEY || "41a3c0487a6b451abd0e258f9a77493a",
+          "x-chain": "solana",
+        },
+      },
     },
     fs: {
       strict: true,
