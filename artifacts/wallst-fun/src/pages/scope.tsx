@@ -22,6 +22,8 @@ const MORALIS_API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJub25jZSI6IjJkOW
 export default function ScopePage() {
   const [tokens, setTokens] = useState<PumpToken[]>([]);
   const previousMarketCaps = useRef<Record<string, number>>({});
+  const allFetchedTokensRef = useRef<PumpToken[]>([]);
+  const zeroChangeCountersRef = useRef<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
@@ -116,6 +118,9 @@ export default function ScopePage() {
         new Map(allTokens.map((token) => [token.tokenAddress, token])).values()
       ).sort((a, b) => (b.marketCap || 0) - (a.marketCap || 0));
 
+      // Store all fetched tokens for replacement lookups
+      allFetchedTokensRef.current = uniqueTokens;
+
       const topTokens = uniqueTokens.slice(0, 12);
       
       setTokens(topTokens);
@@ -168,6 +173,65 @@ export default function ScopePage() {
 
         return { ...token, priceChange1m: change };
       });
+
+      // Track zero-change cycles and replace stale tokens
+      updatedTokens.forEach(token => {
+        const isZeroChange = Number.isNaN(token.priceChange1m) || 
+                             (Math.abs(token.priceChange1m || 0) < 0.01);
+        
+        if (isZeroChange) {
+          // Increment zero-change counter
+          zeroChangeCountersRef.current[token.tokenAddress] = 
+            (zeroChangeCountersRef.current[token.tokenAddress] || 0) + 1;
+        } else {
+          // Reset counter for non-zero change
+          zeroChangeCountersRef.current[token.tokenAddress] = 0;
+        }
+      });
+
+      // Check for tokens that need replacement (2 consecutive zero-change cycles)
+      let tokensNeedingReplacement = false;
+      const replacementMap = new Map<string, PumpToken>();
+
+      updatedTokens.forEach(token => {
+        const counter = zeroChangeCountersRef.current[token.tokenAddress] || 0;
+        if (counter >= 2) {
+          tokensNeedingReplacement = true;
+          replacementMap.set(token.tokenAddress, token);
+        }
+      });
+
+      if (tokensNeedingReplacement) {
+        // Find replacement tokens from the full fetched list
+        const topTokenAddresses = new Set(updatedTokens.map(t => t.tokenAddress));
+        const replacementCandidates = allFetchedTokensRef.current.filter(
+          token => !topTokenAddresses.has(token.tokenAddress)
+        );
+
+        // Sort candidates by strongest positive momentum
+        replacementCandidates.sort((a, b) => {
+          const changeA = a.priceChange1m || -Infinity;
+          const changeB = b.priceChange1m || -Infinity;
+          return changeB - changeA;
+        });
+
+        // Replace stale tokens with top candidates
+        let replacementIndex = 0;
+        const finalTokens = updatedTokens.map(token => {
+          if (replacementMap.has(token.tokenAddress) && replacementIndex < replacementCandidates.length) {
+            const replacement = replacementCandidates[replacementIndex];
+            // Reset counter and previous market cap for new token
+            zeroChangeCountersRef.current[replacement.tokenAddress] = 0;
+            delete previousMarketCaps.current[replacement.tokenAddress];
+            replacementIndex++;
+            // Reset priceChange1m to NaN since it's the first cycle
+            return { ...replacement, priceChange1m: NaN };
+          }
+          return token;
+        });
+
+        return finalTokens;
+      }
 
       return updatedTokens;
     });
