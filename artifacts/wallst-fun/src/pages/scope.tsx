@@ -124,15 +124,6 @@ export default function ScopePage() {
         </div>
       </div>
 
-      {lastUpdated && (
-        <p className="text-xs text-muted-foreground">
-          Last updated: {secondsAgo}s ago ({lastUpdated.toLocaleTimeString()})
-          &nbsp;·&nbsp;
-          <span className="text-gains/70">
-            sorted by trending rank · Moralis & DexScreener · ≥$20K mcap only · auto-refreshes every 4m
-          </span>
-        </p>
-      )}
 
       {error && (
         <div className="bg-losses/10 border border-losses/30 rounded-lg p-4 flex items-start gap-3">
