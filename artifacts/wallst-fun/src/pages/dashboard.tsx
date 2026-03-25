@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { Link } from "wouter";
-import { useLiveMetrics, useXFeed } from "@/hooks/use-simulated-data";
+import { useLiveMetrics } from "@/hooks/use-simulated-data";
+import { useXFeedReal } from "@/hooks/use-x-feed";
 import { useScopeTokens } from "@/hooks/use-scope-data";
 import { useWalletSolBalance, useRealTransactions } from "@/hooks/use-helius-data";
 import { LiveIndicator } from "@/components/ui/LiveIndicator";
@@ -14,7 +15,7 @@ import { motion, AnimatePresence } from "framer-motion";
 
 export default function Dashboard() {
   const metrics = useLiveMetrics();
-  const tweets = useXFeed();
+  const { tweets, loading: tweetsLoading } = useXFeedReal(5);
   const { tokens: scopeTokens, loading: scopeLoading } = useScopeTokens(4);
   const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
 
@@ -368,46 +369,65 @@ export default function Dashboard() {
           <Card className="border-border/50 shadow-sm flex flex-col h-[400px]">
             <CardHeader className="flex flex-row items-center justify-between pb-4 border-b border-border/50 shrink-0">
               <CardTitle className="text-lg font-serif flex items-center gap-2">
-                <MessageSquare className="w-4 h-4 text-primary" /> Intelligence Feed
+                <MessageSquare className="w-4 h-4 text-primary" /> X Feed
               </CardTitle>
               <LiveIndicator />
             </CardHeader>
             <CardContent className="p-4 overflow-hidden flex-1 relative">
               <div className="absolute top-0 left-0 right-0 h-4 bg-gradient-to-b from-card to-transparent z-10 pointer-events-none"></div>
-              <div className="space-y-4 h-full">
-                <AnimatePresence>
-                  {tweets.map((tweet) => (
-                    <motion.div 
-                      key={tweet.id}
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: 'auto' }}
-                      exit={{ opacity: 0, height: 0 }}
-                      className="border-b border-border/50 pb-4 last:border-0"
-                    >
-                      <div className="flex items-start gap-3">
-                        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center font-bold text-primary shrink-0">
-                          W
-                        </div>
-                        <div className="space-y-1 w-full">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-baseline gap-1">
-                              <span className="font-semibold text-sm">{tweet.name}</span>
-                              <span className="text-xs text-muted-foreground">{tweet.handle}</span>
+              {tweetsLoading && tweets.length === 0 ? (
+                <div className="flex items-center justify-center h-full gap-2 text-muted-foreground text-sm">
+                  <Loader2 className="w-4 h-4 animate-spin" /> Loading tweets…
+                </div>
+              ) : !tweetsLoading && tweets.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-full gap-3 text-center px-4">
+                  <MessageSquare className="w-8 h-8 text-muted-foreground/30" />
+                  <p className="text-sm text-muted-foreground">Tweets unavailable</p>
+                  <Link href="/x-feed" className="text-xs text-primary hover:underline">View X Feed →</Link>
+                </div>
+              ) : (
+                <div className="space-y-4 h-full overflow-y-auto">
+                  <AnimatePresence>
+                    {tweets.map((tweet) => (
+                      <motion.div
+                        key={tweet.id}
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="border-b border-border/50 pb-4 last:border-0"
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center font-bold text-primary shrink-0">
+                            W
+                          </div>
+                          <div className="space-y-1 w-full min-w-0">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-baseline gap-1">
+                                <span className="font-semibold text-sm">{tweet.name}</span>
+                                <span className="text-xs text-muted-foreground">{tweet.handle}</span>
+                              </div>
+                              <a
+                                href={tweet.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-xs text-muted-foreground hover:text-primary transition-colors shrink-0"
+                              >
+                                {format(tweet.timestamp, 'HH:mm')}
+                              </a>
                             </div>
-                            <span className="text-xs text-muted-foreground">{format(tweet.timestamp, 'HH:mm')}</span>
-                          </div>
-                          <p className="text-sm text-foreground/90 leading-relaxed">{tweet.text}</p>
-                          <div className="flex items-center gap-4 mt-2 text-muted-foreground text-xs font-mono">
-                            <span className="flex items-center gap-1 hover:text-primary transition-colors cursor-pointer"><MessageCircle className="w-3 h-3" /> 0</span>
-                            <span className="flex items-center gap-1 hover:text-gains transition-colors cursor-pointer"><Repeat2 className="w-3 h-3" /> {tweet.retweets}</span>
-                            <span className="flex items-center gap-1 hover:text-losses transition-colors cursor-pointer"><Heart className="w-3 h-3" /> {tweet.likes}</span>
+                            <p className="text-sm text-foreground/90 leading-relaxed break-words">{tweet.text}</p>
+                            <div className="flex items-center gap-4 mt-2 text-muted-foreground text-xs font-mono">
+                              <span className="flex items-center gap-1 hover:text-primary transition-colors cursor-pointer"><MessageCircle className="w-3 h-3" /> {tweet.replies}</span>
+                              <span className="flex items-center gap-1 hover:text-gains transition-colors cursor-pointer"><Repeat2 className="w-3 h-3" /> {tweet.retweets}</span>
+                              <span className="flex items-center gap-1 hover:text-losses transition-colors cursor-pointer"><Heart className="w-3 h-3" /> {tweet.likes}</span>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </motion.div>
-                  ))}
-                </AnimatePresence>
-              </div>
+                      </motion.div>
+                    ))}
+                  </AnimatePresence>
+                </div>
+              )}
             </CardContent>
           </Card>
 
