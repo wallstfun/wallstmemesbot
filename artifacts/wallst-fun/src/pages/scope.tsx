@@ -148,7 +148,7 @@ export default function ScopePage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-4xl font-serif font-bold text-foreground flex items-center gap-3">
-            <Flame className="w-9 h-9 text-orange-500" /> Scope 👀
+            <Flame className="w-9 h-9 text-orange-500" /> Scope
           </h1>
         </div>
         <div className="bg-card px-4 py-2 rounded-lg border border-border shadow-sm">
