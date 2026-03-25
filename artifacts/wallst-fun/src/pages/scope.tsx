@@ -19,47 +19,102 @@ interface BirdeyeToken {
 }
 
 const MIN_MCAP = 20_000;
+const POLL_MS = 10 * 60 * 1000; // 10 minutes — preserves Birdeye compute units
 const BIRDEYE_API_KEY =
   import.meta.env.VITE_BIRDEYE_API_KEY || "41a3c0487a6b451abd0e258f9a77493a";
-const BIRDEYE_URL =
-  "https://public-api.birdeye.so/defi/token_trending?sort_by=rank&sort_type=asc&limit=20";
 
-async function fetchBirdeyeTrending(): Promise<BirdeyeToken[]> {
-  const res = await fetch(BIRDEYE_URL, {
-    headers: {
-      Accept: "application/json",
-      "X-API-KEY": BIRDEYE_API_KEY,
-      "x-chain": "solana",
+async function fetchBirdeye(): Promise<BirdeyeToken[]> {
+  const res = await fetch(
+    "https://public-api.birdeye.so/defi/token_trending?sort_by=rank&sort_type=asc&limit=20",
+    {
+      headers: {
+        Accept: "application/json",
+        "X-API-KEY": BIRDEYE_API_KEY,
+        "x-chain": "solana",
+      },
     },
-  });
-  if (!res.ok) throw new Error(`Birdeye API error: ${res.status}`);
+  );
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error((body as any)?.message ?? `Birdeye HTTP ${res.status}`);
+  }
   const json = await res.json();
+  if (json?.success === false) throw new Error(json.message ?? "Birdeye error");
   const items: any[] = json?.data?.tokens ?? json?.data?.items ?? [];
-
-  const tokens: BirdeyeToken[] = [];
-  for (const item of items) {
-    const mcap = item.marketcap ?? 0;
-    if (mcap < MIN_MCAP) continue;
-
-    tokens.push({
+  return items
+    .filter((item) => (item.marketcap ?? 0) >= MIN_MCAP)
+    .map((item) => ({
       tokenAddress: item.address,
       name: item.name || "Unknown",
       symbol: item.symbol || item.address?.slice(0, 6).toUpperCase() || "???",
       logo: item.logoURI,
-      marketCap: mcap,
+      marketCap: item.marketcap ?? 0,
       priceUsd: item.price ?? 0,
       priceChange24h: item.price24hChangePercent ?? null,
       bondingProgress:
-        item.liquidity > 0 && mcap > 0
-          ? Math.min((item.liquidity / mcap) * 100, 100)
+        item.liquidity > 0 && (item.marketcap ?? 0) > 0
+          ? Math.min((item.liquidity / item.marketcap) * 100, 100)
           : 0,
       url: `https://birdeye.so/token/${item.address}?chain=solana`,
       volume24h: item.volume24hUSD ?? 0,
       rank: item.rank ?? 0,
-    });
+    }));
+}
+
+async function fetchDexScreener(): Promise<BirdeyeToken[]> {
+  const boostRes = await fetch("https://api.dexscreener.com/token-boosts/top/v1");
+  if (!boostRes.ok) throw new Error(`DexScreener HTTP ${boostRes.status}`);
+  const boosts: any[] = await boostRes.json();
+  const addrs = boosts
+    .filter((b) => b.chainId === "solana")
+    .slice(0, 30)
+    .map((b) => b.tokenAddress)
+    .join(",");
+  if (!addrs) return [];
+
+  const pairsRes = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${addrs}`);
+  if (!pairsRes.ok) throw new Error(`DexScreener pairs HTTP ${pairsRes.status}`);
+  const pairsJson = await pairsRes.json();
+  const pairs: any[] = pairsJson.pairs ?? [];
+
+  // Keep highest-liquidity pair per base token
+  const byAddr = new Map<string, any>();
+  for (const p of pairs) {
+    if (p.chainId !== "solana") continue;
+    const a = p.baseToken?.address ?? "";
+    if (!a) continue;
+    const cur = byAddr.get(a);
+    if (!cur || (p.liquidity?.usd ?? 0) > (cur.liquidity?.usd ?? 0)) byAddr.set(a, p);
   }
 
-  return tokens;
+  return Array.from(byAddr.values())
+    .filter((p) => (p.marketCap ?? 0) >= MIN_MCAP)
+    .slice(0, 20)
+    .map((p, i) => ({
+      tokenAddress: p.baseToken?.address ?? "",
+      name: p.baseToken?.name || "Unknown",
+      symbol: p.baseToken?.symbol || "???",
+      logo: p.info?.imageUrl,
+      marketCap: p.marketCap ?? p.fdv ?? 0,
+      priceUsd: parseFloat(p.priceUsd ?? "0"),
+      priceChange24h: p.priceChange?.h24 ?? null,
+      bondingProgress:
+        (p.liquidity?.usd ?? 0) > 0 && (p.marketCap ?? 0) > 0
+          ? Math.min((p.liquidity.usd / p.marketCap) * 100, 100)
+          : 0,
+      url: p.url ?? `https://dexscreener.com/solana/${p.baseToken?.address}`,
+      volume24h: p.volume?.h24 ?? 0,
+      rank: i + 1,
+    }));
+}
+
+async function fetchTrendingTokens(): Promise<BirdeyeToken[]> {
+  try {
+    return await fetchBirdeye();
+  } catch (err) {
+    console.warn("[Scope] Birdeye failed, using DexScreener:", (err as Error).message);
+    return fetchDexScreener();
+  }
 }
 
 export default function ScopePage() {
@@ -73,20 +128,21 @@ export default function ScopePage() {
 
   const poll = useCallback(async () => {
     try {
-      let fresh = await fetchBirdeyeTrending().catch(() => null);
-      if (!fresh || fresh.length === 0) {
-        fresh = tokenCacheRef.current.length > 0 ? tokenCacheRef.current : null;
+      const fresh = await fetchTrendingTokens();
+      if (fresh && fresh.length > 0) {
+        tokenCacheRef.current = fresh;
+        setTokens(fresh);
+        setLastUpdated(new Date());
+        setError(null);
+      } else if (tokenCacheRef.current.length > 0) {
+        setTokens(tokenCacheRef.current);
+        setLastUpdated(new Date());
+      } else {
+        throw new Error("No tokens found above $20K market cap");
       }
-      if (!fresh) throw new Error("No data available");
-
-      tokenCacheRef.current = fresh;
-      setTokens(fresh);
-      setLastUpdated(new Date());
-      setError(null);
     } catch (err) {
       if (tokenCacheRef.current.length === 0) {
         setError(err instanceof Error ? err.message : "Failed to fetch tokens");
-        console.error("[wallst.fun] Scope error:", err);
       }
     } finally {
       setLoading(false);
@@ -95,7 +151,7 @@ export default function ScopePage() {
 
   useEffect(() => {
     poll();
-    const interval = setInterval(poll, 30_000);
+    const interval = setInterval(poll, POLL_MS);
     return () => clearInterval(interval);
   }, [poll]);
 
@@ -160,7 +216,7 @@ export default function ScopePage() {
           Last updated: {secondsAgo}s ago ({lastUpdated.toLocaleTimeString()})
           &nbsp;·&nbsp;
           <span className="text-gains/70">
-            sorted by trending rank · Birdeye · ≥$20K mcap only · auto-refreshes every 30s
+            sorted by trending rank · Birdeye / DexScreener · ≥$20K mcap only · auto-refreshes every 10m
           </span>
         </p>
       )}
@@ -329,7 +385,7 @@ export default function ScopePage() {
                     rel="noopener noreferrer"
                     className="flex items-center justify-center gap-2 w-full mt-4 px-3 py-2 bg-primary/10 text-primary hover:bg-primary/20 rounded-lg transition-colors font-medium text-sm"
                   >
-                    View on Birdeye
+                    View on Explorer
                     <ExternalLink className="w-3 h-3" />
                   </a>
                 </div>
