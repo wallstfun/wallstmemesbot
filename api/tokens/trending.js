@@ -1,3 +1,5 @@
+// FORCE VERCEL REBUILD - DexScreener only - 2026-03-25
+
 const MIN_MCAP = 10_000;
 const CACHE_TTL = 4 * 60 * 1000; // 4 minutes
 
