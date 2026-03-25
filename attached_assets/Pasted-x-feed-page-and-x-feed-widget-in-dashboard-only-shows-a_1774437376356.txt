@@ -1,0 +1,26 @@
+x-feed page and x feed widget in dashboard only shows a header with "LIVE posts from @WallstM99224" and a link.
+
+I want to replace the broken official X embed with a **custom clean feed** similar to xprince.pro (simple list of recent tweets with username, time ago, full tweet text, engagement stats like ❤️ likes, 🔁 retweets, 💬 replies, 👁 views). Show all tweets on the x feed page but only the latest tweet on the x feed widget on dashboard
+
+Requirements:
+- Use a free / no-API-key method (do NOT use official X API v2 which requires paid credits).
+- Recommended: Add the best working Node.js/TypeScript scraper in 2026 (e.g. @the-convocation/twitter-scraper or a maintained fork of twscrape if it has Node support, or Playwright-based if needed). Prefer lightweight and reliable for just one public profile.
+- Create a new script in the scripts/ folder called fetch-wallst-tweets.ts that fetches the latest 10-15 tweets from @WallstM99224 (text, timestamp, likes, retweets, replies, views, tweet URL if possible).
+- Cache the tweets to a JSON file (e.g. data/latest-tweets.json) or in-memory so the site stays fast.
+- Add a cron/scheduler (Replit has built-in ways or use setInterval) to refresh every 5-10 minutes.
+- Expose the tweets via a simple endpoint or just make the JSON available so the frontend can fetch it.
+- On the frontend (wherever the /x-feed page is rendered), create a nice React-like or vanilla TS component that displays the tweets as cards with Tailwind-style dark theme matching the site (cyber/trading vibe).
+- Make each tweet card look clean: @WallstM99224 • 2h ago | tweet text | engagement icons below.
+- Add auto-refresh on the page (every 30-60 seconds) so new tweets appear live.
+- Update the existing X feed section on wallst.fun/x-feed to use this new custom feed instead of the old embed code.
+- Keep everything in TypeScript, use existing pnpm setup, and make sure it runs smoothly on Replit (handle any dependencies properly).
+
+Please:
+1. Install the necessary dependencies (add to package.json if needed).
+2. Create the fetch script.
+3. Show me the exact code for the scraper + caching.
+4. Show the frontend rendering code to replace the current feed.
+5. Give instructions on how to run the fetcher on Replit (background task or always-on).
+6. Make sure it works for public profile without login if possible, or guide on optional cookie-based auth for better reliability.
+
+Start by checking the current code structure, especially anything related to the X feed, then implement step by step.

@@ -8,55 +8,74 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { format } from "date-fns";
-import { ArrowUpRight, ArrowDownRight, Wallet, Activity, Target, Zap, ExternalLink, Heart, Repeat2, MessageCircle, MessageSquare, Loader2 } from "lucide-react";
+import { format, formatDistanceToNow } from "date-fns";
+import { ArrowUpRight, ArrowDownRight, Wallet, Activity, Target, Zap, ExternalLink, Heart, Repeat2, MessageCircle, Eye, MessageSquare, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useXFeedReal } from "@/hooks/use-x-feed";
+
+function fmt(n: number): string {
+  if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + "M";
+  if (n >= 1_000) return (n / 1_000).toFixed(1) + "K";
+  return String(n);
+}
 
 function LatestTweet() {
-  const ref = React.useRef<HTMLDivElement>(null);
+  const { tweets, loading } = useXFeedReal(1);
+  const tweet = tweets[0];
 
-  React.useEffect(() => {
-    const container = ref.current;
-    if (!container) return;
+  if (loading && !tweet) {
+    return (
+      <div className="flex items-center justify-center h-full gap-2 text-muted-foreground text-sm p-4">
+        <Loader2 className="w-4 h-4 animate-spin" /> Loading…
+      </div>
+    );
+  }
 
-    const render = () => {
-      if ((window as any).twttr?.widgets) {
-        (window as any).twttr.widgets.load(container);
-      }
-    };
-
-    if (!(window as any).twttr) {
-      const existing = document.querySelector('script[src*="platform.twitter.com/widgets.js"]');
-      if (!existing) {
-        const script = document.createElement("script");
-        script.src = "https://platform.twitter.com/widgets.js";
-        script.async = true;
-        script.charset = "utf-8";
-        script.onload = render;
-        document.head.appendChild(script);
-      } else {
-        const poll = setInterval(() => {
-          if ((window as any).twttr?.widgets) { clearInterval(poll); render(); }
-        }, 200);
-        return () => clearInterval(poll);
-      }
-    } else {
-      render();
-    }
-  }, []);
+  if (!tweet) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full gap-2 text-muted-foreground p-4">
+        <MessageSquare className="w-6 h-6 opacity-30" />
+        <p className="text-xs">No posts yet</p>
+      </div>
+    );
+  }
 
   return (
-    <div ref={ref} className="w-full h-full overflow-hidden">
-      <a
-        className="twitter-timeline"
-        data-theme="dark"
-        data-tweet-limit="1"
-        data-chrome="noheader nofooter noborders noscrollbar"
-        data-dnt="true"
-        href="https://twitter.com/WallstM99224"
-      >
-        Latest tweet by @WallstM99224
-      </a>
+    <div className="p-4 flex flex-col gap-3 h-full">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <img
+            src={`${import.meta.env.BASE_URL}images/agent-avatar.jpg`}
+            alt="WallStSmith"
+            className="w-7 h-7 rounded-full border border-primary/20 object-cover"
+            onError={(e) => { e.currentTarget.style.display = "none"; }}
+          />
+          <div>
+            <span className="text-xs font-bold text-foreground">WallStSmith</span>
+            <span className="text-xs text-muted-foreground ml-1">@WallstM99224</span>
+          </div>
+        </div>
+        <a
+          href={tweet.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-[10px] text-muted-foreground hover:text-primary transition-colors flex items-center gap-1"
+        >
+          {formatDistanceToNow(tweet.timestamp, { addSuffix: true })}
+          <ExternalLink className="w-2.5 h-2.5" />
+        </a>
+      </div>
+
+      <p className="text-sm text-foreground/90 leading-relaxed flex-1 overflow-hidden line-clamp-5">
+        {tweet.text}
+      </p>
+
+      <div className="flex items-center gap-4 text-xs text-muted-foreground font-mono border-t border-border/30 pt-2">
+        <span className="flex items-center gap-1"><MessageCircle className="w-3 h-3" /> {fmt(tweet.replies)}</span>
+        <span className="flex items-center gap-1"><Repeat2 className="w-3 h-3" /> {fmt(tweet.retweets)}</span>
+        <span className="flex items-center gap-1"><Heart className="w-3 h-3" /> {fmt(tweet.likes)}</span>
+        {tweet.views > 0 && <span className="flex items-center gap-1"><Eye className="w-3 h-3" /> {fmt(tweet.views)}</span>}
+      </div>
     </div>
   );
 }
@@ -64,12 +83,6 @@ function LatestTweet() {
 export default function Dashboard() {
   const metrics = useLiveMetrics();
   const { tokens: scopeTokens, loading: scopeLoading } = useScopeTokens(4);
-  // Tick increments every 60 s — used as a React key to remount the Twitter widget and fetch the latest tweet
-  const [tweetTick, setTweetTick] = useState(0);
-  useEffect(() => {
-    const id = setInterval(() => setTweetTick((t) => t + 1), 60_000);
-    return () => clearInterval(id);
-  }, []);
   const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
 
   // Real blockchain data
@@ -427,7 +440,7 @@ export default function Dashboard() {
               <LiveIndicator />
             </CardHeader>
             <CardContent className="p-0 overflow-hidden flex-1">
-              <LatestTweet key={tweetTick} />
+              <LatestTweet />
             </CardContent>
           </Card>
 

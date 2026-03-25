@@ -1,44 +1,20 @@
 import { useState, useEffect, useCallback } from "react";
 
-export interface RealTweet {
-  id: string;
-  text: string;
-  created_at: string;
-  public_metrics: {
-    reply_count: number;
-    retweet_count: number;
-    like_count: number;
-    quote_count?: number;
-  };
-}
-
 export interface DisplayTweet {
   id: string;
-  name: string;
-  handle: string;
   text: string;
+  createdAt: string;
   timestamp: Date;
   likes: number;
   retweets: number;
   replies: number;
+  views: number;
   url: string;
+  name: string;
+  handle: string;
 }
 
-function toDisplay(t: RealTweet): DisplayTweet {
-  return {
-    id: t.id,
-    name: "WallStSmith",
-    handle: "@WallstM99224",
-    text: t.text,
-    timestamp: new Date(t.created_at),
-    likes: t.public_metrics?.like_count ?? 0,
-    retweets: t.public_metrics?.retweet_count ?? 0,
-    replies: t.public_metrics?.reply_count ?? 0,
-    url: `https://twitter.com/WallstM99224/status/${t.id}`,
-  };
-}
-
-const POLL_INTERVAL = 60_000;
+const POLL_INTERVAL = 60_000; // 1 minute
 
 export function useXFeedReal(limit = 15) {
   const [tweets, setTweets] = useState<DisplayTweet[]>([]);
@@ -51,9 +27,24 @@ export function useXFeedReal(limit = 15) {
       const res = await fetch("/api/tweets");
       if (!res.ok) throw new Error(`API ${res.status}`);
       const json = await res.json();
-      if (json.error) throw new Error(json.error);
-      const raw: RealTweet[] = (json.tweets ?? []).slice(0, limit);
-      setTweets(raw.map(toDisplay));
+      if (json.error && (!json.tweets || json.tweets.length === 0)) throw new Error(json.error);
+
+      const raw: any[] = (json.tweets ?? []).slice(0, limit);
+      setTweets(
+        raw.map((t) => ({
+          id: t.id,
+          text: t.text,
+          createdAt: t.createdAt,
+          timestamp: new Date(t.createdAt),
+          likes: t.likes ?? 0,
+          retweets: t.retweets ?? 0,
+          replies: t.replies ?? 0,
+          views: t.views ?? 0,
+          url: t.url ?? `https://twitter.com/WallstM99224/status/${t.id}`,
+          name: "WallStSmith",
+          handle: "@WallstM99224",
+        })),
+      );
       setLastRefresh(new Date());
       setError(null);
     } catch (err) {
