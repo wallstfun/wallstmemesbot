@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
-import { useLiveMetrics, useChartData, useXFeed, useViralTrends } from "@/hooks/use-simulated-data";
+import { Link } from "wouter";
+import { useLiveMetrics, useChartData, useXFeed } from "@/hooks/use-simulated-data";
+import { useScopeTokens } from "@/hooks/use-scope-data";
 import { useWalletSolBalance, useRealTransactions } from "@/hooks/use-helius-data";
 import { LiveIndicator } from "@/components/ui/LiveIndicator";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,7 +16,7 @@ export default function Dashboard() {
   const metrics = useLiveMetrics();
   const chartData = useChartData(7);
   const tweets = useXFeed();
-  const trends = useViralTrends();
+  const { tokens: scopeTokens, loading: scopeLoading } = useScopeTokens(3);
 
   // Real blockchain data
   const { balance: solBalance, loading: solBalanceLoading } = useWalletSolBalance();
@@ -377,39 +379,52 @@ export default function Dashboard() {
           </Card>
 
           <Card className="border-border/50 shadow-sm bg-gradient-to-br from-card to-muted/20">
-             <CardHeader className="flex flex-row items-center justify-between pb-4 border-b border-border/50">
-              <CardTitle className="text-lg font-serif">Viral Radar</CardTitle>
+            <CardHeader className="flex flex-row items-center justify-between pb-4 border-b border-border/50">
+              <CardTitle className="text-lg font-serif">Scope</CardTitle>
               <LiveIndicator />
             </CardHeader>
             <CardContent className="p-0">
               <div className="divide-y divide-border/50">
-                {trends.slice(0,4).map((trend, i) => (
-                  <div key={trend.id} className="p-4 hover:bg-muted/30 transition-colors flex items-center justify-between group">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded bg-background border border-border flex items-center justify-center font-mono text-xs font-bold shadow-sm group-hover:border-primary/50 transition-colors">
-                        {i+1}
-                      </div>
-                      <div>
-                        <div className="font-bold flex items-center gap-2">
-                          ${trend.symbol} 
-                          <Badge variant="outline" className="text-[9px] h-4 px-1 text-muted-foreground border-border/50">new</Badge>
-                        </div>
-                        <div className="text-xs text-muted-foreground">Vol: {Math.floor(trend.volume24h)} SOL</div>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className={`font-mono text-sm font-bold ${trend.change24h >= 0 ? 'text-gains' : 'text-losses'}`}>
-                        {trend.change24h >= 0 ? '+' : ''}{trend.change24h.toFixed(1)}%
-                      </div>
-                      <div className="text-xs text-muted-foreground font-mono mt-0.5">{trend.views.toLocaleString()} views</div>
-                    </div>
+                {scopeLoading ? (
+                  <div className="p-6 flex items-center justify-center gap-2 text-muted-foreground text-sm">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Loading tokens...
                   </div>
-                ))}
+                ) : scopeTokens.length === 0 ? (
+                  <div className="p-6 text-center text-muted-foreground text-sm">No tokens found</div>
+                ) : (
+                  scopeTokens.map((token, i) => (
+                    <div key={token.tokenAddress} className="p-4 hover:bg-muted/30 transition-colors flex items-center justify-between group">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded bg-background border border-border flex items-center justify-center font-mono text-xs font-bold shadow-sm group-hover:border-primary/50 transition-colors">
+                          {i + 1}
+                        </div>
+                        <div>
+                          <div className="font-bold flex items-center gap-2">
+                            ${token.symbol}
+                            {token.bondingProgress !== undefined && token.bondingProgress < 100 && (
+                              <Badge variant="outline" className="text-[9px] h-4 px-1 text-muted-foreground border-border/50">bonding</Badge>
+                            )}
+                          </div>
+                          <div className="text-xs text-muted-foreground truncate max-w-[120px]">{token.name}</div>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="font-mono text-sm font-bold text-foreground">
+                          {token.marketCap && token.marketCap > 0
+                            ? `$${(token.marketCap / 1000).toFixed(0)}K`
+                            : '—'}
+                        </div>
+                        <div className="text-xs text-muted-foreground font-mono mt-0.5">mkt cap</div>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
               <div className="p-3 border-t border-border/50 bg-background/50 text-center">
-                <button className="text-xs text-primary font-medium hover:underline flex items-center justify-center w-full gap-1">
-                  View Full Radar <ExternalLink className="w-3 h-3" />
-                </button>
+                <Link href="/viral-trends" className="text-xs text-primary font-medium hover:underline flex items-center justify-center w-full gap-1">
+                  View Full Scope <ExternalLink className="w-3 h-3" />
+                </Link>
               </div>
             </CardContent>
           </Card>
