@@ -59,8 +59,8 @@ async function fetchDexScreener(): Promise<Token[]> {
       priceUsd: parseFloat(p.priceUsd ?? "0"),
       priceChange24h: p.priceChange?.h24 ?? null,
       bondingProgress:
-        (p.liquidity?.usd ?? 0) > 0 && (p.marketCap ?? 0) > 0
-          ? Math.min((p.liquidity.usd / p.marketCap) * 100, 100)
+        (p.marketCap ?? 0) > 0 && (p.volume?.h24 ?? 0) > 0
+          ? Math.min(((p.volume.h24 / p.marketCap) * 10) * 100, 100)
           : 0,
       url: p.url ?? `https://dexscreener.com/solana/${p.baseToken?.address}`,
       volume24h: p.volume?.h24 ?? 0,
@@ -313,14 +313,14 @@ export default function ScopePage() {
                     </div>
                   </div>
 
-                  {/* View on Birdeye Button */}
+                  {/* Trade on Terminal Button */}
                   <a
-                    href={token.url || "#"}
+                    href="https://trade.padre.gg/rk/wallstsmith"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center justify-center gap-2 w-full mt-4 px-3 py-2 bg-primary/10 text-primary hover:bg-primary/20 rounded-lg transition-colors font-medium text-sm"
                   >
-                    View on Explorer
+                    Trade on Terminal
                     <ExternalLink className="w-3 h-3" />
                   </a>
                 </div>
