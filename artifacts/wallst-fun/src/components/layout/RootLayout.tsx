@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { Moon, Sun, Terminal, Activity, Briefcase, MessageSquare, TrendingUp, User, Menu, X } from "lucide-react";
 import { useLiveMetrics } from "@/hooks/use-simulated-data";
+import { useWalletSolBalance } from "@/hooks/use-helius-data";
 
 // Replace with actual Solana wallet address (public-facing, masked)
 export const WALLET_FULL = "Hw7yc27h6Lws6YsQmdLoj4M7psyFHRhosFwoGuSESmTh";
@@ -34,6 +35,7 @@ export function RootLayout({ children }: { children: React.ReactNode }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [solPrice, setSolPrice] = useState(0);
   const metrics = useLiveMetrics();
+  const { balance: realSolBalance } = useWalletSolBalance();
 
   // Read SOL price from dashboard's CoinGecko fetch
   useEffect(() => {
@@ -76,7 +78,7 @@ export function RootLayout({ children }: { children: React.ReactNode }) {
             <span className="text-muted-foreground">///</span>
             <span>SOL/USD:&nbsp;<span className="font-bold">${solPrice > 0 ? solPrice.toFixed(2) : '—'}</span></span>
             <span className="text-muted-foreground">///</span>
-            <span>AGENT BAL:&nbsp;<span className="font-bold">{metrics.solBalance.toFixed(2)} SOL</span></span>
+            <span>AGENT BAL:&nbsp;<span className="font-bold">{realSolBalance !== null ? `${realSolBalance.toFixed(4)} SOL` : '— SOL'}</span></span>
             <span className="text-muted-foreground">///</span>
             <span>24H P&amp;L:&nbsp;<span className={`font-bold ${metrics.dailyPnl >= 0 ? "text-gains" : "text-losses"}`}>{metrics.dailyPnl >= 0 ? "+" : ""}{metrics.dailyPnl.toFixed(2)}%</span></span>
             <span className="text-muted-foreground">///</span>
@@ -93,7 +95,7 @@ export function RootLayout({ children }: { children: React.ReactNode }) {
             <span className="text-muted-foreground">///</span>
             <span>SOL/USD:&nbsp;<span className="font-bold">${solPrice > 0 ? solPrice.toFixed(2) : '—'}</span></span>
             <span className="text-muted-foreground">///</span>
-            <span>AGENT BAL:&nbsp;<span className="font-bold">{metrics.solBalance.toFixed(2)} SOL</span></span>
+            <span>AGENT BAL:&nbsp;<span className="font-bold">{realSolBalance !== null ? `${realSolBalance.toFixed(4)} SOL` : '— SOL'}</span></span>
             <span className="text-muted-foreground">///</span>
             <span>24H P&amp;L:&nbsp;<span className={`font-bold ${metrics.dailyPnl >= 0 ? "text-gains" : "text-losses"}`}>{metrics.dailyPnl >= 0 ? "+" : ""}{metrics.dailyPnl.toFixed(2)}%</span></span>
             <span className="text-muted-foreground">///</span>

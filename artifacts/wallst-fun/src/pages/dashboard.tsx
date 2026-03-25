@@ -1,20 +1,24 @@
 import React, { useState, useEffect } from "react";
-import { useLiveMetrics, useLiveTrades, useChartData, useXFeed, useViralTrends } from "@/hooks/use-simulated-data";
+import { useLiveMetrics, useChartData, useXFeed, useViralTrends } from "@/hooks/use-simulated-data";
+import { useWalletSolBalance, useRealTransactions } from "@/hooks/use-helius-data";
 import { LiveIndicator } from "@/components/ui/LiveIndicator";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { format } from "date-fns";
-import { ArrowUpRight, ArrowDownRight, Wallet, Activity, Target, Zap, ExternalLink, Heart, Repeat2, MessageCircle, MessageSquare } from "lucide-react";
+import { ArrowUpRight, ArrowDownRight, Wallet, Activity, Target, Zap, ExternalLink, Heart, Repeat2, MessageCircle, MessageSquare, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 export default function Dashboard() {
   const metrics = useLiveMetrics();
-  const trades = useLiveTrades(8);
   const chartData = useChartData(7);
   const tweets = useXFeed();
   const trends = useViralTrends();
+
+  // Real blockchain data
+  const { balance: solBalance, loading: solBalanceLoading } = useWalletSolBalance();
+  const { trades: realTrades, loading: tradesLoading } = useRealTransactions();
 
   // Real SOL Price from CoinGecko API
   const [solPrice, setSolPrice] = useState(() => {
@@ -82,8 +86,6 @@ export default function Dashboard() {
     };
   }, []);
 
-  const isProfitable = metrics.dailyPnl >= 0;
-
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       
@@ -109,12 +111,15 @@ export default function Dashboard() {
             <Wallet className="w-4 h-4 text-primary" />
           </div>
           <div className="text-4xl font-bold mt-2 font-mono flex items-baseline gap-2">
-            {metrics.solBalance.toFixed(2)}
+            {solBalanceLoading ? (
+              <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+            ) : (
+              (solBalance ?? 0).toFixed(4)
+            )}
             <span className="text-lg text-muted-foreground font-sans">SOL</span>
           </div>
-          <div className={`text-sm font-medium mt-2 flex items-center gap-1 ${isProfitable ? 'text-gains' : 'text-losses'}`}>
-            {isProfitable ? <ArrowUpRight className="w-4 h-4" /> : <ArrowDownRight className="w-4 h-4" />}
-            {Math.abs(metrics.dailyPnlAbs).toFixed(2)} SOL ({Math.abs(metrics.dailyPnl).toFixed(2)}%) Today
+          <div className="text-xs text-gains font-mono mt-2 flex items-center gap-1">
+            ● Helius Mainnet · live
           </div>
         </div>
       </section>
@@ -208,55 +213,80 @@ export default function Dashboard() {
           <Card className="border-border/50 shadow-sm overflow-hidden">
             <CardHeader className="flex flex-row items-center justify-between pb-4 border-b border-border/50 bg-muted/20">
               <CardTitle className="text-lg font-serif">Live Execution Log</CardTitle>
-              <LiveIndicator />
+              <LiveIndicator text="HELIUS MAINNET" />
             </CardHeader>
             <div className="p-0 relative">
-              <Table>
-                <TableHeader className="bg-muted/30">
-                  <TableRow className="hover:bg-transparent border-border/50">
-                    <TableHead className="w-[100px] text-xs">TIME</TableHead>
-                    <TableHead className="w-[80px] text-xs">ACTION</TableHead>
-                    <TableHead className="text-xs">ASSET</TableHead>
-                    <TableHead className="text-right text-xs">SIZE (SOL)</TableHead>
-                    <TableHead className="text-right text-xs">PNL</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  <AnimatePresence>
-                    {trades.slice(0, 8).map((trade) => (
-                      <motion.tr 
-                        key={trade.id}
-                        initial={{ opacity: 0, y: -10, backgroundColor: 'hsl(var(--muted))' }}
-                        animate={{ opacity: 1, y: 0, backgroundColor: 'transparent' }}
-                        exit={{ opacity: 0 }}
-                        transition={{ duration: 0.3 }}
-                        className="border-border/30 hover:bg-muted/20 transition-colors font-mono text-sm"
-                      >
-                        <TableCell className="text-muted-foreground">{format(trade.timestamp, 'HH:mm:ss')}</TableCell>
-                        <TableCell>
-                          <Badge variant={trade.action === 'BUY' ? 'default' : 'secondary'} className={`text-[10px] ${trade.action === 'BUY' ? 'bg-primary/20 text-primary hover:bg-primary/30' : 'bg-muted text-muted-foreground'}`}>
-                            {trade.action}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="font-bold">${trade.token}</TableCell>
-                        <TableCell className="text-right">{trade.amount.toFixed(2)}</TableCell>
-                        <TableCell className="text-right">
-                          {trade.pnl ? (
-                            <span className={trade.pnl > 0 ? "text-gains" : "text-losses"}>
-                              {trade.pnl > 0 ? "+" : ""}{trade.pnlPercent?.toFixed(1)}%
-                            </span>
-                          ) : (
-                            <span className="text-muted-foreground">-</span>
-                          )}
-                        </TableCell>
-                      </motion.tr>
-                    ))}
-                  </AnimatePresence>
-                </TableBody>
-              </Table>
+              {tradesLoading ? (
+                <div className="flex items-center justify-center gap-3 py-10 text-muted-foreground">
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <span className="text-sm">Fetching on-chain transactions...</span>
+                </div>
+              ) : realTrades.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-10 gap-2 text-muted-foreground">
+                  <p className="text-sm">No swap transactions found on-chain yet.</p>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader className="bg-muted/30">
+                    <TableRow className="hover:bg-transparent border-border/50">
+                      <TableHead className="w-[90px] text-xs">TIME</TableHead>
+                      <TableHead className="w-[75px] text-xs">ACTION</TableHead>
+                      <TableHead className="text-xs">ASSET</TableHead>
+                      <TableHead className="text-right text-xs">SOL</TableHead>
+                      <TableHead className="text-right text-xs">TX</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    <AnimatePresence>
+                      {realTrades.slice(0, 8).map((trade) => (
+                        <motion.tr
+                          key={trade.id}
+                          initial={{ opacity: 0, y: -10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0 }}
+                          transition={{ duration: 0.3 }}
+                          className="border-border/30 hover:bg-muted/20 transition-colors font-mono text-sm"
+                        >
+                          <TableCell className="text-muted-foreground text-xs">
+                            {format(trade.timestamp, 'HH:mm:ss')}
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              variant="outline"
+                              className={`text-[10px] ${
+                                trade.action === 'BUY'
+                                  ? 'bg-gains/10 text-gains border-gains/30'
+                                  : trade.action === 'SELL'
+                                  ? 'bg-losses/10 text-losses border-losses/30'
+                                  : 'bg-primary/10 text-primary border-primary/30'
+                              }`}
+                            >
+                              {trade.action}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="font-bold">{trade.tokenSymbol}</TableCell>
+                          <TableCell className="text-right text-xs">
+                            {trade.solAmount > 0 ? `${trade.solAmount.toFixed(3)}` : '—'}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <a
+                              href={trade.txUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 text-primary hover:underline text-[10px]"
+                            >
+                              {trade.shortSig} <ExternalLink className="w-2.5 h-2.5" />
+                            </a>
+                          </TableCell>
+                        </motion.tr>
+                      ))}
+                    </AnimatePresence>
+                  </TableBody>
+                </Table>
+              )}
             </div>
             <div className="p-3 border-t border-border/50 bg-muted/10 text-center">
-              <span className="text-xs text-muted-foreground italic">Connect Helius RPC for mainnet execution.</span>
+              <span className="text-xs text-gains font-mono">● Live data from Helius Enhanced TX API · 30s refresh</span>
             </div>
           </Card>
 

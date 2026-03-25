@@ -94,3 +94,20 @@ Generated React Query hooks and fetch client from the OpenAPI spec (e.g. `useHea
 ### `scripts` (`@workspace/scripts`)
 
 Utility scripts package. Each script is a `.ts` file in `src/` with a corresponding npm script in `package.json`. Run scripts via `pnpm --filter @workspace/scripts run <script>`. Scripts can import any workspace package (e.g., `@workspace/db`) by adding it as a dependency in `scripts/package.json`.
+
+### `artifacts/wallst-fun` (`@workspace/wallst-fun`)
+
+**wallst.fun** — Autonomous Memecoin Trading Agent Dashboard. React + Vite frontend-only SPA with dark/light mode, live WSJ-style ticker, and 6 pages.
+
+**Agent:** WallStSmith | **Wallet:** `Hw7yc27h6Lws6YsQmdLoj4M7psyFHRhosFwoGuSESmTh` | **X:** `@WallstM99224`
+
+**Pages:** `/` Dashboard, `/live-trades` Live Trades, `/portfolio` Portfolio, `/viral-trends` Scope, `/x-feed` X Feed, `/agent-bio` Agent Bio
+
+**Key integrations:**
+- **Helius API** (`54385120-20ac-4baa-9774-3f7ba8ccd656`): Real on-chain SOL balance (15s refresh), SPL token holdings via DAS `getAssetsByOwner`, real swap transaction history via Enhanced TX API V0 (30s refresh). Hook: `src/hooks/use-helius-data.ts`
+- **Moralis API**: Pump.fun bonding + graduated tokens fetched every 45s for Scope page. Stored in `src/pages/scope.tsx`.
+- **CoinGecko API**: Live SOL/USD price every 60s, cached in `localStorage('wallst-sol-price')` for ticker bar.
+
+**Mock data (retained for non-wallet features):** `src/hooks/use-simulated-data.ts` — P&L chart, X feed tweets, win rate, viral radar.
+
+**Stale token replacement (Scope page):** Tokens showing 0% change for 2 consecutive 45s cycles get replaced with the most actively moving token from the full 100-token fetched list.
