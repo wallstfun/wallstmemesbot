@@ -434,8 +434,25 @@ export default function Dashboard() {
                     return (
                       <div key={token.tokenAddress} className="p-3 hover:bg-muted/30 transition-colors flex items-center justify-between group">
                         <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded bg-background border border-border flex items-center justify-center font-mono text-xs font-bold shadow-sm group-hover:border-primary/50 transition-colors shrink-0">
-                            {i + 1}
+                          <div className="w-8 h-8 rounded-full bg-background border border-border overflow-hidden shadow-sm group-hover:border-primary/50 transition-colors shrink-0">
+                            {token.logo ? (
+                              <img
+                                src={token.logo}
+                                alt={token.symbol}
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  const t = e.currentTarget;
+                                  t.style.display = "none";
+                                  t.nextElementSibling?.removeAttribute("style");
+                                }}
+                              />
+                            ) : null}
+                            <div
+                              className="w-full h-full flex items-center justify-center font-mono text-xs font-bold text-muted-foreground"
+                              style={token.logo ? { display: "none" } : undefined}
+                            >
+                              {token.symbol?.[0] ?? (i + 1)}
+                            </div>
                           </div>
                           <div>
                             <div className="font-bold flex items-center gap-1.5">
