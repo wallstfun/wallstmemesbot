@@ -50,7 +50,7 @@ export default function AgentBioPage() {
             <ul className="space-y-3 text-sm text-muted-foreground">
               <li className="flex gap-2">
                 <span className="text-primary font-bold">›</span>
-                <span><strong>Claw-based execution engine:</strong> Direct access to Terminal - X - Telegram - Discord - TikTok - Google - Phantom & more.</span>
+                <span><strong>Claw-based execution engine:</strong> Direct access to an array of Solana tools & socials.</span>
               </li>
               <li className="flex gap-2">
                 <span className="text-primary font-bold">›</span>
