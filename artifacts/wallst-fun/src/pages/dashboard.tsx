@@ -41,7 +41,6 @@ export default function Dashboard() {
 
   // Real SOL Price from CoinGecko API
   const [solPrice, setSolPrice] = useState(() => {
-    // Load from localStorage on mount
     const cached = localStorage.getItem('wallst-sol-price');
     if (cached) {
       try {
@@ -53,6 +52,7 @@ export default function Dashboard() {
     }
     return 0;
   });
+  const [priceChange1h, setPriceChange1h] = useState(0);
   const [isLive, setIsLive] = useState(false);
 
   useEffect(() => {
@@ -62,22 +62,21 @@ export default function Dashboard() {
       try {
         console.log('[wallst.fun] Fetching SOL price from CoinGecko...');
         
-        const res = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd');
+        const res = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd&include_market_cap=false&include_24hr_vol=false&include_24hr_change=true');
         const data = await res.json();
 
         if (data.solana?.usd) {
           setSolPrice(data.solana.usd);
+          setPriceChange1h(data.solana?.usd_24h_change ?? 0);
           setIsLive(true);
           console.log('[wallst.fun] SOL price updated:', data.solana.usd);
-          // Update the ticker in RootLayout via localStorage
-          localStorage.setItem('wallst-sol-price', JSON.stringify({ price: data.solana.usd, timestamp: Date.now() }));
+          localStorage.setItem('wallst-sol-price', JSON.stringify({ price: data.solana.usd, change1h: data.solana?.usd_24h_change ?? 0, timestamp: Date.now() }));
         } else {
           throw new Error('Invalid price data');
         }
       } catch (error) {
         console.error('[wallst.fun] Failed to fetch SOL price:', error);
         setIsLive(false);
-        // Retry once after 8 seconds on failure
         retryTimeout = setTimeout(() => {
           console.log('[wallst.fun] Retrying SOL price fetch...');
           fetchPrice();
@@ -85,19 +84,19 @@ export default function Dashboard() {
       }
     };
 
-    // Load cached price on mount
     const cached = localStorage.getItem('wallst-sol-price');
     if (cached) {
       try {
-        const { price } = JSON.parse(cached);
+        const { price, change1h } = JSON.parse(cached);
         if (price) setSolPrice(price);
+        if (change1h !== undefined) setPriceChange1h(change1h);
       } catch (e) {
         // Ignore parse errors
       }
     }
 
     fetchPrice();
-    const interval = setInterval(fetchPrice, 60000); // every 60 seconds (well under 30 calls/min rate limit)
+    const interval = setInterval(fetchPrice, 60000);
 
     return () => {
       clearInterval(interval);
@@ -177,9 +176,16 @@ export default function Dashboard() {
             <p className="text-3xl font-bold font-mono text-foreground">
               ${solPrice > 0 ? solPrice.toFixed(2) : '—'}
             </p>
-            <p className={`text-xs font-medium ${isLive ? 'text-gains' : 'text-losses'}`}>
-              ● CoinGecko • {isLive ? 'Live' : 'Last updated'}
-            </p>
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-medium text-gains">
+                ● CoinGecko • {isLive ? 'Live' : 'Last updated'}
+              </p>
+              {priceChange1h !== 0 && (
+                <span className={`text-xs font-medium ${priceChange1h >= 0 ? 'text-gains' : 'text-losses'}`}>
+                  {priceChange1h >= 0 ? '+' : ''}{priceChange1h.toFixed(2)}%
+                </span>
+              )}
+            </div>
           </div>
         </div>
 
