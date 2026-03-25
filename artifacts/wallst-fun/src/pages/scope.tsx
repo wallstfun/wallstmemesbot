@@ -11,7 +11,7 @@ interface PumpToken {
   logo?: string;
   marketCap?: number;
   priceChange24h?: number;
-  priceChange1m?: number;
+  priceChange1m?: number | null;
   priceUsd?: number;
   bondingProgress?: number;
   url?: string;
@@ -19,9 +19,19 @@ interface PumpToken {
 
 const MORALIS_API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJub25jZSI6IjJkOWY2ZmM0LTczZGEtNDEwZC1iYjVlLTk1N2VlMjI4OGU3NCIsIm9yZ0lkIjoiNTA2OTQ1IiwidXNlcklkIjoiNTIxNjE0IiwidHlwZUlkIjoiNjE1MTFhYTYtMTk5ZS00OWVkLThiODktNTc2YjI1NGMxOTkwIiwidHlwZSI6IlBST0pFQ1QiLCJpYXQiOjE3NzQzOTQxMTUsImV4cCI6NDkzMDE1NDExNX0.bPd42MqB0lwTbLivIX-4pFReN-F0LgB3rMplN-UsnHQ";
 
+interface PriceSnapshot { price: number; ts: number; }
+
+function compute1mChange(history: PriceSnapshot[], currentPrice: number, now: number): number {
+  if (history.length < 2 || currentPrice <= 0) return NaN;
+  const oneMinAgo = now - 60_000;
+  const candidate = [...history].filter(h => h.ts <= oneMinAgo + 10_000).pop();
+  if (!candidate || candidate.price <= 0) return NaN;
+  return ((currentPrice - candidate.price) / candidate.price) * 100;
+}
+
 export default function ScopePage() {
   const [tokens, setTokens] = useState<PumpToken[]>([]);
-  const previousMarketCaps = useRef<Record<string, number>>({});
+  const priceHistoryRef = useRef<Record<string, PriceSnapshot[]>>({});
   const allFetchedTokensRef = useRef<PumpToken[]>([]);
   const zeroChangeCountersRef = useRef<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
@@ -77,7 +87,7 @@ export default function ScopePage() {
               logo: token.logo,
               marketCap: marketCap,
               priceChange24h: 0,
-              priceChange1m: NaN,
+              priceChange1m: null,
               priceUsd: parseFloat(token.priceUsd) || 0,
               bondingProgress: token.bondingCurveProgress || 0,
               url: `https://pump.fun/${token.tokenAddress}`,
@@ -103,7 +113,7 @@ export default function ScopePage() {
               logo: token.logo,
               marketCap: marketCap,
               priceChange24h: 0,
-              priceChange1m: NaN,
+              priceChange1m: null,
               priceUsd: parseFloat(token.priceUsd) || 0,
               bondingProgress: 100,
               url: `https://pump.fun/${token.tokenAddress}`,
@@ -122,8 +132,27 @@ export default function ScopePage() {
       allFetchedTokensRef.current = uniqueTokens;
 
       const topTokens = uniqueTokens.slice(0, 12);
-      
-      setTokens(topTokens);
+
+      // Seed price history for any tokens not yet tracked
+      const now = Date.now();
+      topTokens.forEach((token) => {
+        if (!priceHistoryRef.current[token.tokenAddress]) {
+          priceHistoryRef.current[token.tokenAddress] = [];
+        }
+        const price = token.priceUsd ?? 0;
+        if (price > 0) {
+          priceHistoryRef.current[token.tokenAddress].push({ price, ts: now });
+        }
+      });
+
+      // Preserve 1m change values that the price-poll already computed
+      setTokens((prev) => {
+        const prevMap = new Map(prev.map((t) => [t.tokenAddress, t]));
+        return topTokens.map((t) => ({
+          ...t,
+          priceChange1m: prevMap.get(t.tokenAddress)?.priceChange1m ?? null,
+        }));
+      });
       setLastUpdated(new Date());
     } catch (err) {
       const message = err instanceof Error ? err.message : "Unknown error occurred";
@@ -134,10 +163,73 @@ export default function ScopePage() {
     }
   };
 
-  // Auto-refresh every 45 seconds
+  // Auto-refresh token list every 30 seconds
   useEffect(() => {
     fetchTokens();
-    const interval = setInterval(fetchTokens, 45000);
+    const interval = setInterval(fetchTokens, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Lightweight price refresh every 15 seconds — gives real 1-minute change data
+  useEffect(() => {
+    const fetchPrices = async () => {
+      const current = allFetchedTokensRef.current.slice(0, 12);
+      if (current.length === 0) return;
+
+      const now = Date.now();
+
+      const results = await Promise.all(
+        current.map(async (token) => {
+          try {
+            const res = await fetch(
+              `https://solana-gateway.moralis.io/token/mainnet/${token.tokenAddress}/price`,
+              {
+                headers: {
+                  "X-API-Key": MORALIS_API_KEY,
+                  Accept: "application/json",
+                },
+              }
+            );
+            if (!res.ok) return null;
+            const data = await res.json();
+            const price = parseFloat(data.usdPrice) || 0;
+            return { tokenAddress: token.tokenAddress, price };
+          } catch {
+            return null;
+          }
+        })
+      );
+
+      setTokens((prev) =>
+        prev.map((token) => {
+          const result = results.find((r) => r?.tokenAddress === token.tokenAddress);
+          if (!result || result.price <= 0) return token;
+
+          const price = result.price;
+          const hist = priceHistoryRef.current[token.tokenAddress] ?? [];
+          hist.push({ price, ts: now });
+          priceHistoryRef.current[token.tokenAddress] = hist.filter(
+            (h) => now - h.ts <= 90_000
+          );
+
+          const change1m = compute1mChange(
+            priceHistoryRef.current[token.tokenAddress],
+            price,
+            now
+          );
+
+          // Track zero-change cycles for stale replacement
+          const isZero = Number.isNaN(change1m) || Math.abs(change1m || 0) < 0.001;
+          zeroChangeCountersRef.current[token.tokenAddress] = isZero
+            ? (zeroChangeCountersRef.current[token.tokenAddress] || 0) + 1
+            : 0;
+
+          return { ...token, priceUsd: price, priceChange1m: change1m };
+        })
+      );
+    };
+
+    const interval = setInterval(fetchPrices, 15000);
     return () => clearInterval(interval);
   }, []);
 
@@ -154,88 +246,6 @@ export default function ScopePage() {
     return () => clearInterval(updateTimer);
   }, [lastUpdated]);
 
-  // Calculate 1-minute market cap % change after every fetch
-  useEffect(() => {
-    if (tokens.length === 0) return;
-
-    setTokens(prevTokens => {
-      const updatedTokens = prevTokens.map(token => {
-        const currentMC = token.marketCap || 0;
-        const prevMC = previousMarketCaps.current[token.tokenAddress];
-
-        let change = NaN;
-        if (prevMC !== undefined && prevMC > 0) {
-          change = ((currentMC - prevMC) / prevMC) * 100;
-        }
-
-        // Always update the previous market cap for next time
-        previousMarketCaps.current[token.tokenAddress] = currentMC;
-
-        return { ...token, priceChange1m: change };
-      });
-
-      // Track zero-change cycles and replace stale tokens
-      updatedTokens.forEach(token => {
-        const isZeroChange = Number.isNaN(token.priceChange1m) || 
-                             (Math.abs(token.priceChange1m || 0) < 0.01);
-        
-        if (isZeroChange) {
-          // Increment zero-change counter
-          zeroChangeCountersRef.current[token.tokenAddress] = 
-            (zeroChangeCountersRef.current[token.tokenAddress] || 0) + 1;
-        } else {
-          // Reset counter for non-zero change
-          zeroChangeCountersRef.current[token.tokenAddress] = 0;
-        }
-      });
-
-      // Check for tokens that need replacement (2 consecutive zero-change cycles)
-      let tokensNeedingReplacement = false;
-      const replacementMap = new Map<string, PumpToken>();
-
-      updatedTokens.forEach(token => {
-        const counter = zeroChangeCountersRef.current[token.tokenAddress] || 0;
-        if (counter >= 2) {
-          tokensNeedingReplacement = true;
-          replacementMap.set(token.tokenAddress, token);
-        }
-      });
-
-      if (tokensNeedingReplacement) {
-        // Find replacement tokens from the full fetched list
-        const topTokenAddresses = new Set(updatedTokens.map(t => t.tokenAddress));
-        const replacementCandidates = allFetchedTokensRef.current.filter(
-          token => !topTokenAddresses.has(token.tokenAddress)
-        );
-
-        // Sort candidates by strongest positive momentum
-        replacementCandidates.sort((a, b) => {
-          const changeA = a.priceChange1m || -Infinity;
-          const changeB = b.priceChange1m || -Infinity;
-          return changeB - changeA;
-        });
-
-        // Replace stale tokens with top candidates
-        let replacementIndex = 0;
-        const finalTokens = updatedTokens.map(token => {
-          if (replacementMap.has(token.tokenAddress) && replacementIndex < replacementCandidates.length) {
-            const replacement = replacementCandidates[replacementIndex];
-            // Reset counter and previous market cap for new token
-            zeroChangeCountersRef.current[replacement.tokenAddress] = 0;
-            delete previousMarketCaps.current[replacement.tokenAddress];
-            replacementIndex++;
-            // Reset priceChange1m to NaN since it's the first cycle
-            return { ...replacement, priceChange1m: NaN };
-          }
-          return token;
-        });
-
-        return finalTokens;
-      }
-
-      return updatedTokens;
-    });
-  }, [lastUpdated]); // Trigger after each fetch (lastUpdated changes once per fetch)
 
   const formatMarketCap = (cap: number | undefined) => {
     if (!cap || cap === 0) return "—";
@@ -359,21 +369,21 @@ export default function ScopePage() {
                   </div>
 
                   {/* Price Change Badge (1m) */}
-                  {Number.isNaN(token.priceChange1m) ? (
+                  {(token.priceChange1m === null || token.priceChange1m === undefined || Number.isNaN(token.priceChange1m)) ? (
                     <Badge variant="outline" className="bg-muted/10 text-muted-foreground font-semibold">
-                      —
+                      1m: —
                     </Badge>
                   ) : (
                     <Badge
-                      variant={token.priceChange1m >= 0 ? "default" : "destructive"}
+                      variant={(token.priceChange1m ?? 0) >= 0 ? "default" : "destructive"}
                       className={
-                        token.priceChange1m >= 0
+                        (token.priceChange1m ?? 0) >= 0
                           ? "bg-gains/10 text-gains hover:bg-gains/20 font-semibold"
                           : "bg-losses/10 text-losses hover:bg-losses/20 font-semibold"
                       }
                     >
-                      {token.priceChange1m >= 0 ? "+" : ""}
-                      {token.priceChange1m.toFixed(2)}%
+                      {(token.priceChange1m ?? 0) >= 0 ? "+" : ""}
+                      {(token.priceChange1m ?? 0).toFixed(2)}% 1m
                     </Badge>
                   )}
                 </div>

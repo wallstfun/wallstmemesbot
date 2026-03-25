@@ -459,10 +459,10 @@ export default function Dashboard() {
                               ? `$${(token.marketCap / 1000).toFixed(0)}K`
                               : '—'}
                           </div>
-                          <div className={`text-[10px] font-mono mt-0.5 font-medium ${token.priceChange5m === null || token.priceChange5m === undefined ? 'text-muted-foreground' : token.priceChange5m >= 0 ? 'text-gains' : 'text-losses'}`}>
-                            {token.priceChange5m === null || token.priceChange5m === undefined
-                              ? '5m: —'
-                              : `5m: ${token.priceChange5m >= 0 ? '+' : ''}${token.priceChange5m.toFixed(2)}%`}
+                          <div className={`text-[10px] font-mono mt-0.5 font-medium ${!token.priceChange1m && token.priceChange1m !== 0 ? 'text-muted-foreground' : (token.priceChange1m ?? 0) >= 0 ? 'text-gains' : 'text-losses'}`}>
+                            {!token.priceChange1m && token.priceChange1m !== 0
+                              ? '1m: —'
+                              : `1m: ${(token.priceChange1m ?? 0) >= 0 ? '+' : ''}${(token.priceChange1m ?? 0).toFixed(2)}%`}
                           </div>
                         </div>
                       </div>
