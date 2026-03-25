@@ -174,10 +174,6 @@ export function RootLayout({ children }: { children: React.ReactNode }) {
             <span>Agent Wallet: {WALLET}</span>
           </div>
           
-          <div className="flex gap-4">
-            <a href={`https://x.com/wallst_bot`} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors"><MessageSquare className="w-5 h-5" /></a>
-            <a href={`https://solscan.io/account/${WALLET_FULL}`} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors"><Terminal className="w-5 h-5" /></a>
-          </div>
         </div>
       </footer>
     </div>
