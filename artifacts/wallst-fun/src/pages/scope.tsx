@@ -19,9 +19,15 @@ interface PumpToken {
 
 const MORALIS_API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJub25jZSI6IjJkOWY2ZmM0LTczZGEtNDEwZC1iYjVlLTk1N2VlMjI4OGU3NCIsIm9yZ0lkIjoiNTA2OTQ1IiwidXNlcklkIjoiNTIxNjE0IiwidHlwZUlkIjoiNjE1MTFhYTYtMTk5ZS00OWVkLThiODktNTc2YjI1NGMxOTkwIiwidHlwZSI6IlBST0pFQ1QiLCJpYXQiOjE3NzQzOTQxMTUsImV4cCI6NDkzMDE1NDExNX0.bPd42MqB0lwTbLivIX-4pFReN-F0LgB3rMplN-UsnHQ";
 
+interface TokenMarketCapHistory {
+  currentMarketCap: number;
+  marketCapFrom5MinAgo: number | undefined;
+  lastRotationTime: number;
+}
+
 export default function ScopePage() {
   const [tokens, setTokens] = useState<PumpToken[]>([]);
-  const prevMarketCapRef = useRef<Map<string, number>>(new Map());
+  const marketCapHistoryRef = useRef<Map<string, TokenMarketCapHistory>>(new Map());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
@@ -67,11 +73,6 @@ export default function ScopePage() {
         bondingData.result.forEach((token: any) => {
           if (token.tokenAddress && token.symbol) {
             const marketCap = parseFloat(token.fullyDilutedValuation) || 0;
-            const prevMarketCap = prevMarketCapRef.current.get(token.tokenAddress);
-            // Use NaN to represent "first fetch" (no previous market cap)
-            const priceChange1m = prevMarketCap !== undefined 
-              ? ((marketCap - prevMarketCap) / prevMarketCap) * 100 
-              : NaN;
             
             allTokens.push({
               tokenAddress: token.tokenAddress,
@@ -80,7 +81,7 @@ export default function ScopePage() {
               logo: token.logo,
               marketCap: marketCap,
               priceChange24h: 0,
-              priceChange1m: priceChange1m,
+              priceChange1m: NaN,
               priceUsd: parseFloat(token.priceUsd) || 0,
               bondingProgress: token.bondingCurveProgress || 0,
               url: `https://pump.fun/${token.tokenAddress}`,
@@ -98,11 +99,6 @@ export default function ScopePage() {
         graduatedData.result.forEach((token: any) => {
           if (token.tokenAddress && token.symbol) {
             const marketCap = parseFloat(token.fullyDilutedValuation) || 0;
-            const prevMarketCap = prevMarketCapRef.current.get(token.tokenAddress);
-            // Use NaN to represent "first fetch" (no previous market cap)
-            const priceChange1m = prevMarketCap !== undefined 
-              ? ((marketCap - prevMarketCap) / prevMarketCap) * 100 
-              : NaN;
             
             allTokens.push({
               tokenAddress: token.tokenAddress,
@@ -111,7 +107,7 @@ export default function ScopePage() {
               logo: token.logo,
               marketCap: marketCap,
               priceChange24h: 0,
-              priceChange1m: priceChange1m,
+              priceChange1m: NaN,
               priceUsd: parseFloat(token.priceUsd) || 0,
               bondingProgress: 100,
               url: `https://pump.fun/${token.tokenAddress}`,
@@ -128,15 +124,43 @@ export default function ScopePage() {
 
       const topTokens = uniqueTokens.slice(0, 12);
       
-      // Update prev market caps for next fetch (using ref for immediate availability)
-      // Save ALL tokens' market caps, not just top 12
-      const newPrevMarketCaps = new Map<string, number>();
+      // Update market cap history for 5-minute change calculation
+      const now = Date.now();
+      const FIVE_MINUTES = 5 * 60 * 1000;
+      
       allTokens.forEach(token => {
         if (token.marketCap) {
-          newPrevMarketCaps.set(token.tokenAddress, token.marketCap);
+          const existing = marketCapHistoryRef.current.get(token.tokenAddress);
+          
+          if (!existing) {
+            // First time seeing this token
+            marketCapHistoryRef.current.set(token.tokenAddress, {
+              currentMarketCap: token.marketCap,
+              marketCapFrom5MinAgo: undefined,
+              lastRotationTime: now,
+            });
+          } else {
+            // Check if 5 minutes have passed since last rotation
+            const timeSinceRotation = now - existing.lastRotationTime;
+            
+            if (timeSinceRotation >= FIVE_MINUTES) {
+              // Rotate: current becomes 5-min-ago
+              marketCapHistoryRef.current.set(token.tokenAddress, {
+                currentMarketCap: token.marketCap,
+                marketCapFrom5MinAgo: existing.currentMarketCap,
+                lastRotationTime: now,
+              });
+            } else {
+              // Just update current
+              marketCapHistoryRef.current.set(token.tokenAddress, {
+                currentMarketCap: token.marketCap,
+                marketCapFrom5MinAgo: existing.marketCapFrom5MinAgo,
+                lastRotationTime: existing.lastRotationTime,
+              });
+            }
+          }
         }
       });
-      prevMarketCapRef.current = newPrevMarketCaps;
       
       setTokens(topTokens);
       setLastUpdated(new Date());
@@ -168,6 +192,30 @@ export default function ScopePage() {
 
     return () => clearInterval(updateTimer);
   }, [lastUpdated]);
+
+  // Recalculate 5-minute market cap % change every 3 seconds
+  useEffect(() => {
+    const updateTimer = setInterval(() => {
+      setTokens(prevTokens => {
+        return prevTokens.map(token => {
+          const history = marketCapHistoryRef.current.get(token.tokenAddress);
+          
+          if (!history || history.marketCapFrom5MinAgo === undefined) {
+            // No 5-minute-ago data yet
+            return { ...token, priceChange1m: NaN };
+          }
+          
+          // Calculate 5-minute % change
+          const priceChange5m = 
+            ((history.currentMarketCap - history.marketCapFrom5MinAgo) / history.marketCapFrom5MinAgo) * 100;
+          
+          return { ...token, priceChange1m: priceChange5m };
+        });
+      });
+    }, 3000);
+
+    return () => clearInterval(updateTimer);
+  }, []);
 
   const formatMarketCap = (cap: number | undefined) => {
     if (!cap || cap === 0) return "—";
