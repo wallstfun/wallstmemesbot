@@ -148,21 +148,11 @@ export default function ScopePage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-4xl font-serif font-bold text-foreground flex items-center gap-3">
-            <Flame className="w-9 h-9 text-orange-500" /> WallStSmith's Scope 👀
+            <Flame className="w-9 h-9 text-orange-500" /> Scope 👀
           </h1>
         </div>
-        <div className="flex items-center gap-3">
-          <button
-            onClick={poll}
-            disabled={loading}
-            className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
-          >
-            <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
-            Refresh
-          </button>
-          <div className="bg-card px-4 py-2 rounded-lg border border-border shadow-sm">
-            <LiveIndicator text="SCANNING WEB3" />
-          </div>
+        <div className="bg-card px-4 py-2 rounded-lg border border-border shadow-sm">
+          <LiveIndicator text="SCANNING WEB3" />
         </div>
       </div>
 
@@ -302,10 +292,10 @@ export default function ScopePage() {
                     </div>
                   </button>
 
-                  {/* Liquidity Depth */}
+                  {/* Bonding Progress */}
                   <div className="bg-muted/20 p-3 rounded-lg border border-border/50">
                     <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-2">
-                      Liquidity Depth
+                      Bonding Progress
                     </div>
                     <div className="flex items-center gap-2">
                       <div className="flex-1 bg-background rounded-full h-2 overflow-hidden border border-border/50">

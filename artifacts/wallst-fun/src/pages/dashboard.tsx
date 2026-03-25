@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { Link } from "wouter";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { useLiveMetrics } from "@/hooks/use-simulated-data";
 import { useScopeTokens } from "@/hooks/use-scope-data";
 import { useWalletSolBalance, useRealTransactions } from "@/hooks/use-helius-data";
@@ -81,7 +82,7 @@ function LatestTweet() {
   );
 }
 
-export default function Dashboard() {
+function DashboardContent() {
   const metrics = useLiveMetrics();
   const { tokens: scopeTokens, loading: scopeLoading } = useScopeTokens(4);
   const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
@@ -105,6 +106,7 @@ export default function Dashboard() {
     return 0;
   });
   const [priceChange5m, setPriceChange5m] = useState(0);
+  const [isLive] = useState(true);
 
   useEffect(() => {
     let retryTimeout: NodeJS.Timeout | null = null;
@@ -202,6 +204,7 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
+      {/* Dashboard content */}
       
       {/* HERO SECTION */}
       <section className="flex flex-col md:flex-row gap-6 items-start md:items-center justify-between bg-card border border-border p-6 rounded-2xl shadow-sm relative overflow-hidden">
@@ -559,5 +562,13 @@ export default function Dashboard() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function Dashboard() {
+  return (
+    <ErrorBoundary>
+      <DashboardContent />
+    </ErrorBoundary>
   );
 }
