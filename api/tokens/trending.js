@@ -1,12 +1,3 @@
-import express from 'express';
-import cors from 'cors';
-
-const app = express();
-const PORT = process.env.PORT || 3001;
-
-app.use(cors());
-app.use(express.json());
-
 const MORALIS_API_KEY = process.env.MORALIS_API_KEY;
 const MIN_MCAP = 10_000;
 const CACHE_TTL = 4 * 60 * 1000; // 4 minutes
@@ -172,10 +163,23 @@ async function fetchTrendingTokens() {
   return cachedTokens;
 }
 
-app.get('/api/tokens/trending', async (req, res) => {
+module.exports = async (req, res) => {
+  // Enable CORS
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
+  if (req.method !== 'GET') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
   try {
     const tokens = await fetchTrendingTokens();
-    res.json({
+    return res.status(200).json({
       tokens,
       count: tokens.length,
       cached: Date.now() - lastFetchTime < CACHE_TTL,
@@ -183,14 +187,6 @@ app.get('/api/tokens/trending', async (req, res) => {
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     console.error('Failed to fetch trending tokens:', err);
-    res.status(200).json({ error: message, tokens: cachedTokens || [] });
+    return res.status(200).json({ error: message, tokens: cachedTokens || [] });
   }
-});
-
-app.get('/api/healthz', (req, res) => {
-  res.json({ status: 'ok' });
-});
-
-app.listen(PORT, () => {
-  console.log(`[wallst.fun] Server listening on port ${PORT}`);
-});
+};
