@@ -54,6 +54,9 @@ HELIUS_GATEKEEPER_RPC = "https://beta.helius-rpc.com/?api-key=54385120-20ac-4baa
 HELIUS_PARSE_TRANSACTIONS = "https://api-mainnet.helius-rpc.com/v0/transactions/?api-key=54385120-20ac-4baa-9774-3f7ba8ccd656"
 HELIUS_PARSE_ADDRESS_TRANSACTIONS = "https://api-mainnet.helius-rpc.com/v0/addresses/{address}/transactions/?api-key=54385120-20ac-4baa-9774-3f7ba8ccd656"
 JUPITER_API_KEY = "429e13f2-25f8-4706-9326-24287fa313d4"
+X_ACCESS_TOKEN_SECRET = "31l8eHhFToKryVauk1M1z16wVJufJgC4wA8EtifhYcG69"
+X_ACCESS_TOKEN = "2036479065784545280-uaTxV4IvL09HqPM019Hh10w0Wx1ZKb"
+X_BEARER_TOKEN = "AAAAAAAAAAAAAAAAAAAAALYk8gEAAAAAoVC9V%2BYq%2BNlVp3LNbGYWN87P6J0%3DQQYKUyqltBeyeUT8KPzONYJON4069dAOGJmGq9TkdRyy1y8urm"
 
 [nix]
 packages = ["azure-functions-core-tools"]
