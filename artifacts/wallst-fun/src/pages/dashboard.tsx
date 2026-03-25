@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useLiveMetrics, useChartData, useXFeed, useViralTrends } from "@/hooks/use-simulated-data";
-import { useWalletSolBalance, useRealTransactions } from "@/hooks/use-helius-data";
+import { useWalletSolBalance, useRealTransactions, useNetworkCongestion } from "@/hooks/use-helius-data";
 import { LiveIndicator } from "@/components/ui/LiveIndicator";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -18,7 +18,8 @@ export default function Dashboard() {
 
   // Real blockchain data
   const { balance: solBalance, loading: solBalanceLoading } = useWalletSolBalance();
-  const { trades: realTrades, loading: tradesLoading } = useRealTransactions();
+  const { trades: realTrades, totalTrades, winRate, loading: tradesLoading } = useRealTransactions();
+  const { tps, congestion } = useNetworkCongestion();
 
   // Real SOL Price from CoinGecko API
   const [solPrice, setSolPrice] = useState(() => {
@@ -139,28 +140,65 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {[
-          { title: "24H Win Rate", value: `${metrics.winRate.toFixed(1)}%`, icon: Target, trend: "Stable", neutral: false },
-          { title: "Active Trades", value: metrics.totalTrades.toString(), icon: Zap, trend: "+12", neutral: false },
-          { title: "Network Congestion", value: "Low", icon: Activity, trend: "400 TPS", neutral: true },
-        ].map((m, i) => (
-          <Card key={i} className="hover:shadow-md transition-all duration-300 border-border/50">
-            <CardContent className="p-6">
-              <div className="flex justify-between items-start">
-                <div className="space-y-2">
-                  <p className="text-sm font-medium text-muted-foreground">{m.title}</p>
-                  <p className="text-2xl font-bold font-mono">{m.value}</p>
-                </div>
-                <div className="p-2 bg-primary/10 rounded-lg">
-                  <m.icon className="w-5 h-5 text-primary" />
-                </div>
+        {/* Win Rate */}
+        <Card className="hover:shadow-md transition-all duration-300 border-border/50">
+          <CardContent className="p-6">
+            <div className="flex justify-between items-start">
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-muted-foreground">Win Rate</p>
+                <p className="text-2xl font-bold font-mono">
+                  {tradesLoading ? '—' : winRate !== null ? `${winRate.toFixed(1)}%` : '—'}
+                </p>
               </div>
-              <div className={`text-xs mt-4 font-medium ${m.neutral ? 'text-muted-foreground' : 'text-gains'}`}>
-                {m.trend}
+              <div className="p-2 bg-primary/10 rounded-lg">
+                <Target className="w-5 h-5 text-primary" />
               </div>
-            </CardContent>
-          </Card>
-        ))}
+            </div>
+            <div className="text-xs mt-4 font-medium text-muted-foreground">
+              {tradesLoading ? 'Loading...' : winRate !== null ? `${totalTrades} matched trades` : 'No matched trades yet'}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Total Trades */}
+        <Card className="hover:shadow-md transition-all duration-300 border-border/50">
+          <CardContent className="p-6">
+            <div className="flex justify-between items-start">
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-muted-foreground">Total Trades</p>
+                <p className="text-2xl font-bold font-mono">
+                  {tradesLoading ? '—' : totalTrades}
+                </p>
+              </div>
+              <div className="p-2 bg-primary/10 rounded-lg">
+                <Zap className="w-5 h-5 text-primary" />
+              </div>
+            </div>
+            <div className="text-xs mt-4 font-medium text-gains">
+              {tradesLoading ? 'Loading...' : `${totalTrades} swap${totalTrades !== 1 ? 's' : ''} on-chain`}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Network Congestion */}
+        <Card className="hover:shadow-md transition-all duration-300 border-border/50">
+          <CardContent className="p-6">
+            <div className="flex justify-between items-start">
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-muted-foreground">Network Congestion</p>
+                <p className={`text-2xl font-bold font-mono ${congestion === 'High' ? 'text-losses' : congestion === 'Medium' ? 'text-yellow-400' : 'text-gains'}`}>
+                  {congestion}
+                </p>
+              </div>
+              <div className="p-2 bg-primary/10 rounded-lg">
+                <Activity className="w-5 h-5 text-primary" />
+              </div>
+            </div>
+            <div className="text-xs mt-4 font-medium text-muted-foreground">
+              {tps !== null ? `${tps.toLocaleString()} TPS` : 'Helius RPC · live'}
+            </div>
+          </CardContent>
+        </Card>
       </section>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

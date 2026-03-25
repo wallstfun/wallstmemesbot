@@ -162,6 +162,8 @@ const extractSymbolFromDescription = (desc: string, mint: string): string => {
 
 export function useRealTransactions() {
   const [trades, setTrades] = useState<RealTrade[]>([]);
+  const [totalTrades, setTotalTrades] = useState<number>(0);
+  const [winRate, setWinRate] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -254,7 +256,40 @@ export function useRealTransactions() {
         })
         .filter((t): t is RealTrade => t !== null);
 
+      // ── Compute derived stats from parsed trades ──────────────────────────
+      const totalTrades = parsed.length;
+
+      // Win rate: match BUYs to SELLs per token (FIFO), compare SOL amounts
+      const buyQueue: Record<string, number[]> = {};
+      const wins: boolean[] = [];
+
+      // Process oldest → newest to match buy → sell pairs
+      const chronological = [...parsed].reverse();
+      for (const t of chronological) {
+        if (t.action === "BUY" && t.tokenMint && t.solAmount > 0) {
+          if (!buyQueue[t.tokenMint]) buyQueue[t.tokenMint] = [];
+          buyQueue[t.tokenMint].push(t.solAmount);
+        }
+      }
+      for (const t of chronological) {
+        if (
+          t.action === "SELL" &&
+          t.tokenMint &&
+          t.solAmount > 0 &&
+          buyQueue[t.tokenMint]?.length > 0
+        ) {
+          const buySOL = buyQueue[t.tokenMint].shift()!;
+          wins.push(t.solAmount > buySOL);
+        }
+      }
+      const winRate =
+        wins.length > 0
+          ? (wins.filter((w) => w).length / wins.length) * 100
+          : null;
+
       setTrades(parsed);
+      setTotalTrades(totalTrades);
+      setWinRate(winRate);
       setError(null);
     } catch (err) {
       setError(
@@ -271,5 +306,51 @@ export function useRealTransactions() {
     return () => clearInterval(interval);
   }, [fetchTrades]);
 
-  return { trades, loading, error, refresh: fetchTrades };
+  return { trades, totalTrades, winRate, loading, error, refresh: fetchTrades };
+}
+
+// ── Network Congestion (via getRecentPerformanceSamples) ─────────────────────
+
+export type CongestionLevel = "Low" | "Medium" | "High" | "Unknown";
+
+export interface NetworkStatus {
+  tps: number | null;
+  congestion: CongestionLevel;
+  loading: boolean;
+}
+
+export function useNetworkCongestion(): NetworkStatus {
+  const [tps, setTps] = useState<number | null>(null);
+  const [congestion, setCongestion] = useState<CongestionLevel>("Unknown");
+  const [loading, setLoading] = useState(true);
+
+  const fetchCongestion = useCallback(async () => {
+    try {
+      const samples: any[] = await rpc("getRecentPerformanceSamples", [1]);
+      if (Array.isArray(samples) && samples.length > 0) {
+        const sample = samples[0];
+        const calculatedTps = Math.round(
+          sample.numTransactions / sample.samplePeriodSecs
+        );
+        setTps(calculatedTps);
+        setCongestion(
+          calculatedTps > 3000 ? "High" : calculatedTps > 1500 ? "Medium" : "Low"
+        );
+      } else {
+        setCongestion("Unknown");
+      }
+    } catch {
+      setCongestion("Unknown");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchCongestion();
+    const interval = setInterval(fetchCongestion, 30000);
+    return () => clearInterval(interval);
+  }, [fetchCongestion]);
+
+  return { tps, congestion, loading };
 }

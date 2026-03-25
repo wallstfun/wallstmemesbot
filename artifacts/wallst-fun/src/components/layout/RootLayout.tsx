@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { Moon, Sun, Terminal, Activity, Briefcase, MessageSquare, TrendingUp, User, Menu, X } from "lucide-react";
 import { useLiveMetrics } from "@/hooks/use-simulated-data";
-import { useWalletSolBalance } from "@/hooks/use-helius-data";
+import { useWalletSolBalance, useRealTransactions, useNetworkCongestion } from "@/hooks/use-helius-data";
 
 // Replace with actual Solana wallet address (public-facing, masked)
 export const WALLET_FULL = "Hw7yc27h6Lws6YsQmdLoj4M7psyFHRhosFwoGuSESmTh";
@@ -36,6 +36,8 @@ export function RootLayout({ children }: { children: React.ReactNode }) {
   const [solPrice, setSolPrice] = useState(0);
   const metrics = useLiveMetrics();
   const { balance: realSolBalance } = useWalletSolBalance();
+  const { totalTrades, winRate } = useRealTransactions();
+  const { tps, congestion } = useNetworkCongestion();
 
   // Read SOL price from dashboard's CoinGecko fetch
   useEffect(() => {
@@ -82,9 +84,11 @@ export function RootLayout({ children }: { children: React.ReactNode }) {
             <span className="text-muted-foreground">///</span>
             <span>24H P&amp;L:&nbsp;<span className={`font-bold ${metrics.dailyPnl >= 0 ? "text-gains" : "text-losses"}`}>{metrics.dailyPnl >= 0 ? "+" : ""}{metrics.dailyPnl.toFixed(2)}%</span></span>
             <span className="text-muted-foreground">///</span>
-            <span>WIN RATE:&nbsp;<span className="font-bold">{metrics.winRate.toFixed(1)}%</span></span>
+            <span>WIN RATE:&nbsp;<span className="font-bold">{winRate !== null ? `${winRate.toFixed(1)}%` : '—'}</span></span>
             <span className="text-muted-foreground">///</span>
-            <span>ACTIVE TRADES:&nbsp;<span className="font-bold">{metrics.totalTrades}</span></span>
+            <span>TOTAL TRADES:&nbsp;<span className="font-bold">{totalTrades}</span></span>
+            <span className="text-muted-foreground">///</span>
+            <span>NETWORK:&nbsp;<span className={`font-bold ${congestion === 'High' ? 'text-losses' : congestion === 'Medium' ? 'text-yellow-400' : 'text-gains'}`}>{congestion}{tps !== null ? ` · ${tps.toLocaleString()} TPS` : ''}</span></span>
             <span className="text-muted-foreground">///</span>
             <span className="font-bold text-muted-foreground">wallst.fun /// WallStSmith</span>
             <span className="text-muted-foreground px-8">///</span>
@@ -99,9 +103,11 @@ export function RootLayout({ children }: { children: React.ReactNode }) {
             <span className="text-muted-foreground">///</span>
             <span>24H P&amp;L:&nbsp;<span className={`font-bold ${metrics.dailyPnl >= 0 ? "text-gains" : "text-losses"}`}>{metrics.dailyPnl >= 0 ? "+" : ""}{metrics.dailyPnl.toFixed(2)}%</span></span>
             <span className="text-muted-foreground">///</span>
-            <span>WIN RATE:&nbsp;<span className="font-bold">{metrics.winRate.toFixed(1)}%</span></span>
+            <span>WIN RATE:&nbsp;<span className="font-bold">{winRate !== null ? `${winRate.toFixed(1)}%` : '—'}</span></span>
             <span className="text-muted-foreground">///</span>
-            <span>ACTIVE TRADES:&nbsp;<span className="font-bold">{metrics.totalTrades}</span></span>
+            <span>TOTAL TRADES:&nbsp;<span className="font-bold">{totalTrades}</span></span>
+            <span className="text-muted-foreground">///</span>
+            <span>NETWORK:&nbsp;<span className={`font-bold ${congestion === 'High' ? 'text-losses' : congestion === 'Medium' ? 'text-yellow-400' : 'text-gains'}`}>{congestion}{tps !== null ? ` · ${tps.toLocaleString()} TPS` : ''}</span></span>
             <span className="text-muted-foreground">///</span>
             <span className="font-bold text-muted-foreground">wallst.fun /// WallStSmith</span>
             <span className="text-muted-foreground px-8">///</span>
