@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 
 export const AGENT_WALLET = "Hw7yc27h6Lws6YsQmdLoj4M7psyFHRhosFwoGuSESmTh";
-const HELIUS_API_KEY = "54385120-20ac-4baa-9774-3f7ba8ccd656";
-const HELIUS_RPC_URL = `https://mainnet.helius-rpc.com/?api-key=${HELIUS_API_KEY}`;
+const HELIUS_API_KEY = import.meta.env.VITE_HELIUS_API_KEY || "";
+const HELIUS_RPC_URL = HELIUS_API_KEY ? `https://mainnet.helius-rpc.com/?api-key=${HELIUS_API_KEY}` : "";
 const HELIUS_V0_URL = `https://api-mainnet.helius-rpc.com/v0`;
 
 const rpc = async (method: string, params: unknown[]) => {

@@ -47,28 +47,6 @@ export default defineConfig({
     port,
     host: "0.0.0.0",
     allowedHosts: true,
-    proxy: {
-      "/api": {
-        target: "http://localhost:8080",
-        changeOrigin: true,
-      },
-      "/proxy/pumpfun": {
-        target: "https://frontend-api-v3.pump.fun",
-        changeOrigin: true,
-        rewrite: (p) => p.replace(/^\/proxy\/pumpfun/, ""),
-        secure: true,
-      },
-      "/proxy/birdeye": {
-        target: "https://public-api.birdeye.so",
-        changeOrigin: true,
-        rewrite: (p) => p.replace(/^\/proxy\/birdeye/, ""),
-        secure: true,
-        headers: {
-          "X-API-KEY": process.env.BIRDEYE_API_KEY || "41a3c0487a6b451abd0e258f9a77493a",
-          "x-chain": "solana",
-        },
-      },
-    },
     fs: {
       strict: true,
       deny: ["**/.*"],
