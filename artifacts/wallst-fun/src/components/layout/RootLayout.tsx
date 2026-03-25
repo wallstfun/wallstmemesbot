@@ -37,7 +37,6 @@ export function RootLayout({ children }: { children: React.ReactNode }) {
   const metrics = useLiveMetrics();
   const { balance: realSolBalance } = useWalletSolBalance();
   const { totalTrades, winRate } = useRealTransactions();
-  const { tps, congestion } = useNetworkCongestion();
 
   // Read SOL price from dashboard's CoinGecko fetch
   useEffect(() => {
@@ -82,13 +81,9 @@ export function RootLayout({ children }: { children: React.ReactNode }) {
             <span className="text-muted-foreground">///</span>
             <span>AGENT BAL:&nbsp;<span className="font-bold">{realSolBalance !== null ? `${realSolBalance.toFixed(4)} SOL` : '— SOL'}</span></span>
             <span className="text-muted-foreground">///</span>
-            <span>24H P&amp;L:&nbsp;<span className={`font-bold ${metrics.dailyPnl >= 0 ? "text-gains" : "text-losses"}`}>{metrics.dailyPnl >= 0 ? "+" : ""}{metrics.dailyPnl.toFixed(2)}%</span></span>
-            <span className="text-muted-foreground">///</span>
             <span>WIN RATE:&nbsp;<span className="font-bold">{winRate !== null ? `${winRate.toFixed(1)}%` : '—'}</span></span>
             <span className="text-muted-foreground">///</span>
             <span>TOTAL TRADES:&nbsp;<span className="font-bold">{totalTrades}</span></span>
-            <span className="text-muted-foreground">///</span>
-            <span>NETWORK:&nbsp;<span className={`font-bold ${congestion === 'High' ? 'text-losses' : congestion === 'Medium' ? 'text-yellow-400' : 'text-gains'}`}>{congestion}{tps !== null ? ` · ${tps.toLocaleString()} TPS` : ''}</span></span>
             <span className="text-muted-foreground">///</span>
             <span className="font-bold text-muted-foreground">wallst.fun /// WallStSmith</span>
             <span className="text-muted-foreground px-8">///</span>
@@ -101,13 +96,9 @@ export function RootLayout({ children }: { children: React.ReactNode }) {
             <span className="text-muted-foreground">///</span>
             <span>AGENT BAL:&nbsp;<span className="font-bold">{realSolBalance !== null ? `${realSolBalance.toFixed(4)} SOL` : '— SOL'}</span></span>
             <span className="text-muted-foreground">///</span>
-            <span>24H P&amp;L:&nbsp;<span className={`font-bold ${metrics.dailyPnl >= 0 ? "text-gains" : "text-losses"}`}>{metrics.dailyPnl >= 0 ? "+" : ""}{metrics.dailyPnl.toFixed(2)}%</span></span>
-            <span className="text-muted-foreground">///</span>
             <span>WIN RATE:&nbsp;<span className="font-bold">{winRate !== null ? `${winRate.toFixed(1)}%` : '—'}</span></span>
             <span className="text-muted-foreground">///</span>
             <span>TOTAL TRADES:&nbsp;<span className="font-bold">{totalTrades}</span></span>
-            <span className="text-muted-foreground">///</span>
-            <span>NETWORK:&nbsp;<span className={`font-bold ${congestion === 'High' ? 'text-losses' : congestion === 'Medium' ? 'text-yellow-400' : 'text-gains'}`}>{congestion}{tps !== null ? ` · ${tps.toLocaleString()} TPS` : ''}</span></span>
             <span className="text-muted-foreground">///</span>
             <span className="font-bold text-muted-foreground">wallst.fun /// WallStSmith</span>
             <span className="text-muted-foreground px-8">///</span>

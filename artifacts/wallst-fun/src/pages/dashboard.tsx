@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useLiveMetrics, useChartData, useXFeed, useViralTrends } from "@/hooks/use-simulated-data";
-import { useWalletSolBalance, useRealTransactions, useNetworkCongestion } from "@/hooks/use-helius-data";
+import { useWalletSolBalance, useRealTransactions } from "@/hooks/use-helius-data";
 import { LiveIndicator } from "@/components/ui/LiveIndicator";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -19,7 +19,6 @@ export default function Dashboard() {
   // Real blockchain data
   const { balance: solBalance, loading: solBalanceLoading } = useWalletSolBalance();
   const { trades: realTrades, totalTrades, winRate, loading: tradesLoading } = useRealTransactions();
-  const { tps, congestion } = useNetworkCongestion();
 
   // Real SOL Price from CoinGecko API
   const [solPrice, setSolPrice] = useState(() => {
@@ -186,16 +185,14 @@ export default function Dashboard() {
             <div className="flex justify-between items-start">
               <div className="space-y-2">
                 <p className="text-sm font-medium text-muted-foreground">Network Congestion</p>
-                <p className={`text-2xl font-bold font-mono ${congestion === 'High' ? 'text-losses' : congestion === 'Medium' ? 'text-yellow-400' : 'text-gains'}`}>
-                  {congestion}
-                </p>
+                <p className="text-2xl font-bold font-mono text-gains">Good</p>
               </div>
               <div className="p-2 bg-primary/10 rounded-lg">
                 <Activity className="w-5 h-5 text-primary" />
               </div>
             </div>
             <div className="text-xs mt-4 font-medium text-muted-foreground">
-              {tps !== null ? `${tps.toLocaleString()} TPS` : 'Helius RPC · live'}
+              Solana Mainnet
             </div>
           </CardContent>
         </Card>
