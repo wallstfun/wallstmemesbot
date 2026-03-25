@@ -21,11 +21,12 @@ const MORALIS_API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJub25jZSI6IjJkOW
 
 export default function ScopePage() {
   const [tokens, setTokens] = useState<PumpToken[]>([]);
-  const prevTokensRef = useRef<Map<string, number>>(new Map());
+  const prevMarketCapRef = useRef<Map<string, number>>(new Map());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
+  const [secondsAgo, setSecondsAgo] = useState(0);
 
   const fetchTokens = async () => {
     setLoading(true);
@@ -65,11 +66,11 @@ export default function ScopePage() {
         }
         bondingData.result.forEach((token: any) => {
           if (token.tokenAddress && token.symbol) {
-            const priceUsd = parseFloat(token.priceUsd) || 0;
-            const prevPrice = prevTokensRef.current.get(token.tokenAddress);
-            // Use NaN to represent "first fetch" (no previous price)
-            const priceChange1m = prevPrice !== undefined 
-              ? ((priceUsd - prevPrice) / prevPrice) * 100 
+            const marketCap = parseFloat(token.fullyDilutedValuation) || 0;
+            const prevMarketCap = prevMarketCapRef.current.get(token.tokenAddress);
+            // Use NaN to represent "first fetch" (no previous market cap)
+            const priceChange1m = prevMarketCap !== undefined 
+              ? ((marketCap - prevMarketCap) / prevMarketCap) * 100 
               : NaN;
             
             allTokens.push({
@@ -77,10 +78,10 @@ export default function ScopePage() {
               name: token.name || "Unknown",
               symbol: token.symbol,
               logo: token.logo,
-              marketCap: parseFloat(token.fullyDilutedValuation) || 0,
+              marketCap: marketCap,
               priceChange24h: 0,
               priceChange1m: priceChange1m,
-              priceUsd: priceUsd,
+              priceUsd: parseFloat(token.priceUsd) || 0,
               bondingProgress: token.bondingCurveProgress || 0,
               url: `https://pump.fun/${token.tokenAddress}`,
             });
@@ -96,11 +97,11 @@ export default function ScopePage() {
         }
         graduatedData.result.forEach((token: any) => {
           if (token.tokenAddress && token.symbol) {
-            const priceUsd = parseFloat(token.priceUsd) || 0;
-            const prevPrice = prevTokensRef.current.get(token.tokenAddress);
-            // Use NaN to represent "first fetch" (no previous price)
-            const priceChange1m = prevPrice !== undefined 
-              ? ((priceUsd - prevPrice) / prevPrice) * 100 
+            const marketCap = parseFloat(token.fullyDilutedValuation) || 0;
+            const prevMarketCap = prevMarketCapRef.current.get(token.tokenAddress);
+            // Use NaN to represent "first fetch" (no previous market cap)
+            const priceChange1m = prevMarketCap !== undefined 
+              ? ((marketCap - prevMarketCap) / prevMarketCap) * 100 
               : NaN;
             
             allTokens.push({
@@ -108,10 +109,10 @@ export default function ScopePage() {
               name: token.name || "Unknown",
               symbol: token.symbol,
               logo: token.logo,
-              marketCap: parseFloat(token.fullyDilutedValuation) || 0,
+              marketCap: marketCap,
               priceChange24h: 0,
               priceChange1m: priceChange1m,
-              priceUsd: priceUsd,
+              priceUsd: parseFloat(token.priceUsd) || 0,
               bondingProgress: 100,
               url: `https://pump.fun/${token.tokenAddress}`,
             });
@@ -127,15 +128,15 @@ export default function ScopePage() {
 
       const topTokens = uniqueTokens.slice(0, 12);
       
-      // Update prev prices for next fetch (using ref for immediate availability)
-      // Save ALL tokens' prices, not just top 12
-      const newPrevTokens = new Map<string, number>();
+      // Update prev market caps for next fetch (using ref for immediate availability)
+      // Save ALL tokens' market caps, not just top 12
+      const newPrevMarketCaps = new Map<string, number>();
       allTokens.forEach(token => {
-        if (token.priceUsd) {
-          newPrevTokens.set(token.tokenAddress, token.priceUsd);
+        if (token.marketCap) {
+          newPrevMarketCaps.set(token.tokenAddress, token.marketCap);
         }
       });
-      prevTokensRef.current = newPrevTokens;
+      prevMarketCapRef.current = newPrevMarketCaps;
       
       setTokens(topTokens);
       setLastUpdated(new Date());
@@ -148,12 +149,25 @@ export default function ScopePage() {
     }
   };
 
-  // Auto-refresh every 60 seconds (1 minute)
+  // Auto-refresh every 45 seconds
   useEffect(() => {
     fetchTokens();
-    const interval = setInterval(fetchTokens, 60000);
+    const interval = setInterval(fetchTokens, 45000);
     return () => clearInterval(interval);
   }, []);
+
+  // Update "seconds ago" display every second
+  useEffect(() => {
+    if (!lastUpdated) return;
+    
+    const updateTimer = setInterval(() => {
+      const now = new Date();
+      const diff = Math.floor((now.getTime() - lastUpdated.getTime()) / 1000);
+      setSecondsAgo(diff);
+    }, 1000);
+
+    return () => clearInterval(updateTimer);
+  }, [lastUpdated]);
 
   const formatMarketCap = (cap: number | undefined) => {
     if (!cap || cap === 0) return "—";
@@ -197,7 +211,7 @@ export default function ScopePage() {
 
       {lastUpdated && (
         <p className="text-xs text-muted-foreground">
-          Last updated: {lastUpdated.toLocaleTimeString()}
+          Last updated: {secondsAgo}s ago ({lastUpdated.toLocaleTimeString()})
         </p>
       )}
 
