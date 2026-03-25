@@ -172,7 +172,7 @@ export default function XFeedPage() {
 
           {error && (
             <p className="text-xs text-muted-foreground/60 max-w-xs">
-              Note: {error}
+              Feed coming soon.
             </p>
           )}
         </div>

@@ -104,7 +104,7 @@ export default function Dashboard() {
     }
     return 0;
   });
-  const [isLive, setIsLive] = useState(false);
+  const [priceChange5m, setPriceChange5m] = useState(0);
 
   useEffect(() => {
     let retryTimeout: NodeJS.Timeout | null = null;
@@ -117,17 +117,36 @@ export default function Dashboard() {
         const data = await res.json();
 
         if (data.solana?.usd) {
-          setSolPrice(data.solana.usd);
-          setIsLive(true);
-          console.log('[wallst.fun] SOL price updated:', data.solana.usd);
+          const newPrice = data.solana.usd;
+          setSolPrice(newPrice);
+          console.log('[wallst.fun] SOL price updated:', newPrice);
+          
+          // Track price history for 5-minute change calculation
+          const history = JSON.parse(localStorage.getItem('wallst-sol-price-history') || '[]');
+          const now = Date.now();
+          const newEntry = { price: newPrice, timestamp: now };
+          history.push(newEntry);
+          
+          // Keep only prices from last 6 minutes
+          const cutoff = now - 6 * 60 * 1000;
+          const filtered = history.filter(h => h.timestamp > cutoff);
+          localStorage.setItem('wallst-sol-price-history', JSON.stringify(filtered));
+          
+          // Calculate 5-minute change
+          const fiveMinAgo = now - 5 * 60 * 1000;
+          const priceFrom5MinAgo = filtered.find(h => h.timestamp <= fiveMinAgo);
+          if (priceFrom5MinAgo) {
+            const change = ((newPrice - priceFrom5MinAgo.price) / priceFrom5MinAgo.price) * 100;
+            setPriceChange5m(change);
+          }
+          
           // Update the ticker in RootLayout via localStorage
-          localStorage.setItem('wallst-sol-price', JSON.stringify({ price: data.solana.usd, timestamp: Date.now() }));
+          localStorage.setItem('wallst-sol-price', JSON.stringify({ price: newPrice, timestamp: now }));
         } else {
           throw new Error('Invalid price data');
         }
       } catch (error) {
         console.error('[wallst.fun] Failed to fetch SOL price:', error);
-        setIsLive(false);
         // Retry once after 8 seconds on failure
         retryTimeout = setTimeout(() => {
           console.log('[wallst.fun] Retrying SOL price fetch...');
@@ -228,9 +247,12 @@ export default function Dashboard() {
             <p className="text-3xl font-bold font-mono text-foreground">
               ${solPrice > 0 ? solPrice.toFixed(2) : '—'}
             </p>
-            <p className={`text-xs font-medium ${isLive ? 'text-gains' : 'text-losses'}`}>
-              ● CoinGecko • {isLive ? 'Live' : 'Last updated'}
-            </p>
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-medium text-gains">● Live</p>
+              <p className={`text-xs font-medium ${priceChange5m >= 0 ? 'text-gains' : 'text-losses'}`}>
+                {priceChange5m >= 0 ? '+' : ''}{priceChange5m.toFixed(2)}% (5m)
+              </p>
+            </div>
           </div>
         </div>
 
