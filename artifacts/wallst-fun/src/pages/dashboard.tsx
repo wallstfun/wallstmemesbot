@@ -11,7 +11,6 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { format, formatDistanceToNow } from "date-fns";
 import { ArrowUpRight, ArrowDownRight, Wallet, Activity, Target, Zap, ExternalLink, Heart, Repeat2, MessageCircle, Eye, MessageSquare, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useXFeedReal } from "@/hooks/use-x-feed";
 
 function fmt(n: number): string {
   if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + "M";
@@ -20,61 +19,12 @@ function fmt(n: number): string {
 }
 
 function LatestTweet() {
-  const { tweets, loading } = useXFeedReal(1);
-  const tweet = tweets[0];
-
-  if (loading && !tweet) {
-    return (
-      <div className="flex items-center justify-center h-full gap-2 text-muted-foreground text-sm p-4">
-        <Loader2 className="w-4 h-4 animate-spin" /> Loading…
-      </div>
-    );
-  }
-
-  if (!tweet) {
-    return (
-      <div className="flex flex-col items-center justify-center h-full gap-2 text-muted-foreground p-4">
-        <MessageSquare className="w-6 h-6 opacity-30" />
-        <p className="text-xs">No posts yet</p>
-      </div>
-    );
-  }
-
   return (
-    <div className="p-4 flex flex-col gap-3 h-full">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <img
-            src={`${import.meta.env.BASE_URL}images/agent-avatar.jpg`}
-            alt="WallStSmith"
-            className="w-7 h-7 rounded-full border border-primary/20 object-cover"
-            onError={(e) => { e.currentTarget.style.display = "none"; }}
-          />
-          <div>
-            <span className="text-xs font-bold text-foreground">WallStSmith</span>
-            <span className="text-xs text-muted-foreground ml-1">@WallstM99224</span>
-          </div>
-        </div>
-        <a
-          href={tweet.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-[10px] text-muted-foreground hover:text-primary transition-colors flex items-center gap-1"
-        >
-          {formatDistanceToNow(tweet.timestamp, { addSuffix: true })}
-          <ExternalLink className="w-2.5 h-2.5" />
-        </a>
-      </div>
-
-      <p className="text-sm text-foreground/90 leading-relaxed flex-1 overflow-hidden line-clamp-5">
-        {tweet.text}
-      </p>
-
-      <div className="flex items-center gap-4 text-xs text-muted-foreground font-mono border-t border-border/30 pt-2">
-        <span className="flex items-center gap-1"><MessageCircle className="w-3 h-3" /> {fmt(tweet.replies)}</span>
-        <span className="flex items-center gap-1"><Repeat2 className="w-3 h-3" /> {fmt(tweet.retweets)}</span>
-        <span className="flex items-center gap-1"><Heart className="w-3 h-3" /> {fmt(tweet.likes)}</span>
-        {tweet.views > 0 && <span className="flex items-center gap-1"><Eye className="w-3 h-3" /> {fmt(tweet.views)}</span>}
+    <div className="flex flex-col items-center justify-center h-full gap-3 text-muted-foreground p-4">
+      <MessageSquare className="w-8 h-8 opacity-40" />
+      <div className="text-center">
+        <p className="text-sm font-medium">X Feed Coming Soon</p>
+        <p className="text-xs text-muted-foreground/70 mt-1">Setup in progress for @WallstM99224</p>
       </div>
     </div>
   );
