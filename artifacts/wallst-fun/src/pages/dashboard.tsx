@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { Link } from "wouter";
 import { useLiveMetrics } from "@/hooks/use-simulated-data";
-import { useXFeedReal } from "@/hooks/use-x-feed";
 import { useScopeTokens } from "@/hooks/use-scope-data";
 import { useWalletSolBalance, useRealTransactions } from "@/hooks/use-helius-data";
 import { LiveIndicator } from "@/components/ui/LiveIndicator";
@@ -13,10 +12,64 @@ import { format } from "date-fns";
 import { ArrowUpRight, ArrowDownRight, Wallet, Activity, Target, Zap, ExternalLink, Heart, Repeat2, MessageCircle, MessageSquare, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
+function LatestTweet() {
+  const ref = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    const container = ref.current;
+    if (!container) return;
+
+    const render = () => {
+      if ((window as any).twttr?.widgets) {
+        (window as any).twttr.widgets.load(container);
+      }
+    };
+
+    if (!(window as any).twttr) {
+      const existing = document.querySelector('script[src*="platform.twitter.com/widgets.js"]');
+      if (!existing) {
+        const script = document.createElement("script");
+        script.src = "https://platform.twitter.com/widgets.js";
+        script.async = true;
+        script.charset = "utf-8";
+        script.onload = render;
+        document.head.appendChild(script);
+      } else {
+        const poll = setInterval(() => {
+          if ((window as any).twttr?.widgets) { clearInterval(poll); render(); }
+        }, 200);
+        return () => clearInterval(poll);
+      }
+    } else {
+      render();
+    }
+  }, []);
+
+  return (
+    <div ref={ref} className="w-full h-full overflow-hidden">
+      <a
+        className="twitter-timeline"
+        data-theme="dark"
+        data-tweet-limit="1"
+        data-chrome="noheader nofooter noborders noscrollbar"
+        data-dnt="true"
+        href="https://twitter.com/WallstM99224"
+      >
+        Latest tweet by @WallstM99224
+      </a>
+    </div>
+  );
+}
+
 export default function Dashboard() {
   const metrics = useLiveMetrics();
-  const { tweets, loading: tweetsLoading } = useXFeedReal(5);
   const { tokens: scopeTokens, loading: scopeLoading } = useScopeTokens(4);
+  // Tick increments every 60 s — used as a React key to remount the Twitter widget and fetch the latest tweet
+  const [tweetTick, setTweetTick] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setTweetTick((t) => t + 1), 60_000);
+    return () => clearInterval(id);
+  }, []);
   const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
 
   // Real blockchain data
@@ -373,61 +426,8 @@ export default function Dashboard() {
               </CardTitle>
               <LiveIndicator />
             </CardHeader>
-            <CardContent className="p-4 overflow-hidden flex-1 relative">
-              <div className="absolute top-0 left-0 right-0 h-4 bg-gradient-to-b from-card to-transparent z-10 pointer-events-none"></div>
-              {tweetsLoading && tweets.length === 0 ? (
-                <div className="flex items-center justify-center h-full gap-2 text-muted-foreground text-sm">
-                  <Loader2 className="w-4 h-4 animate-spin" /> Loading tweets…
-                </div>
-              ) : !tweetsLoading && tweets.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-full gap-3 text-center px-4">
-                  <MessageSquare className="w-8 h-8 text-muted-foreground/30" />
-                  <p className="text-sm text-muted-foreground">Tweets unavailable</p>
-                  <Link href="/x-feed" className="text-xs text-primary hover:underline">View X Feed →</Link>
-                </div>
-              ) : (
-                <div className="space-y-4 h-full overflow-y-auto">
-                  <AnimatePresence>
-                    {tweets.map((tweet) => (
-                      <motion.div
-                        key={tweet.id}
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: 'auto' }}
-                        exit={{ opacity: 0, height: 0 }}
-                        className="border-b border-border/50 pb-4 last:border-0"
-                      >
-                        <div className="flex items-start gap-3">
-                          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center font-bold text-primary shrink-0">
-                            W
-                          </div>
-                          <div className="space-y-1 w-full min-w-0">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-baseline gap-1">
-                                <span className="font-semibold text-sm">{tweet.name}</span>
-                                <span className="text-xs text-muted-foreground">{tweet.handle}</span>
-                              </div>
-                              <a
-                                href={tweet.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-xs text-muted-foreground hover:text-primary transition-colors shrink-0"
-                              >
-                                {format(tweet.timestamp, 'HH:mm')}
-                              </a>
-                            </div>
-                            <p className="text-sm text-foreground/90 leading-relaxed break-words">{tweet.text}</p>
-                            <div className="flex items-center gap-4 mt-2 text-muted-foreground text-xs font-mono">
-                              <span className="flex items-center gap-1 hover:text-primary transition-colors cursor-pointer"><MessageCircle className="w-3 h-3" /> {tweet.replies}</span>
-                              <span className="flex items-center gap-1 hover:text-gains transition-colors cursor-pointer"><Repeat2 className="w-3 h-3" /> {tweet.retweets}</span>
-                              <span className="flex items-center gap-1 hover:text-losses transition-colors cursor-pointer"><Heart className="w-3 h-3" /> {tweet.likes}</span>
-                            </div>
-                          </div>
-                        </div>
-                      </motion.div>
-                    ))}
-                  </AnimatePresence>
-                </div>
-              )}
+            <CardContent className="p-0 overflow-hidden flex-1">
+              <LatestTweet key={tweetTick} />
             </CardContent>
           </Card>
 
