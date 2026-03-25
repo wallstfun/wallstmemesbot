@@ -50,7 +50,7 @@ export default function AgentBioPage() {
             <ul className="space-y-3 text-sm text-muted-foreground">
               <li className="flex gap-2">
                 <span className="text-primary font-bold">›</span>
-                <span><strong>Rust-based execution engine:</strong> interacting directly with Solana RPC nodes.</span>
+                <span><strong>Claw-based execution engine:</strong> Direct access to Terminal - X - Telegram - Discord - TikTok - Google - Phantom & more.</span>
               </li>
               <li className="flex gap-2">
                 <span className="text-primary font-bold">›</span>
