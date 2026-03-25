@@ -4,7 +4,7 @@ import { logger } from "../lib/logger";
 const router: IRouter = Router();
 
 const MORALIS_API_KEY = process.env.MORALIS_API_KEY;
-const MIN_MCAP = 0;
+const MIN_MCAP = 10_000;
 const CACHE_TTL = 4 * 60 * 1000; // 4 minutes
 
 interface TrendingToken {
