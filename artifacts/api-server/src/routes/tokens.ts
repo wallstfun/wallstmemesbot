@@ -4,7 +4,7 @@ import { logger } from "../lib/logger";
 const router: IRouter = Router();
 
 const MORALIS_API_KEY = process.env.MORALIS_API_KEY;
-const MIN_MCAP = 20_000;
+const MIN_MCAP = 0;
 const CACHE_TTL = 4 * 60 * 1000; // 4 minutes
 
 interface TrendingToken {
@@ -30,20 +30,35 @@ async function fetchMoralis(): Promise<TrendingToken[]> {
   }
 
   try {
-    const res = await fetch("https://solana-gateway.moralis.io/token/mainnet/trendings", {
-      headers: {
-        accept: "application/json",
-        "X-API-Key": MORALIS_API_KEY,
-      },
-    });
+    const endpoints = [
+      "https://solana-gateway.moralis.io/token/mainnet/trendings",
+      "https://solana-gateway.moralis.io/token/mainnet/trending",
+    ];
 
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}));
-      throw new Error(`Moralis HTTP ${res.status}: ${(body as any)?.message ?? "Unknown error"}`);
+    let res: Response | null = null;
+    let lastError: Error | null = null;
+
+    for (const endpoint of endpoints) {
+      try {
+        res = await fetch(endpoint, {
+          headers: {
+            accept: "application/json",
+            "X-API-Key": MORALIS_API_KEY,
+          },
+        });
+        if (res.ok) break;
+      } catch (e) {
+        lastError = e as Error;
+      }
+    }
+
+    if (!res || !res.ok) {
+      const body = await res?.json().catch(() => ({}));
+      throw new Error(`Moralis HTTP ${res?.status ?? 0}: ${(body as any)?.message ?? lastError?.message ?? "Unknown error"}`);
     }
 
     const json = await res.json();
-    const items: any[] = json?.tokens ?? [];
+    const items: any[] = json?.tokens ?? json?.data ?? [];
 
     return items
       .filter((item) => (item.marketCap ?? 0) >= MIN_MCAP)
@@ -74,7 +89,7 @@ async function fetchDexScreener(): Promise<TrendingToken[]> {
     const boosts: any[] = await boostRes.json();
     const addrs = boosts
       .filter((b) => b.chainId === "solana")
-      .slice(0, 30)
+      .slice(0, 50)
       .map((b) => b.tokenAddress)
       .join(",");
 
@@ -134,11 +149,18 @@ async function fetchTrendingTokens(): Promise<TrendingToken[]> {
     fetchDexScreener(),
   ]);
 
-  // Mix: top 10 from each
-  const mixed = [
-    ...moralisTokens.slice(0, 10),
-    ...dexscreenerTokens.slice(0, 10),
-  ];
+  // Mix: if Moralis has tokens, use top 10 from each; otherwise use top 20 from DexScreener
+  let mixed: TrendingToken[] = [];
+  if (moralisTokens.length > 0) {
+    mixed = [
+      ...moralisTokens.slice(0, 10),
+      ...dexscreenerTokens.slice(0, 10),
+    ];
+    logger.info({ moralis: moralisTokens.length, dexscreener: dexscreenerTokens.length }, "Mixing Moralis and DexScreener tokens");
+  } else {
+    mixed = dexscreenerTokens.slice(0, 20);
+    logger.info({ dexscreener: dexscreenerTokens.length }, "Moralis unavailable, using DexScreener tokens only");
+  }
 
   // Deduplicate by tokenAddress (keep first occurrence)
   const seen = new Set<string>();
