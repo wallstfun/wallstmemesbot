@@ -331,7 +331,7 @@ export default function ScopePage() {
                 <div className="flex justify-between items-start mb-4">
                   <div className="flex items-center gap-3">
                     {/* Rank Badge */}
-                    <div className="w-10 h-10 rounded-lg bg-[#6B46C1] flex items-center justify-center font-serif font-bold text-white shadow-md">
+                    <div className="w-10 h-10 rounded-lg bg-background border border-border flex items-center justify-center font-serif font-bold text-foreground shadow-md">
                       {index + 1 === 1 && <span className="flex items-center gap-0.5 text-sm">🏆<span className="text-xs">1</span></span>}
                       {index + 1 === 2 && <span className="flex items-center gap-0.5 text-sm">🥈<span className="text-xs">2</span></span>}
                       {index + 1 === 3 && <span className="flex items-center gap-0.5 text-sm">🥉<span className="text-xs">3</span></span>}
