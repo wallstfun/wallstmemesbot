@@ -330,9 +330,12 @@ export default function ScopePage() {
               <CardContent className="p-6">
                 <div className="flex justify-between items-start mb-4">
                   <div className="flex items-center gap-3">
-                    {/* Rank Badge with Gradient */}
-                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center font-serif text-lg font-bold text-white shadow-md">
-                      #{index + 1}
+                    {/* Rank Badge */}
+                    <div className="w-10 h-10 rounded-lg bg-[#6B46C1] flex items-center justify-center font-serif font-bold text-white shadow-md">
+                      {index + 1 === 1 && <span className="flex items-center gap-0.5 text-sm">🏆<span className="text-xs">1</span></span>}
+                      {index + 1 === 2 && <span className="flex items-center gap-0.5 text-sm">🥈<span className="text-xs">2</span></span>}
+                      {index + 1 === 3 && <span className="flex items-center gap-0.5 text-sm">🥉<span className="text-xs">3</span></span>}
+                      {index + 1 > 3 && <span className="text-lg">#{index + 1}</span>}
                     </div>
 
                     {/* Token Logo & Name */}
