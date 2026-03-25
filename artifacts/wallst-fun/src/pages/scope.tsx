@@ -19,12 +19,18 @@ interface BirdeyeToken {
 }
 
 const MIN_MCAP = 20_000;
+const BIRDEYE_API_KEY =
+  import.meta.env.VITE_BIRDEYE_API_KEY || "41a3c0487a6b451abd0e258f9a77493a";
 const BIRDEYE_URL =
-  "/proxy/birdeye/defi/token_trending?sort_by=rank&sort_type=asc&limit=20";
+  "https://public-api.birdeye.so/defi/token_trending?sort_by=rank&sort_type=asc&limit=20";
 
 async function fetchBirdeyeTrending(): Promise<BirdeyeToken[]> {
   const res = await fetch(BIRDEYE_URL, {
-    headers: { Accept: "application/json" },
+    headers: {
+      Accept: "application/json",
+      "X-API-KEY": BIRDEYE_API_KEY,
+      "x-chain": "solana",
+    },
   });
   if (!res.ok) throw new Error(`Birdeye API error: ${res.status}`);
   const json = await res.json();
