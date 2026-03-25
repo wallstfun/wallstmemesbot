@@ -47,6 +47,14 @@ export default defineConfig({
     port,
     host: "0.0.0.0",
     allowedHosts: true,
+    proxy: {
+      "/proxy/pumpfun": {
+        target: "https://frontend-api-v3.pump.fun",
+        changeOrigin: true,
+        rewrite: (p) => p.replace(/^\/proxy\/pumpfun/, ""),
+        secure: true,
+      },
+    },
     fs: {
       strict: true,
       deny: ["**/.*"],

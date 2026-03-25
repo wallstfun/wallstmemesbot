@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Flame, RefreshCw, ExternalLink, AlertCircle } from "lucide-react";
@@ -10,264 +10,142 @@ interface PumpToken {
   symbol: string;
   logo?: string;
   marketCap?: number;
-  priceChange24h?: number;
   priceChange1m?: number | null;
   priceUsd?: number;
   bondingProgress?: number;
   url?: string;
 }
 
-const MORALIS_API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJub25jZSI6IjJkOWY2ZmM0LTczZGEtNDEwZC1iYjVlLTk1N2VlMjI4OGU3NCIsIm9yZ0lkIjoiNTA2OTQ1IiwidXNlcklkIjoiNTIxNjE0IiwidHlwZUlkIjoiNjE1MTFhYTYtMTk5ZS00OWVkLThiODktNTc2YjI1NGMxOTkwIiwidHlwZSI6IlBST0pFQ1QiLCJpYXQiOjE3NzQzOTQxMTUsImV4cCI6NDkzMDE1NDExNX0.bPd42MqB0lwTbLivIX-4pFReN-F0LgB3rMplN-UsnHQ";
-const BIRDEYE_API_KEY = "41a3c0487a6b451abd0e258f9a77493a";
-const BIRDEYE_HEADERS = {
-  "X-API-KEY": BIRDEYE_API_KEY,
-  "x-chain": "solana",
-  Accept: "application/json",
-};
+interface McapSnapshot {
+  mcap: number;
+  ts: number;
+}
 
-interface PriceSnapshot { price: number; ts: number; }
+const MIN_MCAP = 20_000;
+const PUMP_FUN_URL =
+  "/proxy/pumpfun/coins?offset=0&limit=50&sort=market_cap&order=DESC&includeNsfw=false";
 
-function compute1mChange(history: PriceSnapshot[], currentPrice: number, now: number): number {
-  if (history.length < 2 || currentPrice <= 0) return NaN;
-  const oneMinAgo = now - 60_000;
-  const candidate = [...history].filter(h => h.ts <= oneMinAgo + 10_000).pop();
-  if (!candidate || candidate.price <= 0) return NaN;
-  return ((currentPrice - candidate.price) / candidate.price) * 100;
+function compute1mChange(
+  history: McapSnapshot[],
+  currentMcap: number,
+  now: number
+): number | null {
+  if (history.length < 2 || currentMcap <= 0) return null;
+  const target = now - 60_000;
+  const candidate = [...history]
+    .filter((h) => h.ts <= target + 20_000 && h.ts >= target - 20_000)
+    .sort((a, b) => Math.abs(a.ts - target) - Math.abs(b.ts - target))[0];
+  if (!candidate || candidate.mcap <= 0) return null;
+  return ((currentMcap - candidate.mcap) / candidate.mcap) * 100;
+}
+
+async function fetchPumpFunCoins(): Promise<PumpToken[]> {
+  const res = await fetch(PUMP_FUN_URL, {
+    headers: { Accept: "application/json" },
+  });
+  if (!res.ok) throw new Error(`Pump.fun API error: ${res.status}`);
+  const coins: any[] = await res.json();
+
+  const tokens: PumpToken[] = [];
+  for (const coin of coins ?? []) {
+    const mcap = coin.usd_market_cap ?? 0;
+    if (mcap < MIN_MCAP) continue;
+    const supply = coin.total_supply > 0 ? coin.total_supply : 1_000_000_000;
+    const priceUsd = mcap / supply;
+    tokens.push({
+      tokenAddress: coin.mint,
+      name: coin.name || "Unknown",
+      symbol: coin.symbol || coin.mint?.slice(0, 6).toUpperCase() || "???",
+      logo: coin.image_uri,
+      marketCap: mcap,
+      priceUsd,
+      bondingProgress: coin.complete ? 100 : (coin.bonding_curve_progress ?? 0),
+      url: `https://pump.fun/${coin.mint}`,
+      priceChange1m: null,
+    });
+  }
+  return tokens;
 }
 
 export default function ScopePage() {
   const [tokens, setTokens] = useState<PumpToken[]>([]);
-  const priceHistoryRef = useRef<Record<string, PriceSnapshot[]>>({});
-  const allFetchedTokensRef = useRef<PumpToken[]>([]);
-  const tokenCacheRef = useRef<PumpToken[]>([]);
-  const zeroChangeCountersRef = useRef<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
   const [secondsAgo, setSecondsAgo] = useState(0);
 
-  const fetchTokens = async () => {
-    setLoading(true);
-    setError(null);
+  const mcapHistoryRef = useRef<Record<string, McapSnapshot[]>>({});
+  const tokenCacheRef = useRef<PumpToken[]>([]);
 
+  const poll = useCallback(async () => {
     try {
-      let uniqueTokens: PumpToken[] = [];
-
-      // --- Primary: Moralis bonding+graduated (rich metadata) ---
-      try {
-        const headers = { "X-API-Key": MORALIS_API_KEY, Accept: "application/json" };
-        const [bondingRes, graduatedRes] = await Promise.all([
-          fetch("https://solana-gateway.moralis.io/token/mainnet/exchange/pumpfun/bonding?limit=50", { headers }),
-          fetch("https://solana-gateway.moralis.io/token/mainnet/exchange/pumpfun/graduated?limit=50", { headers }),
-        ]);
-        if (!bondingRes.ok || !graduatedRes.ok) throw new Error("Moralis non-OK");
-        const [bondingData, graduatedData] = await Promise.all([bondingRes.json(), graduatedRes.json()]);
-
-        const allTokens: PumpToken[] = [];
-        const add = (token: any, graduated: boolean) => {
-          if (!token.tokenAddress || !token.symbol) return;
-          allTokens.push({
-            tokenAddress: token.tokenAddress,
-            name: token.name || "Unknown",
-            symbol: token.symbol,
-            logo: token.logo,
-            marketCap: parseFloat(token.fullyDilutedValuation) || 0,
-            priceChange24h: 0,
-            priceChange1m: null,
-            priceUsd: parseFloat(token.priceUsd) || 0,
-            bondingProgress: graduated ? 100 : token.bondingCurveProgress || 0,
-            url: `https://pump.fun/${token.tokenAddress}`,
-          });
-        };
-        (bondingData.result ?? []).forEach((t: any) => add(t, false));
-        (graduatedData.result ?? []).forEach((t: any) => add(t, true));
-        uniqueTokens = Array.from(new Map(allTokens.map((t) => [t.tokenAddress, t])).values())
-          .sort((a, b) => (b.marketCap || 0) - (a.marketCap || 0));
-        console.log("[wallst.fun] Moralis: loaded", uniqueTokens.length, "tokens");
-      } catch {
-        // --- Fallback: DexScreener Pump.fun pairs (no API key, provides symbol/mcap/price) ---
-        try {
-          const res = await fetch(
-            "https://api.dexscreener.com/latest/dex/search?q=pump.fun&chainId=solana",
-            { headers: { Accept: "application/json" } }
-          );
-          if (res.ok) {
-            const data = await res.json();
-            const seen = new Set<string>();
-            for (const pair of data?.pairs ?? []) {
-              if (pair.chainId !== "solana") continue;
-              const addr = pair.baseToken?.address ?? "";
-              if (!addr.endsWith("pump")) continue;
-              if (seen.has(addr)) continue;
-              seen.add(addr);
-              uniqueTokens.push({
-                tokenAddress: addr,
-                name: pair.baseToken?.name || "Unknown",
-                symbol: pair.baseToken?.symbol || addr.slice(0, 6).toUpperCase(),
-                logo: pair.info?.imageUrl,
-                marketCap: pair.fdv ?? 0,
-                priceChange24h: 0,
-                priceChange1m: null,
-                priceUsd: parseFloat(pair.priceUsd ?? "0") || 0,
-                bondingProgress: 100,
-                url: `https://pump.fun/${addr}`,
-              });
-            }
-            uniqueTokens.sort((a, b) => (b.marketCap || 0) - (a.marketCap || 0));
-            console.log("[wallst.fun] DexScreener fallback: loaded", uniqueTokens.length, "tokens");
-          }
-        } catch { /* silent */ }
+      let fresh = await fetchPumpFunCoins().catch(() => null);
+      if (!fresh || fresh.length === 0) {
+        fresh = tokenCacheRef.current.length > 0 ? tokenCacheRef.current : null;
       }
+      if (!fresh) throw new Error("No data available");
 
-      // If both APIs failed, use the in-memory cache silently
-      if (uniqueTokens.length === 0 && tokenCacheRef.current.length > 0) {
-        uniqueTokens = tokenCacheRef.current;
-        console.log("[wallst.fun] Using token cache:", uniqueTokens.length, "tokens");
-      }
-
-      if (uniqueTokens.length === 0) throw new Error("No tokens available");
-
-      tokenCacheRef.current = uniqueTokens;
-      // Store all fetched tokens for replacement lookups
-      allFetchedTokensRef.current = uniqueTokens;
-
-      const topTokens = uniqueTokens.slice(0, 12);
-
-      // Seed Birdeye OHLCV history sequentially (fire-and-forget) to avoid rate limits.
+      tokenCacheRef.current = fresh;
+      const top12 = fresh.slice(0, 12);
       const now = Date.now();
-      const timeFrom = Math.floor((now - 150_000) / 1000);
-      const timeTo = Math.floor(now / 1000);
-      void (async () => {
-        for (const token of topTokens) {
-          try {
-            const res = await fetch(
-              `https://public-api.birdeye.so/defi/ohlcv?address=${token.tokenAddress}&type=1m&time_from=${timeFrom}&time_to=${timeTo}&currency=usd`,
-              { headers: BIRDEYE_HEADERS }
-            );
-            if (!res.ok) continue;
-            const data = await res.json();
-            const items: any[] = data?.data?.items ?? [];
-            if (items.length === 0) continue;
-            const hist = priceHistoryRef.current[token.tokenAddress] ?? [];
-            items.forEach((candle: any) => {
-              const ts = candle.unixTime * 1000;
-              if (!hist.find((h) => Math.abs(h.ts - ts) < 5_000)) {
-                hist.push({ price: candle.c, ts });
-              }
-            });
-            priceHistoryRef.current[token.tokenAddress] = hist.filter(
-              (h) => now - h.ts <= 90_000
-            );
-          } catch {
-            // brand-new tokens may have no OHLCV yet — ignore silently
-          }
-          await new Promise((r) => setTimeout(r, 1_000));
-        }
-      })();
 
-      // Preserve any 1m change already computed by the running price poll
-      setTokens((prev) => {
-        const prevMap = new Map(prev.map((t) => [t.tokenAddress, t]));
-        return topTokens.map((t) => ({
-          ...t,
-          priceChange1m: prevMap.get(t.tokenAddress)?.priceChange1m ?? null,
-        }));
-      });
+      setTokens(
+        top12.map((token) => {
+          const mcap = token.marketCap ?? 0;
+          if (mcap > 0) {
+            const hist = mcapHistoryRef.current[token.tokenAddress] ?? [];
+            hist.push({ mcap, ts: now });
+            mcapHistoryRef.current[token.tokenAddress] = hist.filter(
+              (h) => now - h.ts <= 120_000
+            );
+          }
+          const priceChange1m = compute1mChange(
+            mcapHistoryRef.current[token.tokenAddress] ?? [],
+            mcap,
+            now
+          );
+          return { ...token, priceChange1m };
+        })
+      );
+
       setLastUpdated(new Date());
+      setError(null);
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Unknown error occurred";
-      setError(message);
-      console.error("[wallst.fun] Scope fetch error:", err);
+      if (tokenCacheRef.current.length === 0) {
+        setError(err instanceof Error ? err.message : "Failed to fetch tokens");
+        console.error("[wallst.fun] Scope error:", err);
+      }
     } finally {
       setLoading(false);
     }
-  };
-
-  // Auto-refresh token list every 60 seconds (conserves Moralis CU limits)
-  useEffect(() => {
-    fetchTokens();
-    const interval = setInterval(fetchTokens, 60_000);
-    return () => clearInterval(interval);
   }, []);
 
-  // Birdeye multi_price poll every 5 seconds — single request for all top tokens
+  // Poll every 10 seconds — feeds both live prices and 1m change history
   useEffect(() => {
-    const fetchPrices = async () => {
-      const current = allFetchedTokensRef.current.slice(0, 12);
-      if (current.length === 0) return;
-
-      const now = Date.now();
-      const addresses = current.map((t) => t.tokenAddress).join(",");
-
-      try {
-        const res = await fetch(
-          `https://public-api.birdeye.so/defi/multi_price?list_address=${addresses}`,
-          { headers: BIRDEYE_HEADERS }
-        );
-        if (!res.ok) return;
-        const data = await res.json();
-        const priceMap: Record<string, { value: number }> = data?.data ?? {};
-
-        setTokens((prev) =>
-          prev.map((token) => {
-            const priceData = priceMap[token.tokenAddress];
-            if (!priceData || priceData.value <= 0) return token;
-
-            const price = priceData.value;
-            const hist = priceHistoryRef.current[token.tokenAddress] ?? [];
-            hist.push({ price, ts: now });
-            priceHistoryRef.current[token.tokenAddress] = hist.filter(
-              (h) => now - h.ts <= 90_000
-            );
-
-            const change1m = compute1mChange(
-              priceHistoryRef.current[token.tokenAddress],
-              price,
-              now
-            );
-
-            const isZero = change1m === null || Math.abs(change1m) < 0.001;
-            zeroChangeCountersRef.current[token.tokenAddress] = isZero
-              ? (zeroChangeCountersRef.current[token.tokenAddress] || 0) + 1
-              : 0;
-
-            return { ...token, priceUsd: price, priceChange1m: change1m };
-          })
-        );
-      } catch {
-        // ignore
-      }
-    };
-
-    const interval = setInterval(fetchPrices, 5_000);
+    poll();
+    const interval = setInterval(poll, 10_000);
     return () => clearInterval(interval);
-  }, []);
+  }, [poll]);
 
-  // Update "seconds ago" display every second
+  // "X seconds ago" counter
   useEffect(() => {
     if (!lastUpdated) return;
-    
-    const updateTimer = setInterval(() => {
-      const now = new Date();
-      const diff = Math.floor((now.getTime() - lastUpdated.getTime()) / 1000);
-      setSecondsAgo(diff);
+    const t = setInterval(() => {
+      setSecondsAgo(Math.floor((Date.now() - lastUpdated.getTime()) / 1000));
     }, 1000);
-
-    return () => clearInterval(updateTimer);
+    return () => clearInterval(t);
   }, [lastUpdated]);
-
 
   const formatMarketCap = (cap: number | undefined) => {
     if (!cap || cap === 0) return "—";
-    if (cap >= 1000000) return `$${(cap / 1000000).toFixed(1)}M`;
-    if (cap >= 1000) return `$${(cap / 1000).toFixed(1)}K`;
+    if (cap >= 1_000_000) return `$${(cap / 1_000_000).toFixed(1)}M`;
+    if (cap >= 1_000) return `$${(cap / 1_000).toFixed(1)}K`;
     return `$${cap.toFixed(0)}`;
   };
 
-  const shortenAddress = (address: string) => {
-    return `${address.slice(0, 6)}...${address.slice(-4)}`;
-  };
+  const shortenAddress = (address: string) =>
+    `${address.slice(0, 6)}...${address.slice(-4)}`;
 
   const copyToClipboard = (address: string) => {
     navigator.clipboard.writeText(address);
@@ -285,7 +163,7 @@ export default function ScopePage() {
         </div>
         <div className="flex items-center gap-3">
           <button
-            onClick={fetchTokens}
+            onClick={poll}
             disabled={loading}
             className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
           >
@@ -301,6 +179,8 @@ export default function ScopePage() {
       {lastUpdated && (
         <p className="text-xs text-muted-foreground">
           Last updated: {secondsAgo}s ago ({lastUpdated.toLocaleTimeString()})
+          &nbsp;·&nbsp;
+          <span className="text-gains/70">≥$20K mcap only · auto-refreshes every 10s</span>
         </p>
       )}
 
@@ -310,7 +190,7 @@ export default function ScopePage() {
           <div className="flex-1">
             <p className="text-sm font-medium text-losses">{error}</p>
             <button
-              onClick={fetchTokens}
+              onClick={poll}
               className="text-xs text-losses hover:text-losses/80 mt-2 underline"
             >
               Try Again
@@ -337,7 +217,7 @@ export default function ScopePage() {
 
       {!loading && tokens.length === 0 && !error && (
         <div className="text-center py-12">
-          <p className="text-muted-foreground">No tokens found</p>
+          <p className="text-muted-foreground">No tokens found above $20K market cap</p>
         </div>
       )}
 
@@ -353,10 +233,10 @@ export default function ScopePage() {
                   <div className="flex items-center gap-3">
                     {/* Rank Badge */}
                     <div className="w-10 h-10 rounded-lg bg-background border border-border flex items-center justify-center font-serif font-bold text-foreground shadow-md">
-                      {index + 1 === 1 && <span className="flex items-center gap-0.5 text-sm">🏆<span className="text-xs">1</span></span>}
-                      {index + 1 === 2 && <span className="flex items-center gap-0.5 text-sm">🥈<span className="text-xs">2</span></span>}
-                      {index + 1 === 3 && <span className="flex items-center gap-0.5 text-sm">🥉<span className="text-xs">3</span></span>}
-                      {index + 1 > 3 && <span className="text-lg">#{index + 1}</span>}
+                      {index === 0 && <span className="flex items-center gap-0.5 text-sm">🏆<span className="text-xs">1</span></span>}
+                      {index === 1 && <span className="flex items-center gap-0.5 text-sm">🥈<span className="text-xs">2</span></span>}
+                      {index === 2 && <span className="flex items-center gap-0.5 text-sm">🥉<span className="text-xs">3</span></span>}
+                      {index > 2 && <span className="text-lg">#{index + 1}</span>}
                     </div>
 
                     {/* Token Logo & Name */}
@@ -369,7 +249,7 @@ export default function ScopePage() {
                         />
                       ) : (
                         <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-xs font-bold text-muted-foreground">
-                          {token.symbol[0]}
+                          {token.symbol?.[0] ?? "?"}
                         </div>
                       )}
                       <div>
@@ -379,22 +259,21 @@ export default function ScopePage() {
                     </div>
                   </div>
 
-                  {/* Price Change Badge (1m) */}
-                  {(token.priceChange1m === null || token.priceChange1m === undefined || Number.isNaN(token.priceChange1m)) ? (
-                    <Badge variant="outline" className="bg-muted/10 text-muted-foreground font-semibold">
+                  {/* 1m Price Change Badge */}
+                  {token.priceChange1m == null ? (
+                    <Badge variant="outline" className="bg-muted/10 text-muted-foreground font-semibold text-xs">
                       1m: —
                     </Badge>
                   ) : (
                     <Badge
-                      variant={(token.priceChange1m ?? 0) >= 0 ? "default" : "destructive"}
                       className={
-                        (token.priceChange1m ?? 0) >= 0
-                          ? "bg-gains/10 text-gains hover:bg-gains/20 font-semibold"
-                          : "bg-losses/10 text-losses hover:bg-losses/20 font-semibold"
+                        token.priceChange1m >= 0
+                          ? "bg-gains/10 text-gains hover:bg-gains/20 font-semibold text-xs"
+                          : "bg-losses/10 text-losses hover:bg-losses/20 font-semibold text-xs"
                       }
                     >
-                      {(token.priceChange1m ?? 0) >= 0 ? "+" : ""}
-                      {(token.priceChange1m ?? 0).toFixed(2)}% 1m
+                      {token.priceChange1m >= 0 ? "+" : ""}
+                      {token.priceChange1m.toFixed(2)}% 1m
                     </Badge>
                   )}
                 </div>
@@ -438,13 +317,13 @@ export default function ScopePage() {
                         <div
                           className="h-full transition-all"
                           style={{
-                            background: `linear-gradient(to right, rgb(16, 185, 129) 0%, rgb(16, 185, 129) ${Math.min(token.bondingProgress, 100)}%, rgb(59, 130, 246) ${Math.min(token.bondingProgress, 100)}%, rgb(59, 130, 246) 100%)`,
-                            width: '100%'
+                            background: `linear-gradient(to right, rgb(16,185,129) 0%, rgb(16,185,129) ${Math.min(token.bondingProgress ?? 0, 100)}%, rgb(59,130,246) ${Math.min(token.bondingProgress ?? 0, 100)}%, rgb(59,130,246) 100%)`,
+                            width: "100%",
                           }}
-                        ></div>
+                        />
                       </div>
                       <span className="text-xs font-mono font-bold whitespace-nowrap">
-                        {token.bondingProgress.toFixed(0)}%
+                        {(token.bondingProgress ?? 0).toFixed(0)}%
                       </span>
                     </div>
                   </div>
