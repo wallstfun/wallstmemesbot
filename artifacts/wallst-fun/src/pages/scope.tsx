@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Flame, RefreshCw, ExternalLink, AlertCircle } from "lucide-react";
@@ -21,7 +21,7 @@ const MORALIS_API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJub25jZSI6IjJkOW
 
 export default function ScopePage() {
   const [tokens, setTokens] = useState<PumpToken[]>([]);
-  const [prevTokens, setPrevTokens] = useState<Map<string, number>>(new Map());
+  const prevTokensRef = useRef<Map<string, number>>(new Map());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
@@ -66,7 +66,7 @@ export default function ScopePage() {
         bondingData.result.forEach((token: any) => {
           if (token.tokenAddress && token.symbol) {
             const priceUsd = parseFloat(token.priceUsd) || 0;
-            const prevPrice = prevTokens.get(token.tokenAddress);
+            const prevPrice = prevTokensRef.current.get(token.tokenAddress);
             const priceChange1m = prevPrice ? ((priceUsd - prevPrice) / prevPrice) * 100 : 0;
             
             allTokens.push({
@@ -94,7 +94,7 @@ export default function ScopePage() {
         graduatedData.result.forEach((token: any) => {
           if (token.tokenAddress && token.symbol) {
             const priceUsd = parseFloat(token.priceUsd) || 0;
-            const prevPrice = prevTokens.get(token.tokenAddress);
+            const prevPrice = prevTokensRef.current.get(token.tokenAddress);
             const priceChange1m = prevPrice ? ((priceUsd - prevPrice) / prevPrice) * 100 : 0;
             
             allTokens.push({
@@ -123,14 +123,15 @@ export default function ScopePage() {
       const topTokens = uniqueTokens.slice(0, 12);
       console.log("[wallst.fun] Top 12 tokens loaded");
       
-      // Update prev prices for next fetch
+      // Update prev prices for next fetch (using ref for immediate availability)
+      // Save ALL tokens' prices, not just top 12
       const newPrevTokens = new Map<string, number>();
-      topTokens.forEach(token => {
+      allTokens.forEach(token => {
         if (token.priceUsd) {
           newPrevTokens.set(token.tokenAddress, token.priceUsd);
         }
       });
-      setPrevTokens(newPrevTokens);
+      prevTokensRef.current = newPrevTokens;
       
       setTokens(topTokens);
       setLastUpdated(new Date());
