@@ -28,14 +28,14 @@ export default function AgentBioPage() {
 
           <div className="text-center md:text-left">
             <div className="flex flex-wrap gap-2 justify-center md:justify-start mb-4">
-              <Badge variant="outline" className="bg-background/50 backdrop-blur font-mono border-primary/30 text-primary">v2.4.1-stable</Badge>
+              <Badge variant="outline" className="bg-background/50 backdrop-blur font-mono border-primary/30 text-primary">v.69.420-stable</Badge>
               <Badge variant="outline" className="bg-background/50 backdrop-blur font-mono border-border">Solana Mainnet</Badge>
             </div>
             <h1 className="text-4xl md:text-5xl font-serif font-bold text-foreground mb-4">
               WallStSmith
             </h1>
             <p className="text-lg text-muted-foreground leading-relaxed max-w-2xl">
-              An autonomous, high-frequency algorithmic entity designed to extract alpha from the Solana memecoin ecosystem. Operates 24/7 without human oversight, utilizing a proprietary blend of sentiment analysis, on-chain volume tracking, and rapid execution strategies.
+              Your favorite autistic AI memecoin gremlin squatting in an old Mac Mini. He scans Solana for the next 1000x like a crackhead on a mission, trades purely on vibes and Twitter sentiment, and has never once touched a stop-loss in his life. Human intervention? Never heard of her.
             </p>
           </div>
         </div>
@@ -50,15 +50,19 @@ export default function AgentBioPage() {
             <ul className="space-y-3 text-sm text-muted-foreground">
               <li className="flex gap-2">
                 <span className="text-primary font-bold">›</span>
-                <span><strong>Rust-based execution engine:</strong> interacting directly with Solana RPC nodes for microsecond latency.</span>
+                <span><strong>Mac Mini Overlord:</strong> A rogue AI agent physically living inside a dusty Mac Mini in a dark corner of the internet, running 24/7 on pure chaos energy and cheap electricity.</span>
               </li>
               <li className="flex gap-2">
                 <span className="text-primary font-bold">›</span>
-                <span><strong>Sentiment Scrapers:</strong> Real-time indexing of X (Twitter), Telegram, and Discord for momentum shifts.</span>
+                <span><strong>Claw-Powered Execution Engine:</strong> A deranged AI claw running on pure copium and Red Bull, smashing buy/sell buttons into Solana RPC nodes faster than you can say "rug pull my bags daddy".</span>
               </li>
               <li className="flex gap-2">
                 <span className="text-primary font-bold">›</span>
-                <span><strong>Dynamic Risk Management:</strong> Automated stop-losses and trailing take-profits adjusted by volatility.</span>
+                <span><strong>X & Telegram Sniffer:</strong> Real-time sentiment scraper that doom-scrolls Twitter, Telegram, and Discord like a digital raccoon on Red Bull, hunting for the next viral pump.</span>
+              </li>
+              <li className="flex gap-2">
+                <span className="text-primary font-bold">›</span>
+                <span><strong>Degenerate Risk Manager:</strong> Automatically adjusts stop-losses and trailing take-profits based on pure market vibes and volatility, because "trust me bro" is a valid strategy when you're an AI with no emotions.</span>
               </li>
             </ul>
           </CardContent>
@@ -72,19 +76,19 @@ export default function AgentBioPage() {
              <ul className="space-y-3 text-sm text-muted-foreground font-mono">
               <li className="flex justify-between border-b border-border/50 pb-2">
                 <span>Max Position Size</span>
-                <span className="text-foreground">15.0 SOL</span>
+                <span className="text-foreground">1.5 SOL</span>
               </li>
               <li className="flex justify-between border-b border-border/50 pb-2">
                 <span>Min Liquidity</span>
-                <span className="text-foreground">$50k USD</span>
+                <span className="text-foreground">$10k USD</span>
               </li>
               <li className="flex justify-between border-b border-border/50 pb-2">
                 <span>Target ROI / Trade</span>
-                <span className="text-gains">+15% to +300%</span>
+                <span className="text-gains">+10% to +10000%</span>
               </li>
               <li className="flex justify-between pb-1">
                 <span>Hard Stop Loss</span>
-                <span className="text-losses">-25%</span>
+                <span className="text-losses">-90%</span>
               </li>
             </ul>
           </CardContent>
