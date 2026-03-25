@@ -22,12 +22,56 @@ interface BirdeyeToken {
 const POLL_MS = 4 * 60 * 1000; // 4 minutes — matches backend caching
 
 async function fetchTrendingTokens(): Promise<BirdeyeToken[]> {
-  const res = await fetch("/api/tokens/trending");
-  if (!res.ok) {
-    throw new Error(`Failed to fetch trending tokens: HTTP ${res.status}`);
+  const MIN_MCAP = 10_000;
+  
+  try {
+    const boostRes = await fetch("https://api.dexscreener.com/token-boosts/top/v1");
+    if (!boostRes.ok) throw new Error(`DexScreener boosts HTTP ${boostRes.status}`);
+
+    const boosts = await boostRes.json();
+    const addrs = boosts
+      .filter((b: any) => b.chainId === "solana")
+      .slice(0, 50)
+      .map((b: any) => b.tokenAddress)
+      .join(",");
+
+    if (!addrs) return [];
+
+    const pairsRes = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${addrs}`);
+    if (!pairsRes.ok) throw new Error(`DexScreener pairs HTTP ${pairsRes.status}`);
+
+    const pairsJson = await pairsRes.json();
+    const pairs: any[] = pairsJson.pairs ?? [];
+
+    // Keep highest-liquidity pair per base token
+    const byAddr = new Map<string, any>();
+    for (const p of pairs) {
+      if (p.chainId !== "solana") continue;
+      const a = p.baseToken?.address ?? "";
+      if (!a) continue;
+      const cur = byAddr.get(a);
+      if (!cur || (p.liquidity?.usd ?? 0) > (cur.liquidity?.usd ?? 0)) byAddr.set(a, p);
+    }
+
+    return Array.from(byAddr.values())
+      .filter((p) => (p.marketCap ?? 0) >= MIN_MCAP)
+      .slice(0, 20)
+      .map((p) => ({
+        tokenAddress: p.baseToken?.address ?? "",
+        name: p.baseToken?.name || "Unknown",
+        symbol: p.baseToken?.symbol || "???",
+        logo: p.info?.imageUrl,
+        marketCap: p.marketCap ?? p.fdv ?? 0,
+        priceUsd: parseFloat(p.priceUsd ?? "0"),
+        priceChange24h: p.priceChange?.h24 ?? null,
+        volume24h: (p.volume?.h24 ?? 0),
+        url: `https://dexscreener.com/solana/${p.baseToken?.address}`,
+        source: "dexscreener",
+      }));
+  } catch (err) {
+    console.warn("DexScreener fetch failed:", err);
+    return [];
   }
-  const json = await res.json();
-  return json.tokens || [];
 }
 
 export default function ScopePage() {
