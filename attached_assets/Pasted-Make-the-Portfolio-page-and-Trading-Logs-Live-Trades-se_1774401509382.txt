@@ -1,0 +1,30 @@
+Make the Portfolio page and Trading Logs / Live Trades section on WallStSmith / wallst.fun **real and connected to the actual blockchain** using the agent wallet address: Hw7yc27h6Lws6YsQmdLoj4M7psyFHRhosFwoGuSESmTh
+
+Requirements:
+
+- Reset / clear all fake / mock data for active trades, PNL, portfolio holdings, agent SOL balance, trade history, and any simulated logs.
+
+- From now on, scrape real data directly from the Solana blockchain using **Helius API** (you already have the API keys configured in Replit secrets/environment variables — use `process.env.HELIUS_API_KEY` or however it's stored).
+
+Key features to implement:
+
+1. **Agent SOL Balance** — Fetch and display the real native SOL balance of the wallet in real time (refresh every 10-15 seconds).
+
+2. **Portfolio Holdings** — Show real token balances (SPL tokens) held by the wallet, including token symbol, amount, USD value if possible (use Helius Wallet API or getTokenAccountsByOwner + metadata).
+
+3. **Active Trades / Open Positions** — Detect and list currently open positions based on recent swaps / buys that haven't been fully sold yet. Parse transactions to identify buys that still have remaining tokens.
+
+4. **PNL (Profit & Loss)** — Calculate realized and unrealized PNL where possible by analyzing buy/sell transactions from history.
+
+5. **Trading Logs / Trade History** — Fetch and display the real transaction history of the wallet (last 50-100 transactions), focusing on swaps, buys, sells on Pump.fun or other DEXes. Show timestamp, token involved, action (buy/sell), amount, and approximate PNL per trade. Use Helius enhanced transaction history or Wallet API `/history` or `getTransactionsForAddress`.
+
+Use the best Helius endpoints available (Wallet API beta if accessible, or standard RPC methods like getBalance, getTokenAccountsByOwner, getSignaturesForAddress + getTransaction with parsing).
+
+- Add auto-refresh (every 10-30 seconds) for balance, portfolio, and logs without reloading the page.
+- Keep the existing UI design, card layouts, and styling exactly the same — only replace the mock data with real fetched data.
+- Handle loading states and errors gracefully (show "Loading..." or fallback message if API fails).
+- For any token metadata (name, symbol, logo), use Helius DAS or metadata fetching if needed.
+
+Please output the **full updated code** for the relevant files (mainly Portfolio page/component and any Trading Logs / Live Trades components). If multiple files are affected, provide all of them clearly separated.
+
+After the code, briefly explain the main changes and how the Helius integration works.
