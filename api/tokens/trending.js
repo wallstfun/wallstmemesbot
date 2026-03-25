@@ -1,69 +1,8 @@
-const MORALIS_API_KEY = process.env.MORALIS_API_KEY;
 const MIN_MCAP = 10_000;
 const CACHE_TTL = 4 * 60 * 1000; // 4 minutes
 
 let cachedTokens = [];
 let lastFetchTime = 0;
-
-async function fetchMoralis() {
-  if (!MORALIS_API_KEY) {
-    console.warn('MORALIS_API_KEY not set, skipping Moralis fetch');
-    return [];
-  }
-
-  try {
-    const endpoints = [
-      'https://solana-gateway.moralis.io/token/mainnet/trendings',
-      'https://solana-gateway.moralis.io/token/mainnet/trending',
-    ];
-
-    let res = null;
-    let lastError = null;
-
-    for (const endpoint of endpoints) {
-      try {
-        res = await fetch(endpoint, {
-          headers: {
-            accept: 'application/json',
-            'X-API-Key': MORALIS_API_KEY,
-          },
-        });
-        if (res.ok) break;
-      } catch (e) {
-        lastError = e;
-      }
-    }
-
-    if (!res || !res.ok) {
-      const body = await res?.json().catch(() => ({}));
-      throw new Error(
-        `Moralis HTTP ${res?.status ?? 0}: ${body?.message ?? lastError?.message ?? 'Unknown error'}`
-      );
-    }
-
-    const json = await res.json();
-    const items = json?.tokens ?? json?.data ?? [];
-
-    return items
-      .filter((item) => (item.marketCap ?? 0) >= MIN_MCAP)
-      .slice(0, 20)
-      .map((item) => ({
-        tokenAddress: item.address || item.tokenAddress || '',
-        name: item.name || 'Unknown',
-        symbol: item.symbol || '???',
-        logo: item.logo,
-        marketCap: item.marketCap ?? 0,
-        priceUsd: item.priceUsd ?? 0,
-        priceChange24h: item.priceChange24h ?? null,
-        volume24h: item.volume24h ?? 0,
-        url: `https://moralis.io/token/${item.address}?chain=solana`,
-        source: 'moralis',
-      }));
-  } catch (err) {
-    console.warn('Moralis fetch failed:', err);
-    return [];
-  }
-}
 
 async function fetchDexScreener() {
   try {
@@ -125,38 +64,11 @@ async function fetchTrendingTokens() {
     return cachedTokens;
   }
 
-  console.log('Fetching fresh trending tokens from Moralis and DexScreener');
+  console.log('Fetching fresh trending tokens from DexScreener');
 
-  // Fetch both in parallel
-  const [moralisTokens, dexscreenerTokens] = await Promise.all([
-    fetchMoralis(),
-    fetchDexScreener(),
-  ]);
+  const tokens = await fetchDexScreener();
 
-  // Mix: if Moralis has tokens, use top 10 from each; otherwise use top 20 from DexScreener
-  let mixed = [];
-  if (moralisTokens.length > 0) {
-    mixed = [
-      ...moralisTokens.slice(0, 10),
-      ...dexscreenerTokens.slice(0, 10),
-    ];
-    console.log(
-      `Mixing Moralis (${moralisTokens.length}) and DexScreener (${dexscreenerTokens.length}) tokens`
-    );
-  } else {
-    mixed = dexscreenerTokens.slice(0, 20);
-    console.log(`Moralis unavailable, using DexScreener tokens only (${dexscreenerTokens.length})`);
-  }
-
-  // Deduplicate by tokenAddress (keep first occurrence)
-  const seen = new Set();
-  const deduped = mixed.filter((token) => {
-    if (seen.has(token.tokenAddress)) return false;
-    seen.add(token.tokenAddress);
-    return true;
-  });
-
-  cachedTokens = deduped;
+  cachedTokens = tokens;
   lastFetchTime = now;
 
   console.log(`Trending tokens fetched and cached (count: ${cachedTokens.length})`);
