@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Link } from "wouter";
-import { useLiveMetrics, useChartData, useXFeed } from "@/hooks/use-simulated-data";
+import { useLiveMetrics, useXFeed } from "@/hooks/use-simulated-data";
 import { useScopeTokens } from "@/hooks/use-scope-data";
 import { useWalletSolBalance, useRealTransactions } from "@/hooks/use-helius-data";
 import { LiveIndicator } from "@/components/ui/LiveIndicator";
@@ -14,9 +14,9 @@ import { motion, AnimatePresence } from "framer-motion";
 
 export default function Dashboard() {
   const metrics = useLiveMetrics();
-  const chartData = useChartData(7);
   const tweets = useXFeed();
-  const { tokens: scopeTokens, loading: scopeLoading } = useScopeTokens(3);
+  const { tokens: scopeTokens, loading: scopeLoading } = useScopeTokens(4);
+  const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
 
   // Real blockchain data
   const { balance: solBalance, loading: solBalanceLoading } = useWalletSolBalance();
@@ -87,6 +87,31 @@ export default function Dashboard() {
       if (retryTimeout) clearTimeout(retryTimeout);
     };
   }, []);
+
+  // All-time performance chart: cumulative SOL P&L from real on-chain swaps
+  const allTimeChartData = useMemo(() => {
+    if (realTrades.length === 0) return [];
+    const sorted = [...realTrades].sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+    let cumSol = 0;
+    const points: { time: string; value: number }[] = [];
+    sorted.forEach((trade) => {
+      if (trade.action === "BUY") cumSol -= trade.solAmount;
+      else if (trade.action === "SELL") cumSol += trade.solAmount;
+      points.push({
+        time: format(trade.timestamp, "MMM dd HH:mm"),
+        value: parseFloat((cumSol * (solPrice || 0)).toFixed(2)),
+      });
+    });
+    points.push({ time: format(new Date(), "MMM dd HH:mm"), value: parseFloat((cumSol * (solPrice || 0)).toFixed(2)) });
+    return points;
+  }, [realTrades, solPrice]);
+
+  const handleCopyAddress = (address: string) => {
+    navigator.clipboard.writeText(address).then(() => {
+      setCopiedAddress(address);
+      setTimeout(() => setCopiedAddress(null), 1500);
+    });
+  };
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -207,43 +232,51 @@ export default function Dashboard() {
           
           <Card className="border-border/50 shadow-sm">
             <CardHeader className="flex flex-row items-center justify-between pb-2 border-b border-border/50 bg-muted/20">
-              <CardTitle className="text-lg font-serif">Portfolio Performance (7D)</CardTitle>
+              <CardTitle className="text-lg font-serif">All Time Performance</CardTitle>
               <LiveIndicator />
             </CardHeader>
             <CardContent className="p-0 h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={chartData} margin={{ top: 20, right: 20, left: 20, bottom: 20 }}>
-                  <defs>
-                    <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3}/>
-                      <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-                  <XAxis 
-                    dataKey="time" 
-                    stroke="hsl(var(--muted-foreground))" 
-                    fontSize={12} 
-                    tickLine={false} 
-                    axisLine={false}
-                    minTickGap={50}
-                  />
-                  <YAxis 
-                    stroke="hsl(var(--muted-foreground))" 
-                    fontSize={12} 
-                    tickLine={false} 
-                    axisLine={false} 
-                    tickFormatter={(value) => `$${(value/1000).toFixed(1)}k`}
-                    domain={['dataMin - 500', 'dataMax + 500']}
-                  />
-                  <Tooltip 
-                    contentStyle={{ backgroundColor: 'hsl(var(--card))', borderColor: 'hsl(var(--border))', borderRadius: '8px' }}
-                    itemStyle={{ color: 'hsl(var(--foreground))', fontWeight: 'bold' }}
-                    formatter={(value: number) => [`$${value.toFixed(2)}`, 'Value']}
-                  />
-                  <Area type="monotone" dataKey="value" stroke="hsl(var(--primary))" strokeWidth={2} fillOpacity={1} fill="url(#colorValue)" />
-                </AreaChart>
-              </ResponsiveContainer>
+              {allTimeChartData.length === 0 ? (
+                <div className="h-full flex flex-col items-center justify-center gap-2 text-muted-foreground">
+                  <Activity className="w-8 h-8 opacity-30" />
+                  <p className="text-sm font-medium">No trading history yet</p>
+                  <p className="text-xs opacity-60">Chart will populate as the agent executes trades</p>
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={allTimeChartData} margin={{ top: 20, right: 20, left: 20, bottom: 20 }}>
+                    <defs>
+                      <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3}/>
+                        <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+                    <XAxis
+                      dataKey="time"
+                      stroke="hsl(var(--muted-foreground))"
+                      fontSize={12}
+                      tickLine={false}
+                      axisLine={false}
+                      minTickGap={50}
+                    />
+                    <YAxis
+                      stroke="hsl(var(--muted-foreground))"
+                      fontSize={12}
+                      tickLine={false}
+                      axisLine={false}
+                      tickFormatter={(v) => `$${(v / 1000).toFixed(1)}k`}
+                      domain={['dataMin - 10', 'dataMax + 10']}
+                    />
+                    <Tooltip
+                      contentStyle={{ backgroundColor: 'hsl(var(--card))', borderColor: 'hsl(var(--border))', borderRadius: '8px' }}
+                      itemStyle={{ color: 'hsl(var(--foreground))', fontWeight: 'bold' }}
+                      formatter={(value: number) => [`$${value.toFixed(2)}`, 'P&L']}
+                    />
+                    <Area type="monotone" dataKey="value" stroke="hsl(var(--primary))" strokeWidth={2} fillOpacity={1} fill="url(#colorValue)" />
+                  </AreaChart>
+                </ResponsiveContainer>
+              )}
             </CardContent>
           </Card>
 
@@ -393,32 +426,48 @@ export default function Dashboard() {
                 ) : scopeTokens.length === 0 ? (
                   <div className="p-6 text-center text-muted-foreground text-sm">No tokens found</div>
                 ) : (
-                  scopeTokens.map((token, i) => (
-                    <div key={token.tokenAddress} className="p-4 hover:bg-muted/30 transition-colors flex items-center justify-between group">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded bg-background border border-border flex items-center justify-center font-mono text-xs font-bold shadow-sm group-hover:border-primary/50 transition-colors">
-                          {i + 1}
-                        </div>
-                        <div>
-                          <div className="font-bold flex items-center gap-2">
-                            ${token.symbol}
-                            {token.bondingProgress !== undefined && token.bondingProgress < 100 && (
-                              <Badge variant="outline" className="text-[9px] h-4 px-1 text-muted-foreground border-border/50">bonding</Badge>
-                            )}
+                  scopeTokens.map((token, i) => {
+                    const shortAddr = token.tokenAddress.length > 8
+                      ? `${token.tokenAddress.slice(0, 4)}...${token.tokenAddress.slice(-4)}`
+                      : token.tokenAddress;
+                    const isCopied = copiedAddress === token.tokenAddress;
+                    return (
+                      <div key={token.tokenAddress} className="p-3 hover:bg-muted/30 transition-colors flex items-center justify-between group">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded bg-background border border-border flex items-center justify-center font-mono text-xs font-bold shadow-sm group-hover:border-primary/50 transition-colors shrink-0">
+                            {i + 1}
                           </div>
-                          <div className="text-xs text-muted-foreground truncate max-w-[120px]">{token.name}</div>
+                          <div>
+                            <div className="font-bold flex items-center gap-1.5">
+                              ${token.symbol}
+                              {token.bondingProgress !== undefined && token.bondingProgress < 100 && (
+                                <Badge variant="outline" className="text-[9px] h-4 px-1 text-muted-foreground border-border/50">bonding</Badge>
+                              )}
+                            </div>
+                            <button
+                              onClick={() => handleCopyAddress(token.tokenAddress)}
+                              className="flex items-center gap-1 text-[10px] text-muted-foreground font-mono hover:text-primary transition-colors mt-0.5"
+                              title={token.tokenAddress}
+                            >
+                              {isCopied ? '✓ copied' : shortAddr}
+                            </button>
+                          </div>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <div className="font-mono text-sm font-bold text-foreground">
+                            {token.marketCap && token.marketCap > 0
+                              ? `$${(token.marketCap / 1000).toFixed(0)}K`
+                              : '—'}
+                          </div>
+                          <div className={`text-[10px] font-mono mt-0.5 font-medium ${token.priceChange5m === null || token.priceChange5m === undefined ? 'text-muted-foreground' : token.priceChange5m >= 0 ? 'text-gains' : 'text-losses'}`}>
+                            {token.priceChange5m === null || token.priceChange5m === undefined
+                              ? '5m: —'
+                              : `5m: ${token.priceChange5m >= 0 ? '+' : ''}${token.priceChange5m.toFixed(2)}%`}
+                          </div>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <div className="font-mono text-sm font-bold text-foreground">
-                          {token.marketCap && token.marketCap > 0
-                            ? `$${(token.marketCap / 1000).toFixed(0)}K`
-                            : '—'}
-                        </div>
-                        <div className="text-xs text-muted-foreground font-mono mt-0.5">mkt cap</div>
-                      </div>
-                    </div>
-                  ))
+                    );
+                  })
                 )}
               </div>
               <div className="p-3 border-t border-border/50 bg-background/50 text-center">
