@@ -11,6 +11,8 @@ export interface PumpToken {
   priceUsd?: number;
   bondingProgress?: number;
   url?: string;
+  viewers?: number;
+  lastReply?: number;
 }
 
 interface McapSnapshot {
@@ -63,10 +65,14 @@ async function fetchPumpFunCoins(): Promise<PumpToken[]> {
       bondingProgress: coin.complete ? 100 : (coin.bonding_curve_progress ?? 0),
       url: `https://pump.fun/${coin.mint}`,
       priceChange1m: null,
+      viewers: coin.reply_count ?? 0,
+      lastReply: coin.last_reply ?? 0,
     });
   }
 
-  return tokens; // already sorted DESC by market_cap from API
+  // Sort by most recently replied-to (mindshare proxy) instead of market cap
+  tokens.sort((a, b) => (b.lastReply ?? 0) - (a.lastReply ?? 0));
+  return tokens;
 }
 
 export function useScopeTokens(limit = 4) {

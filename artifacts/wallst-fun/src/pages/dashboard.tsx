@@ -454,15 +454,14 @@ export default function Dashboard() {
                           </div>
                         </div>
                         <div className="text-right shrink-0">
-                          <div className="font-mono text-sm font-bold text-foreground">
-                            {token.marketCap && token.marketCap > 0
-                              ? `$${(token.marketCap / 1000).toFixed(0)}K`
-                              : '—'}
+                          <div className="font-mono text-sm font-bold text-primary flex items-center justify-end gap-1">
+                            <MessageCircle className="w-3 h-3 opacity-70" />
+                            {(token.viewers ?? 0) > 0 ? (token.viewers ?? 0).toLocaleString() : '—'}
                           </div>
-                          <div className={`text-[10px] font-mono mt-0.5 font-medium ${!token.priceChange1m && token.priceChange1m !== 0 ? 'text-muted-foreground' : (token.priceChange1m ?? 0) >= 0 ? 'text-gains' : 'text-losses'}`}>
-                            {!token.priceChange1m && token.priceChange1m !== 0
-                              ? '1m: —'
-                              : `1m: ${(token.priceChange1m ?? 0) >= 0 ? '+' : ''}${(token.priceChange1m ?? 0).toFixed(2)}%`}
+                          <div className="text-[10px] font-mono mt-0.5 text-muted-foreground">
+                            {token.marketCap && token.marketCap > 0
+                              ? `$${(token.marketCap / 1000).toFixed(0)}K mcap`
+                              : '—'}
                           </div>
                         </div>
                       </div>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Flame, RefreshCw, ExternalLink, AlertCircle } from "lucide-react";
+import { Flame, RefreshCw, ExternalLink, AlertCircle, MessageCircle } from "lucide-react";
 import { LiveIndicator } from "@/components/ui/LiveIndicator";
 
 interface PumpToken {
@@ -14,6 +14,8 @@ interface PumpToken {
   priceUsd?: number;
   bondingProgress?: number;
   url?: string;
+  viewers?: number;
+  lastReply?: number;
 }
 
 interface McapSnapshot {
@@ -62,8 +64,12 @@ async function fetchPumpFunCoins(): Promise<PumpToken[]> {
       bondingProgress: coin.complete ? 100 : (coin.bonding_curve_progress ?? 0),
       url: `https://pump.fun/${coin.mint}`,
       priceChange1m: null,
+      viewers: coin.reply_count ?? 0,
+      lastReply: coin.last_reply ?? 0,
     });
   }
+  // Sort by most recently replied-to (mindshare proxy)
+  tokens.sort((a, b) => (b.lastReply ?? 0) - (a.lastReply ?? 0));
   return tokens;
 }
 
@@ -180,7 +186,7 @@ export default function ScopePage() {
         <p className="text-xs text-muted-foreground">
           Last updated: {secondsAgo}s ago ({lastUpdated.toLocaleTimeString()})
           &nbsp;·&nbsp;
-          <span className="text-gains/70">≥$20K mcap only · auto-refreshes every 10s</span>
+          <span className="text-gains/70">sorted by mindshare (latest replies) · ≥$20K mcap only · auto-refreshes every 10s</span>
         </p>
       )}
 
@@ -279,13 +285,23 @@ export default function ScopePage() {
                 </div>
 
                 <div className="space-y-3">
-                  {/* Market Cap */}
-                  <div className="bg-muted/20 p-3 rounded-lg border border-border/50">
-                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">
-                      Market Cap
+                  {/* Viewers + Market Cap */}
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="bg-primary/5 border border-primary/20 p-3 rounded-lg">
+                      <div className="text-[10px] uppercase tracking-wider text-primary/70 font-semibold mb-1 flex items-center gap-1">
+                        <MessageCircle className="w-3 h-3" /> Replies
+                      </div>
+                      <div className="font-mono text-sm font-bold text-primary">
+                        {(token.viewers ?? 0) > 0 ? (token.viewers ?? 0).toLocaleString() : "—"}
+                      </div>
                     </div>
-                    <div className="font-mono text-sm font-bold text-foreground">
-                      {formatMarketCap(token.marketCap)}
+                    <div className="bg-muted/20 p-3 rounded-lg border border-border/50">
+                      <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">
+                        Market Cap
+                      </div>
+                      <div className="font-mono text-sm font-bold text-foreground">
+                        {formatMarketCap(token.marketCap)}
+                      </div>
                     </div>
                   </div>
 
