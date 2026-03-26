@@ -206,18 +206,20 @@
     white-space: nowrap;
     display: flex;
     align-items: center;
+    justify-content: center;
   }
   
   .ticker {
     display: inline-flex;
     align-items: center;
     white-space: nowrap;
-    animation: ticker-scroll 45s linear infinite;
-    will-change: transform;
+    max-width: 80rem;
+    width: 100%;
+    will-change: auto;
   }
 
   .ticker:hover {
-    animation-play-state: paused;
+    /* Removed animation pause */
   }
   
   @keyframes ticker-scroll {
