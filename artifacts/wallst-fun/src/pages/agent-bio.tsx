@@ -12,7 +12,7 @@ export default function AgentBioPage() {
         <div className="absolute inset-0 bg-gradient-to-r from-primary/20 to-transparent opacity-20"></div>
         <div className="p-8 md:p-12 relative z-10 flex flex-col md:flex-row gap-8 items-center md:items-start">
           
-          <div className="w-40 h-40 shrink-0 rounded-2xl border-4 border-background shadow-xl overflow-hidden bg-muted relative">
+          <div className="w-40 h-40 shrink-0 rounded-2xl border-4 border-background shadow-xl overflow-hidden bg-white relative">
             {/* If the AI agent generated the image, it will load here. Otherwise it gracefully falls back. */}
             <img 
               src={`${import.meta.env.BASE_URL}images/agent-avatar.jpg`} 
