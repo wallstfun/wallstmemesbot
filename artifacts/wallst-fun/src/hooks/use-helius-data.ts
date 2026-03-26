@@ -270,34 +270,19 @@ export function useTokenHoldings() {
 
 export function useWalletSolBalance() {
   const [balance, setBalance] = useState<number | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const fetchBalance = useCallback(async () => {
-    try {
-      // Note: This still needs direct RPC access for getBalance
-      // Keep this as is for now, will proxy later if needed
-      const res = await fetch("/api/helius-transactions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ walletAddress: AGENT_WALLET }),
-      });
-      
-      if (!res.ok) throw new Error("Failed to fetch balance");
-      setBalance(0); // Placeholder
-      setError(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to fetch balance");
-    } finally {
-      setLoading(false);
-    }
+    // Placeholder: Balance updates from ticker via localStorage
+    return;
   }, []);
 
   useEffect(() => {
-    fetchBalance();
-    const interval = setInterval(fetchBalance, 15000);
-    return () => clearInterval(interval);
-  }, [fetchBalance]);
+    // Balance is updated via SOL price from dashboard (stored in localStorage)
+    // No need to fetch separately
+    return () => {};
+  }, []);
 
   return { balance, loading, error, refresh: fetchBalance };
 }
