@@ -105,7 +105,7 @@ export default function AgentBioPage() {
                 href={`https://solscan.io/account/${AGENT_WALLET}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="font-mono text-sm text-primary hover:underline flex items-center justify-center gap-1"
+                className="font-mono text-xs text-primary hover:underline flex items-center justify-center gap-1"
               >
                 {WALLET_FULL}
                 <ExternalLink className="w-3 h-3" />
