@@ -71,38 +71,24 @@ export function RootLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground transition-colors duration-300">
-      {/* WSJ Style Ticker — single seamless scrolling line */}
-      <div className="ticker-wrap bg-card border-b border-border h-8 text-xs font-mono select-none relative z-50">
-        <div className="ticker">
-          <span className="inline-flex items-center gap-8 px-8">
-            <span className="font-bold">SYSTEM STATUS:&nbsp;<span className="text-gains">ONLINE</span></span>
-            <span className="text-muted-foreground">///</span>
-            <span>SOL/USD:&nbsp;<span className="font-bold">${solPrice > 0 ? solPrice.toFixed(2) : '—'}</span></span>
-            <span className="text-muted-foreground">///</span>
-            <span>AGENT BAL:&nbsp;<span className="font-bold">{realSolBalance !== null ? `${realSolBalance.toFixed(4)} SOL` : '— SOL'}</span></span>
-            <span className="text-muted-foreground">///</span>
-            <span>WIN RATE:&nbsp;<span className="font-bold">{winRate !== null ? `${winRate.toFixed(1)}%` : '—'}</span></span>
-            <span className="text-muted-foreground">///</span>
-            <span>TOTAL TRADES:&nbsp;<span className="font-bold">{totalTrades}</span></span>
-            <span className="text-muted-foreground">///</span>
-            <span className="font-bold text-muted-foreground">wallst.fun /// WallStSmith</span>
-            <span className="text-muted-foreground px-8">///</span>
-          </span>
-          {/* Duplicate for seamless infinite scroll loop */}
-          <span className="inline-flex items-center gap-8 px-8">
-            <span className="font-bold">SYSTEM STATUS:&nbsp;<span className="text-gains">ONLINE</span></span>
-            <span className="text-muted-foreground">///</span>
-            <span>SOL/USD:&nbsp;<span className="font-bold">${solPrice > 0 ? solPrice.toFixed(2) : '—'}</span></span>
-            <span className="text-muted-foreground">///</span>
-            <span>AGENT BAL:&nbsp;<span className="font-bold">{realSolBalance !== null ? `${realSolBalance.toFixed(4)} SOL` : '— SOL'}</span></span>
-            <span className="text-muted-foreground">///</span>
-            <span>WIN RATE:&nbsp;<span className="font-bold">{winRate !== null ? `${winRate.toFixed(1)}%` : '—'}</span></span>
-            <span className="text-muted-foreground">///</span>
-            <span>TOTAL TRADES:&nbsp;<span className="font-bold">{totalTrades}</span></span>
-            <span className="text-muted-foreground">///</span>
-            <span className="font-bold text-muted-foreground">wallst.fun /// WallStSmith</span>
-            <span className="text-muted-foreground px-8">///</span>
-          </span>
+      {/* WSJ Style Ticker — static, aligned with main content */}
+      <div className="bg-card border-b border-border text-xs font-mono select-none relative z-50">
+        <div className="ticker-wrap container mx-auto px-4 max-w-7xl h-8">
+          <div className="ticker">
+            <span className="inline-flex items-center gap-8">
+              <span className="font-bold">SYSTEM STATUS:&nbsp;<span className="text-gains">ONLINE</span></span>
+              <span className="text-muted-foreground">///</span>
+              <span>SOL/USD:&nbsp;<span className="font-bold">${solPrice > 0 ? solPrice.toFixed(2) : '—'}</span></span>
+              <span className="text-muted-foreground">///</span>
+              <span>AGENT BAL:&nbsp;<span className="font-bold">{realSolBalance !== null ? `${realSolBalance.toFixed(4)} SOL` : '— SOL'}</span></span>
+              <span className="text-muted-foreground">///</span>
+              <span>WIN RATE:&nbsp;<span className="font-bold">{winRate !== null ? `${winRate.toFixed(1)}%` : '—'}</span></span>
+              <span className="text-muted-foreground">///</span>
+              <span>TOTAL TRADES:&nbsp;<span className="font-bold">{totalTrades}</span></span>
+              <span className="text-muted-foreground">///</span>
+              <span className="font-bold text-muted-foreground">wallst.fun /// WallStSmith</span>
+            </span>
+          </div>
         </div>
       </div>
 

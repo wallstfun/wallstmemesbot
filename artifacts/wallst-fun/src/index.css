@@ -202,31 +202,15 @@
   }
   
   .ticker-wrap {
-    overflow: hidden;
-    white-space: nowrap;
     display: flex;
     align-items: center;
+    justify-content: center;
   }
   
   .ticker {
-    display: inline-flex;
+    display: flex;
     align-items: center;
     white-space: nowrap;
-    animation: ticker-scroll 45s linear infinite;
-    will-change: transform;
-  }
-
-  .ticker:hover {
-    animation-play-state: paused;
-  }
-  
-  @keyframes ticker-scroll {
-    0% {
-      transform: translate3d(0, 0, 0);
-    }
-    100% {
-      transform: translate3d(-50%, 0, 0);
-    }
   }
 
   .glass-panel {
