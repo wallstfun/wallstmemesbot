@@ -33,8 +33,22 @@ export function useRealTransactions() {
   const [winRate, setWinRate] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isPaused, setIsPaused] = useState(false);
+  const [pauseUntil, setPauseUntil] = useState<number>(0);
 
   const fetchTrades = useCallback(async () => {
+    // Check if paused due to rate limiting both keys
+    if (isPaused && Date.now() < pauseUntil) {
+      const remainingSeconds = Math.ceil((pauseUntil - Date.now()) / 1000);
+      setError(`Rate limit hit on both API keys. Pausing for ${remainingSeconds}s...`);
+      return;
+    }
+
+    if (isPaused) {
+      setIsPaused(false);
+      setPauseUntil(0);
+    }
+
     try {
       // Call the server proxy route instead of Helius directly
       const res = await fetch("/api/helius-transactions", {
@@ -45,13 +59,25 @@ export function useRealTransactions() {
 
       if (res.status === 429) {
         const data = await res.json();
-        const retryAfter = data.retryAfter || 10;
-        console.warn(`Rate limited by Helius API. Retrying in ${retryAfter}s...`);
+        const retryAfter = data.retryAfter || 30;
+        
+        if (data.error?.includes("both API keys")) {
+          // Both keys failed - pause for 30 seconds
+          setIsPaused(true);
+          setPauseUntil(Date.now() + retryAfter * 1000);
+          setError(`Rate limit hit on both API keys. Retrying in ${retryAfter}s...`);
+          console.warn(`Both API keys rate-limited. Pausing for ${retryAfter}s...`);
+          return;
+        }
+
+        // Single key failed - will retry with alternate key on server side
+        console.warn(`Rate limited. Retrying in ${retryAfter}s...`);
         await new Promise(resolve => setTimeout(resolve, retryAfter * 1000));
         return fetchTrades(); // Recursively retry
       }
 
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      setError(null); // Clear error on success
       const txs: any[] = await res.json();
 
       if (!Array.isArray(txs)) throw new Error("Unexpected response format");
