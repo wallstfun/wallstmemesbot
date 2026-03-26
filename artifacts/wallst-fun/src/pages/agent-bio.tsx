@@ -17,7 +17,7 @@ export default function AgentBioPage() {
             <img 
               src={`${import.meta.env.BASE_URL}images/agent-avatar.jpg`} 
               alt="WallStSmith Agent" 
-              className="w-full h-full object-cover"
+              className="w-full h-full object-top object-cover"
               onError={(e) => {
                 // Fallback to a solid color if image not ready yet
                 (e.target as HTMLImageElement).src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%"><rect width="100%" height="100%" fill="%231e293b" /></svg>';
