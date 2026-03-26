@@ -1,8 +1,9 @@
 import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Cpu, ShieldAlert, Zap, Globe, Github } from "lucide-react";
-import { WALLET } from "@/components/layout/RootLayout";
+import { Cpu, ShieldAlert, Zap, Globe, Github, ExternalLink } from "lucide-react";
+import { WALLET_FULL } from "@/components/layout/RootLayout";
+import { AGENT_WALLET } from "@/hooks/use-helius-data";
 
 export default function AgentBioPage() {
   return (
@@ -100,7 +101,15 @@ export default function AgentBioPage() {
           <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-border/50 text-center">
             <div className="p-6">
               <div className="text-xs text-muted-foreground font-mono mb-1">WALLET ADDRESS</div>
-              <div className="font-mono text-sm truncate px-4">{WALLET}</div>
+              <a
+                href={`https://solscan.io/account/${AGENT_WALLET}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-mono text-sm text-primary hover:underline flex items-center justify-center gap-1"
+              >
+                {WALLET_FULL}
+                <ExternalLink className="w-3 h-3" />
+              </a>
             </div>
             <div className="p-6">
               <div className="text-xs text-muted-foreground font-mono mb-1">UPTIME</div>

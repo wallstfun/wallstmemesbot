@@ -92,7 +92,7 @@ export default function PortfolioPage() {
               rel="noopener noreferrer"
               className="font-mono text-xs text-primary hover:underline"
             >
-              {AGENT_WALLET.slice(0, 8)}...{AGENT_WALLET.slice(-6)}
+              {AGENT_WALLET}
             </a>
           </p>
         </div>
