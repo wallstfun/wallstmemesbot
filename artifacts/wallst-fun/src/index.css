@@ -210,12 +210,13 @@
   }
   
   .ticker {
-    display: inline-flex;
+    display: flex;
     align-items: center;
     white-space: nowrap;
-    max-width: 80rem;
     width: 100%;
+    max-width: none;
     will-change: auto;
+    padding: 0 1rem;
   }
 
   .ticker:hover {
