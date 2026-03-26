@@ -216,7 +216,7 @@ export default function LiveTradesPage() {
 
       <div className="text-center text-xs text-muted-foreground">
         Data sourced from{" "}
-        <span className="text-primary font-medium">Helius Enhanced Transaction API</span> · Auto-refreshes every 30 seconds
+        <span className="text-primary font-medium">Helius Enhanced Transaction API</span> · Click refresh to load latest trades
       </div>
     </div>
   );

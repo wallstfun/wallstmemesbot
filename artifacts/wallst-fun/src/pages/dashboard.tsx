@@ -449,7 +449,7 @@ function DashboardContent() {
               )}
             </div>
             <div className="p-3 border-t border-border/50 bg-muted/10 text-center">
-              <span className="text-xs text-gains font-mono">● Live data from Helius Enhanced TX API · 30s refresh</span>
+              <span className="text-xs text-gains font-mono">● Data from Helius Enhanced TX API</span>
             </div>
           </Card>
 

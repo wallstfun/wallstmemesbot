@@ -126,8 +126,7 @@ export function useTokenHoldings() {
   }, []);
 
   useEffect(() => {
-    fetchHoldings();
-    const interval = setInterval(fetchHoldings, 30000);
+    const interval = setInterval(fetchHoldings, 120000);
     return () => clearInterval(interval);
   }, [fetchHoldings]);
 
@@ -301,8 +300,7 @@ export function useRealTransactions() {
   }, []);
 
   useEffect(() => {
-    fetchTrades();
-    const interval = setInterval(fetchTrades, 30000);
+    const interval = setInterval(fetchTrades, 120000);
     return () => clearInterval(interval);
   }, [fetchTrades]);
 
@@ -347,8 +345,7 @@ export function useNetworkCongestion(): NetworkStatus {
   }, []);
 
   useEffect(() => {
-    fetchCongestion();
-    const interval = setInterval(fetchCongestion, 30000);
+    const interval = setInterval(fetchCongestion, 120000);
     return () => clearInterval(interval);
   }, [fetchCongestion]);
 
