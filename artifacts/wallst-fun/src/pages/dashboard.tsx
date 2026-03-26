@@ -37,7 +37,7 @@ function LatestTweet() {
       <div className="flex flex-col items-center justify-center h-full gap-2 text-muted-foreground p-4">
         <MessageSquare className="w-6 h-6 opacity-30" />
         <p className="text-sm font-medium">X Feed Coming Soon</p>
-        <p className="text-xs opacity-70">Latest tweet from WallStSmith will appear here</p>
+        <p className="text-xs opacity-70">Latest tweet from @WSSmith will appear here</p>
       </div>
     );
   }
