@@ -202,25 +202,22 @@
   }
   
   .ticker-wrap {
-    overflow: visible;
+    overflow: hidden;
     white-space: nowrap;
     display: flex;
     align-items: center;
-    justify-content: center;
-    width: 100vw;
-    position: relative;
-    left: calc(-50vw + 50%);
   }
   
   .ticker {
-    display: flex;
+    display: inline-flex;
     align-items: center;
     white-space: nowrap;
-    will-change: auto;
+    animation: ticker-scroll 45s linear infinite;
+    will-change: transform;
   }
 
   .ticker:hover {
-    /* Removed animation pause */
+    animation-play-state: paused;
   }
   
   @keyframes ticker-scroll {
