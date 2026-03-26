@@ -72,7 +72,7 @@ export function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground transition-colors duration-300">
       {/* WSJ Style Ticker — static, non-scrolling line */}
-      <div className="ticker-wrap w-full bg-card border-b border-border h-8 text-xs font-mono select-none relative z-50">
+      <div className="ticker-wrap container mx-auto px-4 max-w-7xl bg-card border-b border-border h-8 text-xs font-mono select-none relative z-50">
         <div className="ticker">
           <span className="inline-flex items-center gap-8 px-8">
             <span className="font-bold">SYSTEM STATUS:&nbsp;<span className="text-gains">ONLINE</span></span>

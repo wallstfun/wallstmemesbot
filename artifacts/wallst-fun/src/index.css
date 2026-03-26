@@ -207,16 +207,16 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    width: 100vw;
+    position: relative;
+    left: calc(-50vw + 50%);
   }
   
   .ticker {
     display: flex;
     align-items: center;
     white-space: nowrap;
-    width: 100%;
-    max-width: none;
     will-change: auto;
-    padding: 0;
   }
 
   .ticker:hover {
