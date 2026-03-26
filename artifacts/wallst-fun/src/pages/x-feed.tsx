@@ -156,7 +156,7 @@ export default function XFeedPage() {
           <div>
             <h3 className="font-serif font-bold text-lg text-foreground mb-1">WallStSmith is analyzing the market</h3>
             <p className="text-muted-foreground text-sm max-w-sm">
-              The agent is active on X. Posts will appear here automatically — refresh any time.
+              The agent is active on X. Posts will appear here.
             </p>
           </div>
 
