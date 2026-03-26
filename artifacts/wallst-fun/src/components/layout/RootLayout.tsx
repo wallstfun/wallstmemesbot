@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { Moon, Sun, Terminal, Activity, Briefcase, MessageSquare, TrendingUp, User, Menu, X } from "lucide-react";
 import { useLiveMetrics } from "@/hooks/use-simulated-data";
-import { useWalletSolBalance, useRealTransactions } from "@/hooks/use-helius-data";
+import { useWalletSolBalance, useRealTransactions, useNetworkCongestion } from "@/hooks/use-helius-data";
 
 // Replace with actual Solana wallet address (public-facing, masked)
 export const WALLET_FULL = "Hw7yc27h6Lws6YsQmdLoj4M7psyFHRhosFwoGuSESmTh";
