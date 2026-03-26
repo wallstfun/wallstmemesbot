@@ -127,7 +127,7 @@ export function useTokenHoldings() {
 
   useEffect(() => {
     fetchHoldings();
-    const interval = setInterval(fetchHoldings, 30000);
+    const interval = setInterval(fetchHoldings, 90000);
     return () => clearInterval(interval);
   }, [fetchHoldings]);
 
@@ -302,7 +302,7 @@ export function useRealTransactions() {
 
   useEffect(() => {
     fetchTrades();
-    const interval = setInterval(fetchTrades, 30000);
+    const interval = setInterval(fetchTrades, 90000);
     return () => clearInterval(interval);
   }, [fetchTrades]);
 
@@ -320,37 +320,5 @@ export interface NetworkStatus {
 }
 
 export function useNetworkCongestion(): NetworkStatus {
-  const [tps, setTps] = useState<number | null>(null);
-  const [congestion, setCongestion] = useState<CongestionLevel>("Unknown");
-  const [loading, setLoading] = useState(true);
-
-  const fetchCongestion = useCallback(async () => {
-    try {
-      const samples: any[] = await rpc("getRecentPerformanceSamples", [1]);
-      if (Array.isArray(samples) && samples.length > 0) {
-        const sample = samples[0];
-        const calculatedTps = Math.round(
-          sample.numTransactions / sample.samplePeriodSecs
-        );
-        setTps(calculatedTps);
-        setCongestion(
-          calculatedTps > 3000 ? "High" : calculatedTps > 1500 ? "Medium" : "Low"
-        );
-      } else {
-        setCongestion("Unknown");
-      }
-    } catch {
-      setCongestion("Unknown");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchCongestion();
-    const interval = setInterval(fetchCongestion, 30000);
-    return () => clearInterval(interval);
-  }, [fetchCongestion]);
-
-  return { tps, congestion, loading };
+  return { tps: null, congestion: "Unknown", loading: false };
 }
