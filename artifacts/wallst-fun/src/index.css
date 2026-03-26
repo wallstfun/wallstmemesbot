@@ -202,7 +202,7 @@
   }
   
   .ticker-wrap {
-    overflow: hidden;
+    overflow: visible;
     white-space: nowrap;
     display: flex;
     align-items: center;
@@ -216,7 +216,7 @@
     width: 100%;
     max-width: none;
     will-change: auto;
-    padding: 0 1rem;
+    padding: 0;
   }
 
   .ticker:hover {
