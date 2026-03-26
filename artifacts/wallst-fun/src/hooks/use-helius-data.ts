@@ -3,7 +3,6 @@ import { useState, useEffect, useCallback } from "react";
 export const AGENT_WALLET = "Hw7yc27h6Lws6YsQmdLoj4M7psyFHRhosFwoGuSESmTh";
 const HELIUS_API_KEY = "54385120-20ac-4baa-9774-3f7ba8ccd656";
 const HELIUS_RPC_URL = `https://mainnet.helius-rpc.com/?api-key=${HELIUS_API_KEY}`;
-const HELIUS_V0_URL = `https://api-mainnet.helius-rpc.com/v0`;
 
 const rpc = async (method: string, params: unknown[]) => {
   const res = await fetch(HELIUS_RPC_URL, {
@@ -166,12 +165,34 @@ export function useRealTransactions() {
   const [winRate, setWinRate] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
 
   const fetchTrades = useCallback(async () => {
     try {
-      const url = `${HELIUS_V0_URL}/addresses/${AGENT_WALLET}/transactions/?api-key=${HELIUS_API_KEY}&limit=100&type=SWAP`;
-      const res = await fetch(url);
+      const baseUrl = typeof window !== "undefined" 
+        ? `${window.location.origin}` 
+        : "http://localhost:8080";
+      
+      const res = await fetch(`${baseUrl}/api/helius-transactions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ walletAddress: AGENT_WALLET }),
+      });
+
+      // Handle rate limiting with exponential backoff
+      if (res.status === 429) {
+        const data = await res.json();
+        const retryAfter = data.retryAfter || 10;
+        console.warn(`Rate limited by Helius API. Retrying in ${retryAfter}s...`);
+        
+        // Wait and retry
+        await new Promise(resolve => setTimeout(resolve, retryAfter * 1000));
+        setRetryCount(prev => prev + 1);
+        return fetchTrades(); // Recursively retry
+      }
+
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      setRetryCount(0); // Reset retry count on success
       const txs: any[] = await res.json();
 
       if (!Array.isArray(txs)) throw new Error("Unexpected response format");
