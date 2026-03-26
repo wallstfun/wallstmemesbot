@@ -54,7 +54,7 @@ function LatestTweet() {
           />
           <div>
             <span className="text-xs font-bold text-foreground">WallStSmith</span>
-            <span className="text-xs text-muted-foreground ml-1">@WallstM99224</span>
+            <span className="text-xs text-muted-foreground ml-1">@WSSmith</span>
           </div>
         </div>
         <a

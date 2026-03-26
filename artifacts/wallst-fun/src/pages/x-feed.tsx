@@ -100,12 +100,12 @@ export default function XFeedPage() {
             <p className="text-muted-foreground text-sm">
               Live posts from{" "}
               <a
-                href="https://twitter.com/WallstM99224"
+                href="https://twitter.com/WSSmith"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-primary hover:underline"
               >
-                @WallstM99224
+                @WSSmith
               </a>
               {lastRefresh && (
                 <span className="ml-2 text-muted-foreground/60">
@@ -132,7 +132,7 @@ export default function XFeedPage() {
       {loading && tweets.length === 0 && (
         <div className="flex flex-col items-center justify-center py-20 gap-4 text-muted-foreground">
           <Loader2 className="w-8 h-8 animate-spin text-primary" />
-          <p className="text-sm">Fetching posts from @WallstM99224…</p>
+          <p className="text-sm">Fetching posts from @WSSmith…</p>
         </div>
       )}
 
@@ -161,12 +161,12 @@ export default function XFeedPage() {
           </div>
 
           <a
-            href="https://twitter.com/WallstM99224"
+            href="https://twitter.com/WSSmith"
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-colors"
           >
-            Follow @WallstM99224 on X
+            Follow @WSSmith on X
             <ExternalLink className="w-3.5 h-3.5" />
           </a>
 

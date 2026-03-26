@@ -244,7 +244,7 @@ export function useXFeed() {
       const token = rChoice(MEME_TOKENS).symbol;
       return {
         id: genId(),
-        handle: "@WallstM99224",
+        handle: "@WSSmith",
         name: "WallStSmith",
         text: rChoice(TWEET_TEMPLATES).replace("{token}", `$${token}`).replace("{pnl}", rInt(10, 300).toString()),
         timestamp: subMinutes(new Date(), rInt(1, 60) * (i + 1)),
