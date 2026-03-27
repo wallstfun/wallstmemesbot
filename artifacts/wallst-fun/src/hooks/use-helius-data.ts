@@ -324,38 +324,14 @@ export function useRealTransactions() {
               const hasTokenIn = (swap?.tokenInputs?.length ?? 0) > 0;
               
               if (hasNativeOut && hasTokenIn) {
-                // Received native SOL, sent token(s) → could be SELL or BUY SOL depending on what token sent
+                action = "BUY";
+                solFlow = "in";
+                solAmount = Number(swap.nativeOutput.amount) / 1e9;
+                tokenMint = "So11111111111111111111111111111111111111112";
+                tokenSymbol = "SOL";
+                tokenAmount = solAmount;
                 const sentTok = swap.tokenInputs?.[0];
-                const sentMint = sentTok?.mint;
-                const receivedSOL = Number(swap.nativeOutput.amount) / 1e9;
-                
-                if (sentMint && STABLECOIN_MINTS.includes(sentMint)) {
-                  // Sold stablecoin for SOL → SELL the stablecoin
-                  action = "SELL";
-                  solFlow = "none";
-                  tokenMint = sentMint;
-                  const rawAmount = Number(sentTok.rawTokenAmount?.tokenAmount ?? 0);
-                  const decimals = Number(sentTok.rawTokenAmount?.decimals ?? 6);
-                  tokenAmount = rawAmount / Math.pow(10, decimals);
-                  tokenSymbol = sentTok.symbol || KNOWN_TOKEN_SYMBOLS[sentMint] || sentMint.slice(0, 6).toUpperCase();
-                  solAmount = receivedSOL;
-                  console.log(`[parse] ${sig}: SELL ${tokenSymbol}: ${tokenAmount} for ${receivedSOL.toFixed(4)} SOL`);
-                } else {
-                  // Sold other token for SOL → SELL that token
-                  action = "SELL";
-                  solFlow = "in";
-                  solAmount = receivedSOL;
-                  tokenMint = sentMint || "So11111111111111111111111111111111111111112";
-                  tokenSymbol = sentTok?.symbol || KNOWN_TOKEN_SYMBOLS[sentMint || ""] || sentMint?.slice(0, 6).toUpperCase() || "SOL";
-                  const rawAmount = Number(sentTok?.rawTokenAmount?.tokenAmount ?? 0);
-                  const decimals = Number(sentTok?.rawTokenAmount?.decimals ?? 0);
-                  tokenAmount = rawAmount > 0 ? rawAmount / Math.pow(10, decimals) : 0;
-                  if (sentMint && sentTok?.symbol) {
-                    tokenSymbol = sentTok.symbol;
-                  }
-                  if (sentTok?.mint) (tx as any).__sentMint__ = sentTok.mint;
-                  console.log(`[parse] ${sig}: SELL ${tokenSymbol}: ${tokenAmount} for ${receivedSOL.toFixed(4)} SOL`);
-                }
+                if (sentTok?.mint) (tx as any).__sentMint__ = sentTok.mint;
               } else if (hasNativeIn && hasTokenOut) {
                 const out = swap.tokenOutputs?.[0];
                 if (out?.mint) {
@@ -366,9 +342,7 @@ export function useRealTransactions() {
                   solAmount = Number(swap.nativeInput.amount) / 1e9;
                   solFlow = "out";
                   action = STABLECOIN_MINTS.includes(tokenMint) ? "SELL" : "BUY";
-                  console.log(`[parse] ${sig}: ${action} ${out.symbol || tokenMint.slice(0, 6).toUpperCase()}: ${tokenAmount} for ${solAmount.toFixed(4)} SOL`);
                 } else {
-                  console.log(`[parse] ${sig}: DROPPED - hasNativeIn && hasTokenOut but no output mint`);
                   return null;
                 }
               } else if (hasTokenIn && hasTokenOut) {
@@ -381,13 +355,10 @@ export function useRealTransactions() {
                   solFlow = "none";
                   action = STABLECOIN_MINTS.includes(tokenMint) ? "SELL" : "BUY";
                   solAmount = 0;
-                  console.log(`[parse] ${sig}: ${action} ${out.symbol || tokenMint.slice(0, 6).toUpperCase()}: token-to-token swap`);
                 } else {
-                  console.log(`[parse] ${sig}: DROPPED - hasTokenIn && hasTokenOut but no output mint`);
                   return null;
                 }
               } else {
-                console.log(`[parse] ${sig}: DROPPED - no matching swap pattern (hasNativeIn=${hasNativeIn}, hasNativeOut=${hasNativeOut}, hasTokenIn=${hasTokenIn}, hasTokenOut=${hasTokenOut})`);
                 return null;
               }
             } // end if (swap)

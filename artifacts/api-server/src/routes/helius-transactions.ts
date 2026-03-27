@@ -69,7 +69,7 @@ router.post("/helius-transactions", async (req: Request, res: Response) => {
     let allRateLimited = true;
 
     for (const key of keys) {
-      const url = `${HELIUS_V0_URL}/addresses/${walletAddress}/transactions?api-key=${key}&limit=500`;
+      const url = `${HELIUS_V0_URL}/addresses/${walletAddress}/transactions?api-key=${key}&limit=100`;
       try {
         const response = await throttledHeliusFetch(url);
 
