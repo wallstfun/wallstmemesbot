@@ -13,6 +13,7 @@ import { format, formatDistanceToNow } from "date-fns";
 import { ArrowUpRight, ArrowDownRight, Wallet, Activity, Target, Zap, ExternalLink, Heart, Repeat2, MessageCircle, Eye, MessageSquare, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useXFeedReal } from "@/hooks/use-x-feed";
+import { fetchTokenMetadata } from "@/utils/token-metadata";
 
 function fmt(n: number): string {
   if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + "M";
@@ -91,6 +92,38 @@ function DashboardContent() {
   const { balance: solBalance, loading: solBalanceLoading } = useWalletSolBalance();
   const { trades: realTrades, totalTrades, winRate, loading: tradesLoading } = useRealTransactions();
   const { holdings } = useTokenHoldings();
+
+  // Enrich trades with token metadata
+  const [enrichedTrades, setEnrichedTrades] = useState<any[]>([]);
+  useEffect(() => {
+    const enrichTrades = async () => {
+      const unique_mints = [...new Set(realTrades.filter(t => t.tokenMint && t.tokenMint !== "So11111111111111111111111111111111111111112").map(t => t.tokenMint))];
+      console.log(`[dashboard] Enriching ${unique_mints.length} unique token mints...`);
+      
+      const metadata: Record<string, any> = {};
+      for (const mint of unique_mints) {
+        try {
+          const meta = await fetchTokenMetadata(mint);
+          metadata[mint] = meta;
+          console.log(`[dashboard] Resolved ${mint} to ${meta.symbol}`);
+        } catch (e) {
+          console.log(`[dashboard] Failed to enrich ${mint}:`, e);
+        }
+      }
+      
+      // Enrich each trade
+      const enriched = realTrades.map(t => ({
+        ...t,
+        enrichedSymbol: metadata[t.tokenMint]?.symbol || t.tokenSymbol || "???",
+      }));
+      
+      setEnrichedTrades(enriched);
+    };
+    
+    if (realTrades.length > 0) {
+      enrichTrades();
+    }
+  }, [realTrades]);
 
   // Real SOL Price from CoinGecko API
   const [solPrice, setSolPrice] = useState(() => {
@@ -441,7 +474,7 @@ function DashboardContent() {
                   </TableHeader>
                   <TableBody>
                     <AnimatePresence>
-                      {realTrades.slice(0, 8).map((trade) => (
+                      {enrichedTrades.slice(0, 8).map((trade) => (
                         <motion.tr
                           key={trade.id}
                           initial={{ opacity: 0, y: -10 }}
@@ -467,7 +500,7 @@ function DashboardContent() {
                               {trade.action}
                             </Badge>
                           </TableCell>
-                          <TableCell className="font-bold">{trade.tokenSymbol}</TableCell>
+                          <TableCell className="font-bold">{trade.enrichedSymbol || trade.tokenSymbol}</TableCell>
                           <TableCell className="text-right text-xs">
                             {trade.solAmount > 0 ? `${trade.solAmount.toFixed(3)}` : '—'}
                           </TableCell>
