@@ -200,10 +200,9 @@ export function useRealTransactions() {
   }, []);
 
   useEffect(() => {
-    // API fetching paused - avoiding rate limit issues
-    // fetchTrades();
-    // const interval = setInterval(fetchTrades, 90000);
-    // return () => clearInterval(interval);
+    fetchTrades();
+    const interval = setInterval(fetchTrades, 90000);
+    return () => clearInterval(interval);
   }, [fetchTrades]);
 
   return { trades, totalTrades, winRate, loading, error, refresh: fetchTrades };
@@ -281,10 +280,9 @@ export function useTokenHoldings() {
   }, []);
 
   useEffect(() => {
-    // API fetching paused - avoiding rate limit issues
-    // fetchHoldings();
-    // const interval = setInterval(fetchHoldings, 90000);
-    // return () => clearInterval(interval);
+    fetchHoldings();
+    const interval = setInterval(fetchHoldings, 90000);
+    return () => clearInterval(interval);
   }, [fetchHoldings]);
 
   return { holdings, loading, error, refresh: fetchHoldings };
