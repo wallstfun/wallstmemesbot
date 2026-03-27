@@ -299,10 +299,10 @@ export function useWalletSolBalance() {
 
   const fetchBalance = useCallback(async () => {
     try {
-      const res = await fetch("/api/helius-balance", {
+      const res = await fetch("/api/alchemy-balance", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ walletAddress: AGENT_WALLET }),
+        body: JSON.stringify({ wallet: AGENT_WALLET }),
       });
 
       if (!res.ok) {
@@ -310,7 +310,7 @@ export function useWalletSolBalance() {
       }
 
       const data = await res.json();
-      const bal = data.balance ?? 0;
+      const bal = data.solBalance ?? 0;
       setBalance(bal);
       setError(null);
       console.log(`[wallst.fun] SOL balance fetched: ${bal.toFixed(4)} SOL`);
@@ -324,10 +324,9 @@ export function useWalletSolBalance() {
   }, []);
 
   useEffect(() => {
-    // API fetching paused - avoiding rate limit issues
-    // fetchBalance();
-    // const interval = setInterval(fetchBalance, 120000);
-    // return () => clearInterval(interval);
+    fetchBalance();
+    const interval = setInterval(fetchBalance, 120000); // Every 120 seconds
+    return () => clearInterval(interval);
   }, [fetchBalance]);
 
   return { balance, loading, error, refresh: fetchBalance };

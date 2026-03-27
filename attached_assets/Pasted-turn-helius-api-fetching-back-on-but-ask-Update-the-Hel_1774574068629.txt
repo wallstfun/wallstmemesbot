@@ -1,0 +1,67 @@
+turn helius api fetching back on, but, ask: Update the Helius transaction proxy to support short-term Alchemy fallback + long-term dual Helius keys.Goals:Short-term: Use Alchemy as the main provider while Helius is rate-limited.
+Long-term: Prefer the two Helius keys with round-robin, fallback to Alchemy on 429.
+
+Wallet address to use: Hw7yc27h6Lws6YsQmdLoj4M7psyFHRhosFwoGuSESmThImplementation details:Update (or create) the proxy route at app/api/helius-transactions/route.tsUse this structure:ts
+
+import { NextRequest, NextResponse } from 'next/server';
+
+const HELIUS_KEY1 = "54385120-28ac-4baa-9774-3f7ba8ccd656";
+const HELIUS_KEY2 = "8ffc1afb-b4e5-494e-852e-f80ec0f5033e";   // ← replace with your actual second key
+
+// Replace with your own Alchemy HTTP endpoint (create a free Alchemy app for Solana Mainnet)
+const ALCHEMY_URL = "https://solana-mainnet.g.alchemy.com/v2/9vePK8JAvqdzoDs3Q1kZ4";
+
+let currentHeliusIndex = 0;
+
+export async function POST(request: NextRequest) {
+  try {
+    const { wallet } = await request.json();
+    if (!wallet) return NextResponse.json({ error: "Wallet required" }, { status: 400 });
+
+    // Try Helius first (with both keys)
+    const heliusKeys = [HELIUS_KEY1, HELIUS_KEY2];
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const key = heliusKeys[currentHeliusIndex];
+      currentHeliusIndex = (currentHeliusIndex + 1) % 2;
+
+      const url = `https://api-mainnet.helius-rpc.com/v0/addresses/${wallet}/transactions?api-key=${key}&type=SWAP&limit=50`;
+
+      const res = await fetch(url);
+
+      if (res.ok) {
+        const data = await res.json();
+        return NextResponse.json(data);
+      }
+
+      if (res.status !== 429) break;
+      await new Promise(r => setTimeout(r, 350)); // small delay
+    }
+
+    // If both Helius keys fail → fallback to Alchemy (raw RPC)
+    console.log("Helius failed, falling back to Alchemy");
+
+    // Fetch signatures using Alchemy
+    const signaturesRes = await fetch(ALCHEMY_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        id: 1,
+        method: "getSignaturesForAddress",
+        params: [wallet, { limit: 50 }]
+      })
+    });
+
+    if (!signaturesRes.ok) {
+      return NextResponse.json({ error: "All providers failed" }, { status: 429 });
+    }
+
+    const signaturesData = await signaturesRes.json();
+    return NextResponse.json(signaturesData);   // Return signatures for now (we can enhance parsing later)
+
+  } catch (err) {
+    return NextResponse.json({ error: "Server error" }, { status: 500 });
+  }
+}
+
+Frontend side — make sure the live-trades page only calls /api/helius-transactions (no direct calls).
