@@ -4,9 +4,13 @@ import { LiveIndicator } from "@/components/ui/LiveIndicator";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { format } from "date-fns";
 import { ExternalLink, Filter, RefreshCw, AlertCircle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+
+// Format timestamp in UTC
+function formatUTC(date: Date): string {
+  return date.toISOString().replace('T', ' ').substring(0, 19);
+}
 
 type FilterType = "all" | "buy" | "sell" | "swap";
 
@@ -151,7 +155,7 @@ export default function LiveTradesPage() {
                     className="border-border/40 hover:bg-muted/30 transition-colors"
                   >
                     <TableCell className="text-muted-foreground text-xs">
-                      {format(trade.timestamp, "yyyy-MM-dd HH:mm:ss")}
+                      {formatUTC(trade.timestamp)}
                     </TableCell>
                     <TableCell>
                       <Badge
@@ -169,10 +173,12 @@ export default function LiveTradesPage() {
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-col">
-                        <span className="font-bold text-foreground">{trade.tokenSymbol}</span>
-                        <span className="text-[10px] text-muted-foreground truncate max-w-[140px]">
-                          {trade.description ? trade.description.slice(0, 50) + (trade.description.length > 50 ? "..." : "") : trade.tokenMint.slice(0, 12) + "..."}
-                        </span>
+                        <span className="font-bold text-foreground">{trade.tokenSymbol || "SOL"}</span>
+                        {trade.tokenSymbol !== "SOL" && trade.description && (
+                          <span className="text-[10px] text-muted-foreground truncate max-w-[140px]">
+                            {trade.description.slice(0, 50) + (trade.description.length > 50 ? "..." : "")}
+                          </span>
+                        )}
                       </div>
                     </TableCell>
                     <TableCell className="text-right">
