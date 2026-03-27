@@ -3,6 +3,17 @@
 // In-memory metadata cache (session-level)
 export const metadataCache = new Map<string, any>();
 
+// Clear cache on module load to get fresh Pump.fun/Birdeye data
+if (typeof window !== "undefined") {
+  // Only clear on page load, not on module reload
+  if (document.readyState === "loading") {
+    window.addEventListener("load", () => {
+      console.log(`[metadata] Clearing cache on page load for fresh Pump.fun/Birdeye data`);
+      metadataCache.clear();
+    });
+  }
+}
+
 // In-memory price cache (session-level)
 export const priceCache = new Map<string, number>();
 
@@ -13,13 +24,17 @@ export interface TokenMetadata {
 }
 
 /**
- * Fetch token metadata with multiple fallbacks (Pump.fun → Birdeye → Jupiter → CoinGecko → Orca → Metaplex → Smart URLs)
+ * Fetch token metadata with multiple fallbacks (Jupiter → CoinGecko → Orca → Metaplex → Smart URLs)
+ * Note: Pump.fun and Birdeye (CORS-blocked) are available via backend endpoint only
  */
 export async function fetchTokenMetadata(mint: string): Promise<TokenMetadata> {
-  // Check cache first
+  // Check cache first (but skip if it's a stale "Unknown Token" result)
   if (metadataCache.has(mint)) {
-    console.log(`[metadata] Cache hit for ${mint}`);
-    return metadataCache.get(mint);
+    const cached = metadataCache.get(mint);
+    if (cached.name !== "Unknown Token") {
+      console.log(`[metadata] Cache hit for ${mint}`);
+      return cached;
+    }
   }
 
   // Special case: SOL token
@@ -40,61 +55,7 @@ export async function fetchTokenMetadata(mint: string): Promise<TokenMetadata> {
     logoURI: undefined,
   };
 
-  // Method 1: Try Pump.fun (fastest for new tokens)
-  try {
-    console.log(`[metadata] Fetching from Pump.fun for ${mint}`);
-    const res = await fetch(`https://frontend-api-v3.pump.fun/coins/${mint}?sync=true`, {
-      headers: { Accept: "application/json" },
-      signal: AbortSignal.timeout(5000),
-    });
-    if (res.ok) {
-      const data = await res.json();
-      if (data && (data.symbol || data.name)) {
-        metadata = {
-          symbol: data.symbol || metadata.symbol,
-          name: data.name || metadata.name,
-          logoURI: data.image_uri || data.icon || undefined,
-        };
-        console.log(`[metadata] Pump.fun success for ${mint}: symbol=${metadata.symbol}, name=${metadata.name}`);
-        metadataCache.set(mint, metadata);
-        return metadata;
-      }
-    }
-  } catch (e) {
-    console.log(`[metadata] Pump.fun fetch failed for ${mint}:`, e instanceof Error ? e.message : String(e));
-  }
-
-  // Method 2: Try Birdeye (fast indexer for Pump.fun)
-  try {
-    console.log(`[metadata] Fetching from Birdeye for ${mint}`);
-    const res = await fetch(
-      `https://public-api.birdeye.so/defi/v3/token/meta-data/single?address=${mint}&chain=solana`,
-      {
-        headers: {
-          "x-chain": "solana",
-          Accept: "application/json",
-        },
-        signal: AbortSignal.timeout(5000),
-      }
-    );
-    if (res.ok) {
-      const { data } = await res.json();
-      if (data && (data.symbol || data.name)) {
-        metadata = {
-          symbol: data.symbol || metadata.symbol,
-          name: data.name || metadata.name,
-          logoURI: data.logoURI || data.image || undefined,
-        };
-        console.log(`[metadata] Birdeye success for ${mint}: symbol=${metadata.symbol}, name=${metadata.name}`);
-        metadataCache.set(mint, metadata);
-        return metadata;
-      }
-    }
-  } catch (e) {
-    console.log(`[metadata] Birdeye fetch failed for ${mint}:`, e instanceof Error ? e.message : String(e));
-  }
-
-  // Method 3: Try Jupiter single token endpoint
+  // Method 1: Try Jupiter single token endpoint
   try {
     console.log(`[metadata] Fetching from Jupiter /token/{mint} for ${mint}`);
     const res = await fetch(`https://tokens.jup.ag/token/${mint}`, { signal: AbortSignal.timeout(5000) });

@@ -20488,27 +20488,27 @@ var require_router = __commonJS({
     var slice = Array.prototype.slice;
     var flatten = Array.prototype.flat;
     var methods = METHODS.map((method) => method.toLowerCase());
-    module.exports = Router8;
+    module.exports = Router9;
     module.exports.Route = Route;
-    function Router8(options) {
-      if (!(this instanceof Router8)) {
-        return new Router8(options);
+    function Router9(options) {
+      if (!(this instanceof Router9)) {
+        return new Router9(options);
       }
       const opts = options || {};
-      function router8(req, res, next) {
-        router8.handle(req, res, next);
+      function router9(req, res, next) {
+        router9.handle(req, res, next);
       }
-      Object.setPrototypeOf(router8, this);
-      router8.caseSensitive = opts.caseSensitive;
-      router8.mergeParams = opts.mergeParams;
-      router8.params = {};
-      router8.strict = opts.strict;
-      router8.stack = [];
-      return router8;
+      Object.setPrototypeOf(router9, this);
+      router9.caseSensitive = opts.caseSensitive;
+      router9.mergeParams = opts.mergeParams;
+      router9.params = {};
+      router9.strict = opts.strict;
+      router9.stack = [];
+      return router9;
     }
-    Router8.prototype = function() {
+    Router9.prototype = function() {
     };
-    Router8.prototype.param = function param(name, fn) {
+    Router9.prototype.param = function param(name, fn) {
       if (!name) {
         throw new TypeError("argument name is required");
       }
@@ -20528,7 +20528,7 @@ var require_router = __commonJS({
       params.push(fn);
       return this;
     };
-    Router8.prototype.handle = function handle(req, res, callback) {
+    Router9.prototype.handle = function handle(req, res, callback) {
       if (!callback) {
         throw new TypeError("argument callback is required");
       }
@@ -20655,7 +20655,7 @@ var require_router = __commonJS({
         }
       }
     };
-    Router8.prototype.use = function use(handler4) {
+    Router9.prototype.use = function use(handler4) {
       let offset = 0;
       let path = "/";
       if (typeof handler4 !== "function") {
@@ -20688,7 +20688,7 @@ var require_router = __commonJS({
       }
       return this;
     };
-    Router8.prototype.route = function route(path) {
+    Router9.prototype.route = function route(path) {
       const route2 = new Route(path);
       const layer = new Layer(path, {
         sensitive: this.caseSensitive,
@@ -20703,7 +20703,7 @@ var require_router = __commonJS({
       return route2;
     };
     methods.concat("all").forEach(function(method) {
-      Router8.prototype[method] = function(path) {
+      Router9.prototype[method] = function(path) {
         const route = this.route(path);
         route[method].apply(route, slice.call(arguments, 1));
         return this;
@@ -20886,13 +20886,13 @@ var require_application = __commonJS({
     var compileTrust = require_utils3().compileTrust;
     var resolve = __require("node:path").resolve;
     var once = require_once();
-    var Router8 = require_router();
+    var Router9 = require_router();
     var slice = Array.prototype.slice;
     var flatten = Array.prototype.flat;
     var app2 = exports = module.exports = {};
     var trustProxyDefaultSymbol = "@@symbol:trust_proxy_default";
     app2.init = function init() {
-      var router8 = null;
+      var router9 = null;
       this.cache = /* @__PURE__ */ Object.create(null);
       this.engines = /* @__PURE__ */ Object.create(null);
       this.settings = /* @__PURE__ */ Object.create(null);
@@ -20901,13 +20901,13 @@ var require_application = __commonJS({
         configurable: true,
         enumerable: true,
         get: function getrouter() {
-          if (router8 === null) {
-            router8 = new Router8({
+          if (router9 === null) {
+            router9 = new Router9({
               caseSensitive: this.enabled("case sensitive routing"),
               strict: this.enabled("strict routing")
             });
           }
-          return router8;
+          return router9;
         }
       });
     };
@@ -20978,15 +20978,15 @@ var require_application = __commonJS({
       if (fns.length === 0) {
         throw new TypeError("app.use() requires a middleware function");
       }
-      var router8 = this.router;
+      var router9 = this.router;
       fns.forEach(function(fn2) {
         if (!fn2 || !fn2.handle || !fn2.set) {
-          return router8.use(path, fn2);
+          return router9.use(path, fn2);
         }
         debug2(".use app under %s", path);
         fn2.mountpath = path;
         fn2.parent = this;
-        router8.use(path, function mounted_app(req, res, next) {
+        router9.use(path, function mounted_app(req, res, next) {
           var orig = req.app;
           fn2.handle(req, res, function(err) {
             Object.setPrototypeOf(req, orig.request);
@@ -23513,7 +23513,7 @@ var require_express = __commonJS({
     var EventEmitter = __require("node:events").EventEmitter;
     var mixin = require_merge_descriptors();
     var proto = require_application();
-    var Router8 = require_router();
+    var Router9 = require_router();
     var req = require_request();
     var res = require_response();
     exports = module.exports = createApplication;
@@ -23535,8 +23535,8 @@ var require_express = __commonJS({
     exports.application = proto;
     exports.request = req;
     exports.response = res;
-    exports.Route = Router8.Route;
-    exports.Router = Router8;
+    exports.Route = Router9.Route;
+    exports.Router = Router9;
     exports.json = bodyParser.json;
     exports.raw = bodyParser.raw;
     exports.static = require_serve_static();
@@ -48472,12 +48472,12 @@ var init_mod2 = __esm({
 });
 
 // src/app.ts
-var import_express8 = __toESM(require_express2(), 1);
+var import_express9 = __toESM(require_express2(), 1);
 var import_cors = __toESM(require_lib3(), 1);
 var import_pino_http = __toESM(require_logger(), 1);
 
 // src/routes/index.ts
-var import_express7 = __toESM(require_express2(), 1);
+var import_express8 = __toESM(require_express2(), 1);
 
 // src/routes/health.ts
 var import_express = __toESM(require_express2(), 1);
@@ -52784,15 +52784,8 @@ router6.post("/helius-holdings", async (req, res) => {
 });
 var helius_holdings_default = router6;
 
-// src/routes/index.ts
-var router7 = (0, import_express7.Router)();
-router7.use(health_default);
-router7.use(tweets_default);
-router7.use(helius_transactions_default);
-router7.use(helius_balance_default);
-router7.use(alchemy_balance_default);
-router7.use(helius_holdings_default);
-var routes_default = router7;
+// src/routes/token-metadata.ts
+var import_express7 = __toESM(require_express2(), 1);
 
 // src/lib/logger.ts
 var import_pino = __toESM(require_pino(), 1);
@@ -52812,8 +52805,134 @@ var logger = (0, import_pino.default)({
   }
 });
 
+// src/routes/token-metadata.ts
+var router7 = (0, import_express7.Router)();
+var metadataCache = /* @__PURE__ */ new Map();
+async function fetchTokenMetadata(mint) {
+  if (metadataCache.has(mint)) {
+    logger.debug(`[metadata] Cache hit for ${mint}`);
+    return metadataCache.get(mint);
+  }
+  if (mint === "So11111111111111111111111111111111111111112") {
+    const solMetadata = {
+      symbol: "SOL",
+      name: "Solana",
+      logoURI: "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png"
+    };
+    metadataCache.set(mint, solMetadata);
+    return solMetadata;
+  }
+  let metadata = {
+    symbol: mint.slice(0, 6).toUpperCase(),
+    name: "Unknown Token",
+    logoURI: void 0
+  };
+  try {
+    logger.debug(`[metadata] Fetching from Pump.fun for ${mint}`);
+    const res = await fetch(`https://frontend-api-v3.pump.fun/coins/${mint}?sync=true`, {
+      headers: { Accept: "application/json" },
+      signal: AbortSignal.timeout(5e3)
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data && (data.symbol || data.name)) {
+        metadata = {
+          symbol: data.symbol || metadata.symbol,
+          name: data.name || metadata.name,
+          logoURI: data.image_uri || data.icon || void 0
+        };
+        logger.info(`[metadata] Pump.fun success for ${mint}: symbol=${metadata.symbol}`);
+        metadataCache.set(mint, metadata);
+        return metadata;
+      }
+    }
+  } catch (e) {
+    logger.debug(`[metadata] Pump.fun fetch failed for ${mint}`);
+  }
+  try {
+    logger.debug(`[metadata] Fetching from Birdeye for ${mint}`);
+    const res = await fetch(
+      `https://public-api.birdeye.so/defi/v3/token/meta-data/single?address=${mint}&chain=solana`,
+      {
+        headers: {
+          "x-chain": "solana",
+          Accept: "application/json"
+        },
+        signal: AbortSignal.timeout(5e3)
+      }
+    );
+    if (res.ok) {
+      const { data } = await res.json();
+      if (data && (data.symbol || data.name)) {
+        metadata = {
+          symbol: data.symbol || metadata.symbol,
+          name: data.name || metadata.name,
+          logoURI: data.logoURI || data.image || void 0
+        };
+        logger.info(`[metadata] Birdeye success for ${mint}: symbol=${metadata.symbol}`);
+        metadataCache.set(mint, metadata);
+        return metadata;
+      }
+    }
+  } catch (e) {
+    logger.debug(`[metadata] Birdeye fetch failed for ${mint}`);
+  }
+  try {
+    logger.debug(`[metadata] Fetching from Jupiter for ${mint}`);
+    const res = await fetch(`https://tokens.jup.ag/token/${mint}`, { signal: AbortSignal.timeout(5e3) });
+    if (res.ok) {
+      const data = await res.json();
+      if (data && (data.symbol || data.name)) {
+        metadata = {
+          symbol: data.symbol || metadata.symbol,
+          name: data.name || metadata.name,
+          logoURI: data.logoURI || data.icon || void 0
+        };
+        logger.info(`[metadata] Jupiter success for ${mint}: symbol=${metadata.symbol}`);
+        metadataCache.set(mint, metadata);
+        return metadata;
+      }
+    }
+  } catch (e) {
+    logger.debug(`[metadata] Jupiter fetch failed for ${mint}`);
+  }
+  logger.info(`[metadata] Final fallback for ${mint}: symbol=${metadata.symbol}`);
+  metadataCache.set(mint, metadata);
+  return metadata;
+}
+router7.post("/token-metadata", async (req, res) => {
+  try {
+    const { mints } = req.body;
+    if (!Array.isArray(mints) || mints.length === 0) {
+      return res.status(400).json({ error: "mints array required" });
+    }
+    const metadata = {};
+    for (const mint of mints) {
+      if (mint) {
+        metadata[mint] = await fetchTokenMetadata(mint);
+      }
+    }
+    res.json({ data: metadata });
+  } catch (error) {
+    logger.error("[token-metadata] Error:", error);
+    res.status(500).json({ error: "Failed to fetch metadata" });
+  }
+});
+var token_metadata_default = router7;
+
+// src/routes/index.ts
+var router8 = (0, import_express8.Router)();
+router8.use(health_default);
+router8.use(tweets_default);
+router8.use(helius_transactions_default);
+router8.use(helius_balance_default);
+router8.use(alchemy_balance_default);
+router8.use(helius_holdings_default);
+router8.use(token_metadata_default);
+var routes_default = router8;
+
 // src/app.ts
-var app = (0, import_express8.default)();
+var app = (0, import_express9.default)();
 app.use(
   (0, import_pino_http.default)({
     logger,
@@ -52834,8 +52953,8 @@ app.use(
   })
 );
 app.use((0, import_cors.default)());
-app.use(import_express8.default.json());
-app.use(import_express8.default.urlencoded({ extended: true }));
+app.use(import_express9.default.json());
+app.use(import_express9.default.urlencoded({ extended: true }));
 app.use("/api", routes_default);
 var app_default = app;
 
