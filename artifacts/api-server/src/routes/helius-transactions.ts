@@ -5,6 +5,7 @@ const router = Router();
 const KEY_PRIMARY = "8ffc1afb-b4e5-494e-852e-f80ec0f5033e";
 const KEY_FALLBACK = "54385120-28ac-4baa-9774-3f7ba8ccd656";
 const HELIUS_V0_URL = "https://api-mainnet.helius-rpc.com/v0";
+const JUPITER_SWAP_HISTORY_URL = "https://api.jup.ag/swap/v1/swap-history";
 
 const rateLimitStates = new Map<string, { pausedUntil: number }>();
 const responseCache = new Map<string, { data: any; expiresAt: number }>();
@@ -49,13 +50,12 @@ router.post("/helius-transactions", async (req: Request, res: Response) => {
       return;
     }
 
-    // Fetch from Helius (primary)
+    // 1. Fetch from Helius (primary)
     let heliusData: any[] = [];
     const keys = [KEY_PRIMARY, KEY_FALLBACK];
     let allRateLimited = true;
 
     for (const key of keys) {
-      // Helius Enhanced TX API max is 100
       const url = `${HELIUS_V0_URL}/addresses/${walletAddress}/transactions?api-key=${key}&limit=100`;
       try {
         const response = await throttledFetch(url);
@@ -87,9 +87,26 @@ router.post("/helius-transactions", async (req: Request, res: Response) => {
       return;
     }
 
-    // Cache and return Helius data
-    responseCache.set(cacheKey, { data: heliusData, expiresAt: Date.now() + 30000 });
-    res.json(heliusData);
+    // 2. Fetch from Jupiter (supplementary, non-blocking)
+    let jupiterData: any[] = [];
+    try {
+      const jupRes = await fetch(`${JUPITER_SWAP_HISTORY_URL}?wallet=${walletAddress}&limit=100`);
+      if (jupRes.ok) {
+        const jupJson = await jupRes.json();
+        jupiterData = Array.isArray(jupJson) ? jupJson : (jupJson?.swaps ?? jupJson?.history ?? []);
+      }
+    } catch (err) {
+      // Non-blocking: Jupiter failure doesn't crash response
+    }
+
+    // 3. Merge: Helius primary + unique Jupiter txs
+    const heliusSigs = new Set(heliusData.map((tx) => tx.signature).filter(Boolean));
+    const uniqueJupiterTxs = jupiterData.filter((tx) => !heliusSigs.has(tx.signature));
+    const merged = [...heliusData, ...uniqueJupiterTxs];
+
+    // Cache and return merged data
+    responseCache.set(cacheKey, { data: merged, expiresAt: Date.now() + 30000 });
+    res.json(merged);
   } catch (error) {
     const msg = error instanceof Error ? error.message : "Unknown error";
     res.status(500).json({ error: "Server error", message: msg });
