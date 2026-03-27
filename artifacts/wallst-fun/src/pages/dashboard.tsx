@@ -131,12 +131,12 @@ function DashboardContent() {
           
           // Keep only prices from last 6 minutes
           const cutoff = now - 6 * 60 * 1000;
-          const filtered = history.filter(h => h.timestamp > cutoff);
+          const filtered = history.filter((h: { price: number; timestamp: number }) => h.timestamp > cutoff);
           localStorage.setItem('wallst-sol-price-history', JSON.stringify(filtered));
           
           // Calculate 5-minute change
           const fiveMinAgo = now - 5 * 60 * 1000;
-          const priceFrom5MinAgo = filtered.find(h => h.timestamp <= fiveMinAgo);
+          const priceFrom5MinAgo = filtered.find((h: { price: number; timestamp: number }) => h.timestamp <= fiveMinAgo);
           if (priceFrom5MinAgo) {
             const change = ((newPrice - priceFrom5MinAgo.price) / priceFrom5MinAgo.price) * 100;
             setPriceChange5m(change);
