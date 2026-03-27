@@ -542,8 +542,8 @@ export function useRealTransactions() {
   }, []);
 
   useEffect(() => {
-    // Delay first fetch by 3s, then poll every 5 minutes (conservative rate limiting)
-    const initTimer = setTimeout(fetchTrades, 3000);
+    // Delay first fetch by 1s, then poll every 5 minutes (conservative rate limiting)
+    const initTimer = setTimeout(fetchTrades, 1000);
     const interval = setInterval(fetchTrades, 300000); // every 5 minutes
     return () => {
       clearTimeout(initTimer);
@@ -668,8 +668,8 @@ export function useTokenHoldings() {
   }, []);
 
   useEffect(() => {
-    // Stagger 3s after mount (same as transactions), then poll every 3 minutes
-    const initTimer = setTimeout(fetchHoldings, 3000);
+    // Stagger 1s after mount, then poll every 3 minutes
+    const initTimer = setTimeout(fetchHoldings, 1000);
     const interval = setInterval(fetchHoldings, 180000); // every 3 minutes
     return () => {
       clearTimeout(initTimer);
@@ -717,8 +717,8 @@ export function useWalletSolBalance() {
   }, []);
 
   useEffect(() => {
-    // Stagger 3s after mount, then poll every 3 minutes
-    const initTimer = setTimeout(fetchBalance, 3000);
+    // Stagger 1s after mount, then poll every 3 minutes
+    const initTimer = setTimeout(fetchBalance, 1000);
     const interval = setInterval(fetchBalance, 180000); // every 3 minutes
     return () => {
       clearTimeout(initTimer);
