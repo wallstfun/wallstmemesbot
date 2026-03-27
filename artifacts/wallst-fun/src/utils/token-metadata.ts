@@ -110,17 +110,15 @@ export async function fetchTokenMetadata(mint: string): Promise<TokenMetadata> {
     const res = await fetch(`https://api.orca.so/v1/token?address=${mint}`, { signal: AbortSignal.timeout(5000) });
     if (res.ok) {
       const data = await res.json();
-      if (data && (data.symbol || data.name || data.logoURI)) {
+      if (data && (data.symbol || data.name)) {
         metadata = {
           symbol: data.symbol?.toUpperCase() || metadata.symbol,
           name: data.name || metadata.name,
           logoURI: data.logoURI || undefined,
         };
-        if (metadata.logoURI) {
-          console.log(`[metadata] Orca API success for ${mint}: symbol=${metadata.symbol}, name=${metadata.name}`);
-          metadataCache.set(mint, metadata);
-          return metadata;
-        }
+        console.log(`[metadata] Orca API success for ${mint}: symbol=${metadata.symbol}, name=${metadata.name}`);
+        metadataCache.set(mint, metadata);
+        return metadata;
       }
     }
   } catch (e) {
@@ -133,17 +131,15 @@ export async function fetchTokenMetadata(mint: string): Promise<TokenMetadata> {
     const res = await fetch(`https://api.metaplex.solana.com/tokens/${mint}`, { signal: AbortSignal.timeout(5000) });
     if (res.ok) {
       const data = await res.json();
-      if (data && (data.symbol || data.name || data.image)) {
+      if (data && (data.symbol || data.name)) {
         metadata = {
           symbol: data.symbol?.toUpperCase() || metadata.symbol,
           name: data.name || metadata.name,
           logoURI: data.image || undefined,
         };
-        if (metadata.logoURI) {
-          console.log(`[metadata] Metaplex success for ${mint}: symbol=${metadata.symbol}, name=${metadata.name}`);
-          metadataCache.set(mint, metadata);
-          return metadata;
-        }
+        console.log(`[metadata] Metaplex success for ${mint}: symbol=${metadata.symbol}, name=${metadata.name}`);
+        metadataCache.set(mint, metadata);
+        return metadata;
       }
     }
   } catch (e) {
