@@ -27,10 +27,10 @@ export async function fetchTokenMetadata(mint: string): Promise<TokenMetadata> {
     const solMetadata: TokenMetadata = {
       symbol: "SOL",
       name: "Solana",
-      logoURI: "https://tokens.jup.ag/token/So11111111111111111111111111111111111111112/So11111111111111111111111111111111111111112.png",
+      logoURI: "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png",
     };
     metadataCache.set(mint, solMetadata);
-    console.log(`[metadata] SOL token resolved`);
+    console.log(`[metadata] SOL token resolved with logo`);
     return solMetadata;
   }
 
