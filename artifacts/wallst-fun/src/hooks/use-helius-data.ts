@@ -115,15 +115,17 @@ export function useRealTransactions() {
               if (solTransfer) {
                 console.log(`[parse] ${sig}: Found SOL transfer(s)`);
                 
-                // Sum all SOL transfers in case there are multiple
+                // Take the largest SOL transfer (actual trade amount, not fees/dust)
                 const allSolTransfers = changes.filter((t: any) => (t?.tokenAddress || t?.mint) === SOL_MINT);
                 let solAmount_raw = 0;
                 allSolTransfers.forEach((transfer: any) => {
                   const amount = Number(transfer.tokenAmount ?? 0);
-                  // Only sum positive amounts (received SOL)
                   if (amount > 0) {
-                    solAmount_raw += amount;
-                    console.log(`[parse] ${sig}: SOL received: ${amount}`);
+                    console.log(`[parse] ${sig}: SOL transfer: ${amount}`);
+                    // Take the largest positive transfer as the actual trade
+                    if (amount > solAmount_raw) {
+                      solAmount_raw = amount;
+                    }
                   }
                 });
                 
@@ -131,7 +133,7 @@ export function useRealTransactions() {
                   solAmount_raw = Number(solTransfer.tokenAmount ?? 0);
                 }
                 
-                console.log(`[parse] ${sig}: Total SOL received: ${solAmount_raw}`);
+                console.log(`[parse] ${sig}: Largest SOL transfer: ${solAmount_raw}`);
                 
                 if (solAmount_raw > 0) {
                   // SOL being received
