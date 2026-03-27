@@ -76,108 +76,73 @@ export function useRealTransactions() {
 
       const parsed: RealTrade[] = txs
         .map((tx: any, idx: number) => {
-          const swap = tx.events?.swap;
-          const sig = tx.signature?.slice(0, 8) || `tx${idx}`;
-          
-          // Include Jupiter transactions and any tx with tokenTransfers that look like swaps
-          const isJupiter = tx.source === "JUPITER";
-          const hasTransfers = (tx.tokenTransfers?.length ?? 0) >= 2;
-          
-          console.log(`[parse] ${sig}: swap=${!!swap}, jupiter=${isJupiter}, transfers=${tx.tokenTransfers?.length || 0}`);
-          
-          if (!swap && !isJupiter && !hasTransfers) {
-            console.log(`[parse] ${sig}: DROPPED - no swap, not jupiter, <2 transfers`);
-            return null;
-          }
-
-          let action: RealTrade["action"] = "SWAP";
-          let solAmount = 0;
-          let tokenAmount = 0;
-          let tokenMint = "";
-          let tokenSymbol = "";
-          let solFlow: RealTrade["solFlow"] = "none";
-
-          // For Jupiter fills or swap-like txs without top-level swap event, parse from token changes
-          if (!swap && (isJupiter || hasTransfers)) {
-            console.log(`[parse] ${sig}: Processing without swap event (jupiter=${isJupiter}, transfers=${hasTransfers})`);
-            const changes = tx.tokenTransfers || [];
+          try {
+            const swap = tx?.events?.swap;
+            const sig = tx?.signature?.slice(0, 8) || `tx${idx}`;
             
-            if (changes.length < 2) {
-              console.log(`[parse] ${sig}: DROPPED - <2 token transfers`);
+            // Include Jupiter transactions and any tx with tokenTransfers that look like swaps
+            const isJupiter = tx?.source === "JUPITER";
+            const hasTransfers = (tx?.tokenTransfers?.length ?? 0) >= 2;
+            
+            console.log(`[parse] ${sig}: swap=${!!swap}, jupiter=${isJupiter}, transfers=${tx?.tokenTransfers?.length || 0}`);
+            
+            if (!swap && !isJupiter && !hasTransfers) {
+              console.log(`[parse] ${sig}: DROPPED - no swap, not jupiter, <2 transfers`);
               return null;
             }
-            
-            const SOL_MINT = "So11111111111111111111111111111111111111112";
-            // Support both tokenAddress (standard) and mint (alternative format from Helius)
-            const solTransfer = changes.find((t: any) => (t.tokenAddress || t.mint) === SOL_MINT);
-            
-            if (solTransfer) {
-              console.log(`[parse] ${sig}: Found SOL transfer, amount=${solTransfer.tokenAmount}`);
-              // SOL is involved — this is definitely a swap
-              const solAmount_raw = Number(solTransfer.tokenAmount ?? 0);
+
+            let action: RealTrade["action"] = "SWAP";
+            let solAmount = 0;
+            let tokenAmount = 0;
+            let tokenMint = "";
+            let tokenSymbol = "";
+            let solFlow: RealTrade["solFlow"] = "none";
+
+            // For Jupiter fills or swap-like txs without top-level swap event, parse from token changes
+            if (!swap && (isJupiter || hasTransfers)) {
+              console.log(`[parse] ${sig}: Processing without swap event (jupiter=${isJupiter}, transfers=${hasTransfers})`);
+              const changes = tx?.tokenTransfers ?? [];
               
-              if (solAmount_raw > 0) {
-                // SOL being received
-                console.log(`[parse] ${sig}: SOL received (${solAmount_raw} SOL) → BUY SOL`);
-                action = "BUY";
-                solFlow = "in";
-                solAmount = solAmount_raw; // Already normalized by Helius
-                tokenMint = SOL_MINT;
-                tokenSymbol = "SOL";
-                tokenAmount = solAmount;
-                
-                // Track which token was sent (also support both field names)
-                const sentToken = changes.find((t: any) => (t.tokenAddress || t.mint) !== SOL_MINT && Number(t.tokenAmount ?? 0) > 0);
-                if (sentToken?.tokenAddress || sentToken?.mint) {
-                  (tx as any).__sentMint__ = sentToken.tokenAddress || sentToken.mint;
-                  console.log(`[parse] ${sig}: Also received ${sentToken.tokenSymbol || 'token'}`);
-                }
-              } else {
-                // SOL being spent
-                console.log(`[parse] ${sig}: SOL spent (${Math.abs(solAmount_raw)} SOL) → BUY token`);
-                action = "BUY";
-                solFlow = "out";
-                solAmount = Math.abs(solAmount_raw); // Already normalized by Helius
-                
-                // Find received token
-                const receivedToken = changes.find((t: any) => (t.tokenAddress || t.mint) !== SOL_MINT && Number(t.tokenAmount ?? 0) > 0);
-                if (receivedToken) {
-                  tokenMint = receivedToken.tokenAddress || receivedToken.mint;
-                  tokenSymbol = receivedToken.tokenSymbol || tokenMint.slice(0, 6);
-                  tokenAmount = Number(receivedToken.tokenAmount ?? 0) / Math.pow(10, receivedToken.decimals ?? 0);
-                  console.log(`[parse] ${sig}: Received token=${tokenSymbol} (${tokenAmount})`);
-                }
+              if (!Array.isArray(changes) || changes.length < 2) {
+                console.log(`[parse] ${sig}: DROPPED - <2 token transfers or not array`);
+                return null;
               }
               
-              console.log(`[parse] ${sig}: ✅ CREATED ${action} trade`);
-              return {
-                signature: tx.signature,
-                timestamp: tx.timestamp,
-                action,
-                tokenMint,
-                tokenSymbol,
-                tokenAmount,
-                solAmount,
-                solFlow,
-              } as RealTrade;
-            } else {
-              // No SOL, but has 2+ transfers — try to extract tokens
-              console.log(`[parse] ${sig}: No SOL but has 2+ transfers, attempting token-to-token parse`);
-              const nonSysTokens = changes.filter((t: any) => {
-                const mint = t.tokenAddress || t.mint;
-                return mint && !mint.includes("11111111111");
-              });
-              if (nonSysTokens.length >= 2) {
-                // Token to token swap
-                const inToken = nonSysTokens.find((t: any) => Number(t.tokenAmount ?? 0) < 0);
-                const outToken = nonSysTokens.find((t: any) => Number(t.tokenAmount ?? 0) > 0);
-                if (inToken && outToken) {
-                  tokenMint = outToken.tokenAddress || outToken.mint;
-                  tokenSymbol = outToken.tokenSymbol || tokenMint.slice(0, 6);
-                  tokenAmount = Number(outToken.tokenAmount ?? 0) / Math.pow(10, outToken.decimals ?? 0);
-                  action = "SWAP";
-                  solFlow = "none";
-                  console.log(`[parse] ${sig}: ✅ CREATED token→token SWAP`);
+              const SOL_MINT = "So11111111111111111111111111111111111111112";
+              // Support both tokenAddress (standard) and mint (alternative format from Helius)
+              const solTransfer = changes.find((t: any) => (t?.tokenAddress || t?.mint) === SOL_MINT);
+              
+              if (solTransfer) {
+                console.log(`[parse] ${sig}: Found SOL transfer, amount=${solTransfer.tokenAmount}`);
+                const solAmount_raw = Number(solTransfer.tokenAmount ?? 0);
+                
+                if (solAmount_raw > 0) {
+                  // SOL being received
+                  console.log(`[parse] ${sig}: SOL received (${solAmount_raw} SOL) → BUY SOL`);
+                  action = "BUY";
+                  solFlow = "in";
+                  solAmount = solAmount_raw;
+                  tokenMint = SOL_MINT;
+                  tokenSymbol = "SOL";
+                  tokenAmount = solAmount;
+                } else if (solAmount_raw < 0) {
+                  // SOL being spent
+                  console.log(`[parse] ${sig}: SOL spent (${Math.abs(solAmount_raw)} SOL) → BUY token`);
+                  action = "BUY";
+                  solFlow = "out";
+                  solAmount = Math.abs(solAmount_raw);
+                  
+                  const receivedToken = changes.find((t: any) => (t?.tokenAddress || t?.mint) !== SOL_MINT && Number(t?.tokenAmount ?? 0) > 0);
+                  if (receivedToken && (receivedToken.tokenAddress || receivedToken.mint)) {
+                    tokenMint = receivedToken.tokenAddress || receivedToken.mint;
+                    tokenSymbol = receivedToken.tokenSymbol || (tokenMint ? tokenMint.slice(0, 6) : "TOKEN");
+                    tokenAmount = Number(receivedToken.tokenAmount ?? 0) / Math.pow(10, receivedToken.decimals ?? 0);
+                    console.log(`[parse] ${sig}: Received token=${tokenSymbol}`);
+                  }
+                }
+                
+                if (tokenMint) {
+                  console.log(`[parse] ${sig}: ✅ CREATED ${action} trade`);
                   return {
                     signature: tx.signature,
                     timestamp: tx.timestamp,
@@ -185,90 +150,95 @@ export function useRealTransactions() {
                     tokenMint,
                     tokenSymbol,
                     tokenAmount,
-                    solAmount: 0,
+                    solAmount,
                     solFlow,
                   } as RealTrade;
                 }
               }
-              console.log(`[parse] ${sig}: DROPPED - no SOL and can't parse token-to-token`);
+              console.log(`[parse] ${sig}: DROPPED - no valid SOL transfer`);
               return null;
             }
-          }
           
-          // Standard swap event parsing
-          if (swap) {
-            const hasNativeIn = swap.nativeInput && Number(swap.nativeInput.amount) > 0;
-            const hasNativeOut = swap.nativeOutput && Number(swap.nativeOutput.amount) > 0;
-            const hasTokenOut = (swap.tokenOutputs?.length ?? 0) > 0;
-            const hasTokenIn = (swap.tokenInputs?.length ?? 0) > 0;
-            
-            if (hasNativeOut && hasTokenIn) {
-              // Received SOL, sent a token (e.g. USDC → SOL, or memecoin → SOL)
-              // The asset gained is SOL — always label as BUY SOL
-              action = "BUY";
-              solFlow = "in";
-              solAmount = Number(swap.nativeOutput.amount) / 1e9;
-              tokenMint = "So11111111111111111111111111111111111111112"; // native SOL
-              tokenSymbol = "SOL";
-              tokenAmount = solAmount; // amount of SOL received
-              // Track which token was sent — needed for win rate matching
-              const sentTok = swap.tokenInputs[0];
-              if (sentTok?.mint) (tx as any).__sentMint__ = sentTok.mint;
-            } else if (hasNativeIn && hasTokenOut) {
-              // Sent SOL, received a token
-              const out = swap.tokenOutputs[0];
-              tokenMint = out.mint;
-              tokenAmount =
-                Number(out.rawTokenAmount?.tokenAmount ?? 0) /
-                Math.pow(10, out.rawTokenAmount?.decimals ?? 6);
-              solAmount = Number(swap.nativeInput.amount) / 1e9;
-              solFlow = "out";
-              // Classify by the received token: stablecoin = SELL, otherwise = BUY
-              action = STABLECOIN_MINTS.includes(tokenMint) ? "SELL" : "BUY";
-            } else if (hasTokenIn && hasTokenOut) {
-              // Token-to-token swap (no SOL involved)
-              const out = swap.tokenOutputs[0];
-              tokenMint = out.mint;
-              tokenAmount =
-                Number(out.rawTokenAmount?.tokenAmount ?? 0) /
-                Math.pow(10, out.rawTokenAmount?.decimals ?? 6);
-              solFlow = "none";
-              action = STABLECOIN_MINTS.includes(tokenMint) ? "SELL" : "BUY";
-              solAmount = 0;
-            } else {
-              return null;
-            }
-          } // end if (swap)
+            // Standard swap event parsing
+            if (swap) {
+              const hasNativeIn = swap?.nativeInput && Number(swap.nativeInput.amount) > 0;
+              const hasNativeOut = swap?.nativeOutput && Number(swap.nativeOutput.amount) > 0;
+              const hasTokenOut = (swap?.tokenOutputs?.length ?? 0) > 0;
+              const hasTokenIn = (swap?.tokenInputs?.length ?? 0) > 0;
+              
+              if (hasNativeOut && hasTokenIn) {
+                action = "BUY";
+                solFlow = "in";
+                solAmount = Number(swap.nativeOutput.amount) / 1e9;
+                tokenMint = "So11111111111111111111111111111111111111112";
+                tokenSymbol = "SOL";
+                tokenAmount = solAmount;
+                const sentTok = swap.tokenInputs?.[0];
+                if (sentTok?.mint) (tx as any).__sentMint__ = sentTok.mint;
+              } else if (hasNativeIn && hasTokenOut) {
+                const out = swap.tokenOutputs?.[0];
+                if (out?.mint) {
+                  tokenMint = out.mint;
+                  tokenAmount =
+                    Number(out.rawTokenAmount?.tokenAmount ?? 0) /
+                    Math.pow(10, out.rawTokenAmount?.decimals ?? 6);
+                  solAmount = Number(swap.nativeInput.amount) / 1e9;
+                  solFlow = "out";
+                  action = STABLECOIN_MINTS.includes(tokenMint) ? "SELL" : "BUY";
+                } else {
+                  return null;
+                }
+              } else if (hasTokenIn && hasTokenOut) {
+                const out = swap.tokenOutputs?.[0];
+                if (out?.mint) {
+                  tokenMint = out.mint;
+                  tokenAmount =
+                    Number(out.rawTokenAmount?.tokenAmount ?? 0) /
+                    Math.pow(10, out.rawTokenAmount?.decimals ?? 6);
+                  solFlow = "none";
+                  action = STABLECOIN_MINTS.includes(tokenMint) ? "SELL" : "BUY";
+                  solAmount = 0;
+                } else {
+                  return null;
+                }
+              } else {
+                return null;
+              }
+            } // end if (swap)
 
-          if (!tokenMint) return null;
+            if (!tokenMint) return null;
 
-          // Resolve symbol for non-SOL tokens
-          if (!tokenSymbol) {
-            if (tx.tokenTransfers?.length > 0) {
-              const match = tx.tokenTransfers.find((t: any) => t.mint === tokenMint);
-              if (match?.symbol) tokenSymbol = match.symbol;
-            }
+            // Resolve symbol for non-SOL tokens
             if (!tokenSymbol) {
-              tokenSymbol = extractSymbolFromDescription(tx.description || "", tokenMint);
+              if (tx?.tokenTransfers?.length > 0) {
+                const match = tx.tokenTransfers.find((t: any) => (t?.mint === tokenMint || t?.tokenAddress === tokenMint));
+                if (match?.symbol) tokenSymbol = match.symbol;
+              }
+              if (!tokenSymbol) {
+                tokenSymbol = extractSymbolFromDescription(tx?.description || "", tokenMint);
+              }
             }
-          }
 
-          return {
-            id: tx.signature ?? "",
-            signature: tx.signature ?? "",
-            shortSig: (tx.signature ?? "").slice(0, 8) + "…" + (tx.signature ?? "").slice(-4),
-            timestamp: new Date((tx.timestamp ?? 0) * 1000),
-            action,
-            tokenSymbol,
-            tokenMint,
-            solAmount,
-            tokenAmount,
-            description: tx.description ?? "",
-            source: tx.source ?? "DEX",
-            txUrl: `https://solscan.io/tx/${sig}`,
-            solFlow,
-            sentMint: (tx as any).__sentMint__ || undefined,
-          } as RealTrade;
+            return {
+              id: tx?.signature ?? "",
+              signature: tx?.signature ?? "",
+              shortSig: (tx?.signature ?? "").slice(0, 8) + "…" + (tx?.signature ?? "").slice(-4),
+              timestamp: new Date((tx?.timestamp ?? 0) * 1000),
+              action,
+              tokenSymbol,
+              tokenMint,
+              solAmount,
+              tokenAmount,
+              description: tx?.description ?? "",
+              source: tx?.source ?? "DEX",
+              txUrl: `https://solscan.io/tx/${sig}`,
+              solFlow,
+              sentMint: (tx as any)?.__sentMint__ || undefined,
+            } as RealTrade;
+          } catch (err) {
+            console.error(`[parse] Error processing tx ${idx}:`, err);
+            return null;
+          }
         })
         .filter((t): t is RealTrade => t !== null);
 
