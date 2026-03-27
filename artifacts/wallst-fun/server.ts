@@ -67,8 +67,9 @@ app.post("/api/alchemy-balance", async (req, res) => {
 });
 
 // ── POST /api/helius-transactions ─────────────────────────────────────────────
-let txKeyIndex = 0;
 const txRateLimitStates = new Map<string, { pausedUntil: number }>();
+const txResponseCache = new Map<string, { data: any; expiresAt: number }>();
+const JUPITER_SWAP_API = "https://api.jup.ag/swap/wallet";
 
 app.post("/api/helius-transactions", async (req, res) => {
   try {
@@ -76,44 +77,71 @@ app.post("/api/helius-transactions", async (req, res) => {
     if (!walletAddress) { res.status(400).json({ error: "walletAddress is required" }); return; }
 
     const cacheKey = `helius-${walletAddress}`;
-    const state = txRateLimitStates.get(cacheKey) || { pausedUntil: 0 };
-    if (state.pausedUntil > Date.now()) {
-      const s = Math.ceil((state.pausedUntil - Date.now()) / 1000);
-      res.status(429).json({ error: "Rate limit hit on both API keys", retryAfter: s });
+    
+    // Check cache
+    const cached = txResponseCache.get(cacheKey);
+    if (cached && cached.expiresAt > Date.now()) {
+      res.json(cached.data);
       return;
     }
 
-    const keys = [HELIUS_KEY1, HELIUS_KEY2];
-    let lastError = "";
-    let lastStatus = 0;
+    const state = txRateLimitStates.get(cacheKey) || { pausedUntil: 0 };
+    if (state.pausedUntil > Date.now()) {
+      const s = Math.ceil((state.pausedUntil - Date.now()) / 1000);
+      res.status(429).json({ error: "Rate limited", retryAfter: s });
+      return;
+    }
 
-    for (let attempt = 0; attempt < 2; attempt++) {
-      const key = keys[txKeyIndex];
-      txKeyIndex = (txKeyIndex + 1) % 2;
+    // Fetch from Helius (primary)
+    let heliusData: any[] = [];
+    const keys = [HELIUS_KEY2, HELIUS_KEY1];
+    let allFailed = true;
+
+    for (const key of keys) {
       const url = `${HELIUS_V0_URL}/addresses/${walletAddress}/transactions?api-key=${key}&limit=100`;
       try {
         const r = await fetch(url);
-        lastStatus = r.status;
         if (r.ok) {
+          heliusData = await r.json();
           txRateLimitStates.delete(cacheKey);
-          res.json(await r.json());
-          return;
+          allFailed = false;
+          break;
         }
-        if (r.status !== 429 && r.status !== 401) { lastError = `HTTP ${r.status}`; break; }
-        console.warn(`Helius tx key ${attempt + 1} failed (${r.status}). Trying alternate...`);
-        await delay(300);
+        if (r.status === 429 || r.status === 401) { await delay(300); continue; }
+        allFailed = false;
+        break;
       } catch (e) {
-        lastError = e instanceof Error ? e.message : "Fetch error";
+        allFailed = false;
         break;
       }
     }
 
-    if (lastStatus === 429) {
-      txRateLimitStates.set(cacheKey, { pausedUntil: Date.now() + 60000 });
-      res.status(429).json({ error: "Both keys rate-limited", retryAfter: 60 });
+    if (allFailed) {
+      txRateLimitStates.set(cacheKey, { pausedUntil: Date.now() + 180000 });
+      res.status(429).json({ error: "Both keys rate-limited", retryAfter: 180 });
       return;
     }
-    res.status(lastStatus || 500).json({ error: "Failed to fetch from Helius", message: lastError });
+
+    // Fetch from Jupiter (supplementary) — non-blocking
+    let jupiterData: any[] = [];
+    try {
+      const jupRes = await fetch(`${JUPITER_SWAP_API}/${walletAddress}?limit=100`);
+      if (jupRes.ok) {
+        const jupJson = await jupRes.json();
+        jupiterData = Array.isArray(jupJson) ? jupJson : (jupJson?.swaps ?? []);
+      }
+    } catch (err) {
+      // Non-blocking
+    }
+
+    // Merge: Helius primary, add Jupiter fills not in Helius
+    const heliusSigs = new Set(heliusData.map((tx) => tx.signature).filter(Boolean));
+    const uniqueJupiterTxs = jupiterData.filter((tx) => !heliusSigs.has(tx.signature));
+    const merged = [...heliusData, ...uniqueJupiterTxs];
+
+    // Cache and return
+    txResponseCache.set(cacheKey, { data: merged, expiresAt: Date.now() + 30000 });
+    res.json(merged);
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Unknown error";
     res.status(500).json({ error: "Server error", message: msg });
