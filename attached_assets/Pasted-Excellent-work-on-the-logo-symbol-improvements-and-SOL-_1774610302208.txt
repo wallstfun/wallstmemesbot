@@ -1,0 +1,19 @@
+Excellent work on the logo/symbol improvements and SOL deduplication!  However, VALUE (USD) and PRICE are still missing (showing as "-") for PIGEON in the Assets table, even though the balance (2.70K) is correct. The allocation pie chart also doesn't reflect PIGEON's value properly.Task: Add reliable price fetching and USD value calculationUpdate the token metadata enrichment logic (in the Portfolio component, holdings hook, or mergedHoldings):Fetch real-time price for every token (including PIGEON and any future tokens):Use Jupiter Price API: https://api.jup.ag/price/v2?ids=<mint> (or the latest v3 if available).
+For multiple tokens in one call: pass comma-separated mints (e.g. SOL,PIGEON_mint).
+The response contains data.<mint>.price in USD.
+Calculate USD value:For each token: value = balance * price
+For native SOL, use the existing SOL price or fetch it the same way.
+Format the value nicely (e.g. round to 2 decimals).
+Improve overall enrichment (make it robust for future tokens):First fetch metadata from Jupiter Tokens API V2: https://api.jup.ag/tokens/v2/search?query=<mint> (this gives icon, symbol, name, and often usdPrice).
+Then fetch price separately from Jupiter Price API if not included.
+If price fetch fails (common for very new/low-liquidity tokens), show "-" or a small "—" and still display the token.
+Add clear console logs, e.g.:"Fetched price for PIGEON: $0.0021 → Value: $5.67"
+"Price fetch failed for mint X, using fallback"
+Update the Assets table rendering so:PRICE column shows the USD price per token.
+VALUE (USD) column shows the calculated total value.
+The total "Assets ≈ $XXX USD" and the allocation pie chart use the correct USD values for all tokens (SOL + PIGEON + future ones).
+After making the changes:Restart the frontend.
+Make a checkpoint.
+Commit with message: "feat: add Jupiter Price API integration for USD price & value in portfolio (PIGEON + future tokens)"
+Provide the exact next steps (e.g. "Hard refresh Portfolio and click Refresh button").
+

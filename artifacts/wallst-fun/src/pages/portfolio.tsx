@@ -144,25 +144,80 @@ async function fetchTokenMetadata(mint: string): Promise<any> {
   return metadata;
 }
 
-// Helper: Fetch prices from Jupiter
+// In-memory price cache (session-level)
+const priceCache = new Map<string, number>();
+
+// Helper: Fetch prices from Jupiter with robust fallback
 async function fetchTokenPrices(mints: string[]): Promise<Record<string, number>> {
   if (mints.length === 0) return {};
   
+  const prices: Record<string, number> = {};
+  const uncachedMints = mints.filter(m => !priceCache.has(m));
+  
+  // Return cached prices
+  mints.forEach(mint => {
+    if (priceCache.has(mint)) {
+      prices[mint] = priceCache.get(mint)!;
+    }
+  });
+  
+  if (uncachedMints.length === 0) {
+    console.log(`[price] All ${mints.length} prices cached`);
+    return prices;
+  }
+  
+  // Fetch uncached prices from Jupiter
   try {
-    const res = await fetch(`https://price.jup.ag/v6/price?ids=${mints.join(",")}`);
+    console.log(`[price] Fetching ${uncachedMints.length} uncached token prices from Jupiter...`);
+    const res = await fetch(`https://price.jup.ag/v6/price?ids=${uncachedMints.join(",")}`, { 
+      signal: AbortSignal.timeout(8000) 
+    });
+    
     if (res.ok) {
       const data = await res.json();
-      const prices: Record<string, number> = {};
       if (data.data) {
         Object.entries(data.data).forEach(([mint, info]: [string, any]) => {
-          prices[mint] = parseFloat(info.price ?? "0");
+          const price = parseFloat(info.price ?? "0");
+          if (price > 0) {
+            prices[mint] = price;
+            priceCache.set(mint, price);
+            console.log(`[price] ${mint}: $${price.toFixed(6)}`);
+          } else {
+            console.log(`[price] ${mint}: No price data (price = 0 or missing)`);
+          }
         });
       }
       return prices;
+    } else {
+      console.log(`[price] Jupiter API returned ${res.status}, using fallback`);
     }
-  } catch {}
+  } catch (e) {
+    console.log(`[price] Jupiter fetch failed:`, e instanceof Error ? e.message : String(e));
+  }
   
-  return {};
+  // Fallback: Try CoinGecko for any remaining mints
+  const remainingMints = uncachedMints.filter(m => !prices[m]);
+  if (remainingMints.length > 0) {
+    console.log(`[price] Fallback: Attempting CoinGecko for ${remainingMints.length} tokens`);
+    for (const mint of remainingMints) {
+      try {
+        const res = await fetch(`https://api.coingecko.com/api/v3/coins/solana/contract/${mint}`, {
+          signal: AbortSignal.timeout(3000)
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.market_data?.current_price?.usd) {
+            const price = data.market_data.current_price.usd;
+            prices[mint] = price;
+            priceCache.set(mint, price);
+            console.log(`[price] CoinGecko ${mint}: $${price.toFixed(6)}`);
+          }
+        }
+      } catch {}
+    }
+  }
+  
+  return prices;
 }
 
 export default function PortfolioPage() {
@@ -254,21 +309,22 @@ export default function PortfolioPage() {
                                   metaSymbol === h.mint.slice(0, 6).toUpperCase();
         const symbol = !isMetadataFallback && metaSymbol ? metaSymbol : h.symbol;
         const logo = metadataResults[i]?.logoURI || h.logo;
+        const price = pricesResult[h.mint];
+        const value = price && price > 0 ? h.balance * price : undefined;
         
-        // Log detailed enrichment info for debugging
-        if (logo) {
-          console.log(`[portfolio] ${symbol} (${h.mint}): logo=${logo}`);
-        } else {
-          console.log(`[portfolio] ${symbol} (${h.mint}): NO LOGO FOUND`);
-        }
+        // Log detailed enrichment info with price and value
+        const priceStr = price ? `$${price.toFixed(6)}` : "N/A";
+        const valueStr = value ? `$${value.toFixed(2)}` : "N/A";
+        const logoStr = logo ? "✓" : "✗";
+        console.log(`[portfolio] ${symbol}: balance=${h.balance}, price=${priceStr}, value=${valueStr}, logo=${logoStr}`);
         
         return {
           ...h,
           symbol,
           name: metadataResults[i]?.name || h.name,
           logo,
-          priceUsd: pricesResult[h.mint] ?? undefined,
-          valueUsd: (pricesResult[h.mint] ?? 0) > 0 ? h.balance * (pricesResult[h.mint] ?? 0) : undefined,
+          priceUsd: price,
+          valueUsd: value,
         };
       });
       
