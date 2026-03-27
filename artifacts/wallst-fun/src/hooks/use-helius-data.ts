@@ -83,11 +83,6 @@ export function useRealTransactions() {
           const hasSwapLikeTransfers = (tx.tokenTransfers?.length ?? 0) >= 2;
           if (!swap && !isJupiter && !hasSwapLikeTransfers) return null;
 
-          const hasNativeIn = swap.nativeInput && Number(swap.nativeInput.amount) > 0;
-          const hasNativeOut = swap.nativeOutput && Number(swap.nativeOutput.amount) > 0;
-          const hasTokenOut = (swap.tokenOutputs?.length ?? 0) > 0;
-          const hasTokenIn = (swap.tokenInputs?.length ?? 0) > 0;
-
           let action: RealTrade["action"] = "SWAP";
           let solAmount = 0;
           let tokenAmount = 0;
@@ -156,44 +151,49 @@ export function useRealTransactions() {
           }
           
           // Standard swap event parsing
-          if (!swap) return null;
-          
-          if (hasNativeOut && hasTokenIn) {
-            // Received SOL, sent a token (e.g. USDC → SOL, or memecoin → SOL)
-            // The asset gained is SOL — always label as BUY SOL
-            action = "BUY";
-            solFlow = "in";
-            solAmount = Number(swap.nativeOutput.amount) / 1e9;
-            tokenMint = "So11111111111111111111111111111111111111112"; // native SOL
-            tokenSymbol = "SOL";
-            tokenAmount = solAmount; // amount of SOL received
-            // Track which token was sent — needed for win rate matching
-            const sentTok = swap.tokenInputs[0];
-            if (sentTok?.mint) (tx as any).__sentMint__ = sentTok.mint;
-          } else if (hasNativeIn && hasTokenOut) {
-            // Sent SOL, received a token
-            const out = swap.tokenOutputs[0];
-            tokenMint = out.mint;
-            tokenAmount =
-              Number(out.rawTokenAmount?.tokenAmount ?? 0) /
-              Math.pow(10, out.rawTokenAmount?.decimals ?? 6);
-            solAmount = Number(swap.nativeInput.amount) / 1e9;
-            solFlow = "out";
-            // Classify by the received token: stablecoin = SELL, otherwise = BUY
-            action = STABLECOIN_MINTS.includes(tokenMint) ? "SELL" : "BUY";
-          } else if (hasTokenIn && hasTokenOut) {
-            // Token-to-token swap (no SOL involved)
-            const out = swap.tokenOutputs[0];
-            tokenMint = out.mint;
-            tokenAmount =
-              Number(out.rawTokenAmount?.tokenAmount ?? 0) /
-              Math.pow(10, out.rawTokenAmount?.decimals ?? 6);
-            solFlow = "none";
-            action = STABLECOIN_MINTS.includes(tokenMint) ? "SELL" : "BUY";
-            solAmount = 0;
-          } else {
-            return null;
-          }
+          if (swap) {
+            const hasNativeIn = swap.nativeInput && Number(swap.nativeInput.amount) > 0;
+            const hasNativeOut = swap.nativeOutput && Number(swap.nativeOutput.amount) > 0;
+            const hasTokenOut = (swap.tokenOutputs?.length ?? 0) > 0;
+            const hasTokenIn = (swap.tokenInputs?.length ?? 0) > 0;
+            
+            if (hasNativeOut && hasTokenIn) {
+              // Received SOL, sent a token (e.g. USDC → SOL, or memecoin → SOL)
+              // The asset gained is SOL — always label as BUY SOL
+              action = "BUY";
+              solFlow = "in";
+              solAmount = Number(swap.nativeOutput.amount) / 1e9;
+              tokenMint = "So11111111111111111111111111111111111111112"; // native SOL
+              tokenSymbol = "SOL";
+              tokenAmount = solAmount; // amount of SOL received
+              // Track which token was sent — needed for win rate matching
+              const sentTok = swap.tokenInputs[0];
+              if (sentTok?.mint) (tx as any).__sentMint__ = sentTok.mint;
+            } else if (hasNativeIn && hasTokenOut) {
+              // Sent SOL, received a token
+              const out = swap.tokenOutputs[0];
+              tokenMint = out.mint;
+              tokenAmount =
+                Number(out.rawTokenAmount?.tokenAmount ?? 0) /
+                Math.pow(10, out.rawTokenAmount?.decimals ?? 6);
+              solAmount = Number(swap.nativeInput.amount) / 1e9;
+              solFlow = "out";
+              // Classify by the received token: stablecoin = SELL, otherwise = BUY
+              action = STABLECOIN_MINTS.includes(tokenMint) ? "SELL" : "BUY";
+            } else if (hasTokenIn && hasTokenOut) {
+              // Token-to-token swap (no SOL involved)
+              const out = swap.tokenOutputs[0];
+              tokenMint = out.mint;
+              tokenAmount =
+                Number(out.rawTokenAmount?.tokenAmount ?? 0) /
+                Math.pow(10, out.rawTokenAmount?.decimals ?? 6);
+              solFlow = "none";
+              action = STABLECOIN_MINTS.includes(tokenMint) ? "SELL" : "BUY";
+              solAmount = 0;
+            } else {
+              return null;
+            }
+          } // end if (swap)
 
           if (!tokenMint) return null;
 
