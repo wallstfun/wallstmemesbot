@@ -43,8 +43,8 @@ export default function PortfolioPage() {
         }
       } catch {}
     };
-    // Only fetch if no cached price
-    if (!solPrice) fetchPrice();
+    // Fetching paused - use cached price only
+    // if (!solPrice) fetchPrice();
   }, []);
 
   const solUsdValue = (solBalance ?? 0) * solPrice;

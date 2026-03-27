@@ -119,13 +119,11 @@ export function useSolPrice() {
       }
     };
 
-    // Fetch immediately on mount
-    fetchPrice();
-
-    // Fetch every 15 seconds
-    const interval = setInterval(fetchPrice, 15000);
-    
-    return () => clearInterval(interval);
+    // Fetching paused - use fallback price only
+    setLoading(false);
+    // fetchPrice();
+    // const interval = setInterval(fetchPrice, 15000);
+    // return () => clearInterval(interval);
   }, []);
 
   return { solPrice, isLive, loading };

@@ -2,6 +2,9 @@ import { useState, useEffect, useCallback } from "react";
 
 export const AGENT_WALLET = "Hw7yc27h6Lws6YsQmdLoj4M7psyFHRhosFwoGuSESmTh";
 
+// Set to true to pause all API fetching (use when hitting rate limits)
+const FETCHING_PAUSED = true;
+
 // Known stablecoin mints (USDC, USDT, etc.)
 const STABLECOIN_MINTS = [
   "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", // USDC
@@ -218,6 +221,7 @@ export function useRealTransactions() {
   }, []);
 
   useEffect(() => {
+    if (FETCHING_PAUSED) { setLoading(false); return; }
     fetchTrades();
     const interval = setInterval(fetchTrades, 90000);
     return () => clearInterval(interval);
@@ -300,6 +304,7 @@ export function useTokenHoldings() {
   }, []);
 
   useEffect(() => {
+    if (FETCHING_PAUSED) { setLoading(false); return; }
     fetchHoldings();
     const interval = setInterval(fetchHoldings, 90000);
     return () => clearInterval(interval);
@@ -342,6 +347,7 @@ export function useWalletSolBalance() {
   }, []);
 
   useEffect(() => {
+    if (FETCHING_PAUSED) { setLoading(false); return; }
     fetchBalance();
     const interval = setInterval(fetchBalance, 120000); // Every 120 seconds
     return () => clearInterval(interval);

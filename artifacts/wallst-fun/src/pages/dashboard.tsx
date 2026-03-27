@@ -168,11 +168,11 @@ function DashboardContent() {
       }
     }
 
-    fetchPrice();
-    const interval = setInterval(fetchPrice, 60000); // every 60 seconds (well under 30 calls/min rate limit)
+    // Fetching paused - load from cache only, no live requests
+    // fetchPrice();
+    // const interval = setInterval(fetchPrice, 60000);
 
     return () => {
-      clearInterval(interval);
       if (retryTimeout) clearTimeout(retryTimeout);
     };
   }, []);
