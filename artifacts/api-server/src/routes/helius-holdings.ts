@@ -2,39 +2,16 @@ import { Router, type Request, type Response } from "express";
 
 const router = Router();
 
-// Holdings now use Alchemy exclusively — keeps Helius keys free for transactions only
 const ALCHEMY_URL = "https://solana-mainnet.g.alchemy.com/v2/9vePK8JAvqdzoDs3Q1kZ4";
 const TOKEN_PROGRAM_ID = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA";
-
-// Hardcoded metadata for well-known tokens — always correct, no API needed
-const KNOWN_TOKENS: Record<string, { symbol: string; name: string; logoURI: string }> = {
-  "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v": {
-    symbol: "USDC",
-    name: "USD Coin",
-    logoURI: "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v/logo.png",
-  },
-  "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenEsw": {
-    symbol: "USDT",
-    name: "Tether USD",
-    logoURI: "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenEsw/logo.svg",
-  },
-  "So11111111111111111111111111111111111111112": {
-    symbol: "SOL",
-    name: "Solana",
-    logoURI: "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png",
-  },
-  // PIGEON token
-  "4fSWEw2wbYEUCcMtitzmeGUfqinoafXxkhqZrA9Gpump": {
-    symbol: "PIGEON",
-    name: "Pigeon Token",
-    logoURI: "",
-  },
-};
+const JUPITER_TOKENS_URL = "https://token.jup.ag/all";
+const JUPITER_PRICE_URL = "https://price.jup.ag/v6/price";
 
 interface TokenAccount {
   mint: string;
   balance: number;
   decimals: number;
+  uiAmount: number;
 }
 
 router.post("/helius-holdings", async (req: Request, res: Response) => {
@@ -46,6 +23,7 @@ router.post("/helius-holdings", async (req: Request, res: Response) => {
     }
 
     // 1. Fetch all SPL token accounts via Alchemy RPC
+    console.log(`[holdings] Fetching token accounts for ${walletAddress}`);
     const alchemyRes = await fetch(ALCHEMY_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -79,25 +57,17 @@ router.post("/helius-holdings", async (req: Request, res: Response) => {
         const info = acc.account?.data?.parsed?.info;
         if (!info) return null;
         const uiAmount = info.tokenAmount?.uiAmount ?? 0;
-        const mint = info.mint as string;
-        if (uiAmount <= 0) {
-          if (mint === "4fSWEw2wbYEUCcMtitzmeGUfqinoafXxkhqZrA9Gpump") {
-            console.log(`[holdings] PIGEON (${mint}): uiAmount=${uiAmount}, FILTERED OUT`);
-          }
-          return null;
-        }
-        if (mint === "4fSWEw2wbYEUCcMtitzmeGUfqinoafXxkhqZrA9Gpump") {
-          console.log(`[holdings] PIGEON found: uiAmount=${uiAmount}, decimals=${info.tokenAmount?.decimals}`);
-        }
+        if (uiAmount <= 0) return null;
         return {
-          mint,
+          mint: info.mint as string,
           balance: uiAmount as number,
           decimals: (info.tokenAmount?.decimals ?? 0) as number,
+          uiAmount,
         };
       })
       .filter((t): t is TokenAccount => t !== null);
 
-    console.log(`[holdings] After filtering: ${tokenAccounts.length} tokens`);
+    console.log(`[holdings] Found ${tokenAccounts.length} tokens with balance > 0`);
     if (tokenAccounts.length === 0) {
       res.json({ items: [] });
       return;
@@ -105,67 +75,63 @@ router.post("/helius-holdings", async (req: Request, res: Response) => {
 
     const mints = tokenAccounts.map((t) => t.mint);
 
-    // 2. Fetch token metadata — use hardcoded map first, then Jupiter API for unknowns
-    const metadataMap: Record<string, { symbol: string; name: string; logoURI?: string }> = {};
-
-    // Pre-populate from KNOWN_TOKENS (never needs a network call)
-    for (const mint of mints) {
-      if (KNOWN_TOKENS[mint]) {
-        metadataMap[mint] = KNOWN_TOKENS[mint];
-      }
-    }
-
-    // Only call Jupiter for mints not already resolved
-    const unknownMints = mints.filter((m) => !metadataMap[m]);
-    await Promise.allSettled(
-      unknownMints.map(async (mint) => {
-        try {
-          const r = await fetch(`https://tokens.jup.ag/token/${mint}`, {
-            headers: { Accept: "application/json" },
-          });
-          if (r.ok) {
-            const t = await r.json();
-            metadataMap[mint] = {
-              symbol: t.symbol || mint.slice(0, 6).toUpperCase(),
-              name: t.name || "Unknown Token",
-              logoURI: t.logoURI || undefined,
-            };
-          }
-        } catch {
-          // Silently skip — fallback applied below
-        }
-      })
-    );
-
-    // 3. Fetch prices from DexScreener (batch, up to 30 mints)
-    const priceMap: Record<string, number> = {};
+    // 2. Fetch all token metadata from Jupiter
+    console.log(`[holdings] Fetching metadata from Jupiter for ${mints.length} tokens`);
+    let jupTokenMap: Record<string, any> = {};
     try {
-      const mintList = mints.slice(0, 30).join(",");
-      const dexRes = await fetch(`https://api.dexscreener.com/tokens/v1/solana/${mintList}`, {
-        headers: { Accept: "application/json" },
-      });
-      if (dexRes.ok) {
-        const dexData = await dexRes.json();
-        const pairs = Array.isArray(dexData) ? dexData : [];
-        for (const pair of pairs) {
-          const addr = pair.baseToken?.address;
-          const price = parseFloat(pair.priceUsd ?? "0");
-          if (addr && price > 0 && !priceMap[addr]) {
-            priceMap[addr] = price;
-          }
-        }
+      const jupRes = await fetch(JUPITER_TOKENS_URL);
+      if (jupRes.ok) {
+        const jupList = await jupRes.json();
+        jupList.forEach((t: any) => {
+          jupTokenMap[t.address] = t;
+        });
+        console.log(`[holdings] Jupiter returned ${Object.keys(jupTokenMap).length} tokens`);
       }
     } catch (e) {
-      console.warn("[holdings] DexScreener price fetch failed:", e instanceof Error ? e.message : e);
+      console.warn(
+        "[holdings] Jupiter token fetch failed:",
+        e instanceof Error ? e.message : e
+      );
     }
 
-    // 4. Build response in the same shape the frontend expects
-    const items = tokenAccounts.map(({ mint, balance, decimals }) => {
-      const meta = metadataMap[mint];
+    // 3. Fetch prices from Jupiter
+    console.log(`[holdings] Fetching prices from Jupiter for ${mints.length} tokens`);
+    let priceMap: Record<string, number> = {};
+    try {
+      const priceRes = await fetch(`${JUPITER_PRICE_URL}?ids=${mints.join(",")}`);
+      if (priceRes.ok) {
+        const priceData = await priceRes.json();
+        if (priceData.data) {
+          Object.entries(priceData.data).forEach(([mint, info]: [string, any]) => {
+            const price = parseFloat(info.price ?? "0");
+            if (price > 0) {
+              priceMap[mint] = price;
+            }
+          });
+        }
+        console.log(`[holdings] Got prices for ${Object.keys(priceMap).length} tokens`);
+      }
+    } catch (e) {
+      console.warn(
+        "[holdings] Jupiter price fetch failed:",
+        e instanceof Error ? e.message : e
+      );
+    }
+
+    // 4. Build response
+    const items = tokenAccounts.map(({ mint, balance, decimals, uiAmount }) => {
+      const jupMeta = jupTokenMap[mint];
+      const symbol = jupMeta?.symbol ?? mint.slice(0, 6).toUpperCase();
+      const name = jupMeta?.name ?? "Unknown Token";
+      const logo = jupMeta?.logoURI || undefined;
       const priceUsd = priceMap[mint] ?? 0;
       const valueUsd = priceUsd > 0 ? balance * priceUsd : undefined;
-      const symbol = meta?.symbol || mint.slice(0, 6).toUpperCase();
-      const name = meta?.name || "Unknown Token";
+
+      if (symbol === "PIGEON" || mint === "4fSWEw2wbYEUCcMtitzmeGUfqinoafXxkhqZrA9Gpump") {
+        console.log(
+          `[holdings] PIGEON: uiAmount=${uiAmount}, price=${priceUsd}, total=${valueUsd}`
+        );
+      }
 
       return {
         id: mint,
@@ -174,17 +140,19 @@ router.post("/helius-holdings", async (req: Request, res: Response) => {
           symbol,
           decimals,
           balance: balance * Math.pow(10, decimals),
-          price_info: priceUsd > 0
-            ? { price_per_token: priceUsd, total_price: valueUsd }
-            : undefined,
+          price_info:
+            priceUsd > 0
+              ? { price_per_token: priceUsd, total_price: valueUsd }
+              : undefined,
         },
         content: {
           metadata: { name, symbol },
-          links: { image: meta?.logoURI || undefined },
+          links: { image: logo || undefined },
         },
       };
     });
 
+    console.log(`[holdings] Returning ${items.length} items`);
     res.json({ items });
   } catch (error) {
     const msg = error instanceof Error ? error.message : "Unknown error";

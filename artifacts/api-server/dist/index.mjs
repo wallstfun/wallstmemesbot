@@ -52642,29 +52642,8 @@ var import_express6 = __toESM(require_express2(), 1);
 var router6 = (0, import_express6.Router)();
 var ALCHEMY_URL2 = "https://solana-mainnet.g.alchemy.com/v2/9vePK8JAvqdzoDs3Q1kZ4";
 var TOKEN_PROGRAM_ID = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA";
-var KNOWN_TOKENS = {
-  "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v": {
-    symbol: "USDC",
-    name: "USD Coin",
-    logoURI: "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v/logo.png"
-  },
-  "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenEsw": {
-    symbol: "USDT",
-    name: "Tether USD",
-    logoURI: "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenEsw/logo.svg"
-  },
-  "So11111111111111111111111111111111111111112": {
-    symbol: "SOL",
-    name: "Solana",
-    logoURI: "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png"
-  },
-  // PIGEON token
-  "4fSWEw2wbYEUCcMtitzmeGUfqinoafXxkhqZrA9Gpump": {
-    symbol: "PIGEON",
-    name: "Pigeon Token",
-    logoURI: ""
-  }
-};
+var JUPITER_TOKENS_URL = "https://token.jup.ag/all";
+var JUPITER_PRICE_URL = "https://price.jup.ag/v6/price";
 router6.post("/helius-holdings", async (req, res) => {
   try {
     const { walletAddress } = req.body;
@@ -52672,6 +52651,7 @@ router6.post("/helius-holdings", async (req, res) => {
       res.status(400).json({ error: "walletAddress is required" });
       return;
     }
+    console.log(`[holdings] Fetching token accounts for ${walletAddress}`);
     const alchemyRes = await fetch(ALCHEMY_URL2, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -52699,79 +52679,71 @@ router6.post("/helius-holdings", async (req, res) => {
       const info = acc.account?.data?.parsed?.info;
       if (!info) return null;
       const uiAmount = info.tokenAmount?.uiAmount ?? 0;
-      const mint = info.mint;
-      if (uiAmount <= 0) {
-        if (mint === "4fSWEw2wbYEUCcMtitzmeGUfqinoafXxkhqZrA9Gpump") {
-          console.log(`[holdings] PIGEON (${mint}): uiAmount=${uiAmount}, FILTERED OUT`);
-        }
-        return null;
-      }
-      if (mint === "4fSWEw2wbYEUCcMtitzmeGUfqinoafXxkhqZrA9Gpump") {
-        console.log(`[holdings] PIGEON found: uiAmount=${uiAmount}, decimals=${info.tokenAmount?.decimals}`);
-      }
+      if (uiAmount <= 0) return null;
       return {
-        mint,
+        mint: info.mint,
         balance: uiAmount,
-        decimals: info.tokenAmount?.decimals ?? 0
+        decimals: info.tokenAmount?.decimals ?? 0,
+        uiAmount
       };
     }).filter((t) => t !== null);
-    console.log(`[holdings] After filtering: ${tokenAccounts.length} tokens`);
+    console.log(`[holdings] Found ${tokenAccounts.length} tokens with balance > 0`);
     if (tokenAccounts.length === 0) {
       res.json({ items: [] });
       return;
     }
     const mints = tokenAccounts.map((t) => t.mint);
-    const metadataMap = {};
-    for (const mint of mints) {
-      if (KNOWN_TOKENS[mint]) {
-        metadataMap[mint] = KNOWN_TOKENS[mint];
-      }
-    }
-    const unknownMints = mints.filter((m) => !metadataMap[m]);
-    await Promise.allSettled(
-      unknownMints.map(async (mint) => {
-        try {
-          const r = await fetch(`https://tokens.jup.ag/token/${mint}`, {
-            headers: { Accept: "application/json" }
-          });
-          if (r.ok) {
-            const t = await r.json();
-            metadataMap[mint] = {
-              symbol: t.symbol || mint.slice(0, 6).toUpperCase(),
-              name: t.name || "Unknown Token",
-              logoURI: t.logoURI || void 0
-            };
-          }
-        } catch {
-        }
-      })
-    );
-    const priceMap = {};
+    console.log(`[holdings] Fetching metadata from Jupiter for ${mints.length} tokens`);
+    let jupTokenMap = {};
     try {
-      const mintList = mints.slice(0, 30).join(",");
-      const dexRes = await fetch(`https://api.dexscreener.com/tokens/v1/solana/${mintList}`, {
-        headers: { Accept: "application/json" }
-      });
-      if (dexRes.ok) {
-        const dexData = await dexRes.json();
-        const pairs = Array.isArray(dexData) ? dexData : [];
-        for (const pair of pairs) {
-          const addr = pair.baseToken?.address;
-          const price = parseFloat(pair.priceUsd ?? "0");
-          if (addr && price > 0 && !priceMap[addr]) {
-            priceMap[addr] = price;
-          }
-        }
+      const jupRes = await fetch(JUPITER_TOKENS_URL);
+      if (jupRes.ok) {
+        const jupList = await jupRes.json();
+        jupList.forEach((t) => {
+          jupTokenMap[t.address] = t;
+        });
+        console.log(`[holdings] Jupiter returned ${Object.keys(jupTokenMap).length} tokens`);
       }
     } catch (e) {
-      console.warn("[holdings] DexScreener price fetch failed:", e instanceof Error ? e.message : e);
+      console.warn(
+        "[holdings] Jupiter token fetch failed:",
+        e instanceof Error ? e.message : e
+      );
     }
-    const items = tokenAccounts.map(({ mint, balance, decimals }) => {
-      const meta = metadataMap[mint];
+    console.log(`[holdings] Fetching prices from Jupiter for ${mints.length} tokens`);
+    let priceMap = {};
+    try {
+      const priceRes = await fetch(`${JUPITER_PRICE_URL}?ids=${mints.join(",")}`);
+      if (priceRes.ok) {
+        const priceData = await priceRes.json();
+        if (priceData.data) {
+          Object.entries(priceData.data).forEach(([mint, info]) => {
+            const price = parseFloat(info.price ?? "0");
+            if (price > 0) {
+              priceMap[mint] = price;
+            }
+          });
+        }
+        console.log(`[holdings] Got prices for ${Object.keys(priceMap).length} tokens`);
+      }
+    } catch (e) {
+      console.warn(
+        "[holdings] Jupiter price fetch failed:",
+        e instanceof Error ? e.message : e
+      );
+    }
+    const items = tokenAccounts.map(({ mint, balance, decimals, uiAmount }) => {
+      const jupMeta = jupTokenMap[mint];
+      const symbol = jupMeta?.symbol ?? mint.slice(0, 6).toUpperCase();
+      const name = jupMeta?.name ?? "Unknown Token";
+      const logo = jupMeta?.logoURI || void 0;
       const priceUsd = priceMap[mint] ?? 0;
       const valueUsd = priceUsd > 0 ? balance * priceUsd : void 0;
-      const symbol = meta?.symbol || mint.slice(0, 6).toUpperCase();
-      const name = meta?.name || "Unknown Token";
+      if (symbol === "PIGEON" || mint === "4fSWEw2wbYEUCcMtitzmeGUfqinoafXxkhqZrA9Gpump") {
+        console.log(
+          `[holdings] PIGEON: uiAmount=${uiAmount}, price=${priceUsd}, total=${valueUsd}`
+        );
+      }
       return {
         id: mint,
         interface: "FungibleToken",
@@ -52783,10 +52755,11 @@ router6.post("/helius-holdings", async (req, res) => {
         },
         content: {
           metadata: { name, symbol },
-          links: { image: meta?.logoURI || void 0 }
+          links: { image: logo || void 0 }
         }
       };
     });
+    console.log(`[holdings] Returning ${items.length} items`);
     res.json({ items });
   } catch (error) {
     const msg = error instanceof Error ? error.message : "Unknown error";

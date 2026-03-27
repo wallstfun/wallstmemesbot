@@ -1,0 +1,18 @@
+The portfolio on wallst.fun Agent Portfolio is still only showing SOL (100%) even though the live wallet Hw7yc27h6Lws6YsQmdLoj4M7psyFHRhosFwoGuSESmTh has both SOL (~2.797) and PIGEON (mint: 4fSWEw2wbYEUCcMtitzmeGUfqinoafXxkhqZrA9Gpump, balance: 2700, ~$5.70+ value) with confirmed non-zero balance on Solscan.The previous hardcoded PIGEON fix was not enough and has not been pushed yet. I need a complete, permanent fix so the site automatically detects any future token the agent ever trades (no more manual additions ever).Task:Make the holdings API fully dynamic:Use Helius getTokenAccountsByOwner (or getAssetsByOwner DAS if better) to fetch ALL SPL token accounts + balances for any wallet.
+Always fetch native SOL balance separately.
+For every token with uiAmount > 0:Pull symbol, name, logoURI from Jupiter Tokens API (https://token.jup.ag/all or V2 endpoint).
+Pull current USD price from Jupiter Price API (https://price.jup.ag/v6/price?ids=<mint>).
+Calculate USD value = balance × price.
+Include logo, ticker, Solscan link, etc.
+Return the exact same response format the frontend expects (assets array, allocation %, SOL balance, etc. — match what the current Portfolio page uses).
+Remove all hardcoded known-tokens lists and PIGEON-specific code.
+Add clear logging for debugging ("Found X tokens", "Enriched PIGEON with logo/price", etc.).
+Update ALL THREE locations consistently so nothing breaks in dev, production, or backend:Root API: /api/helius-holdings.js (Vercel production)
+Dev API: /artifacts/wallst-fun/api/helius-holdings.js (Vite proxy)
+Backend API: /artifacts/api-server/src/routes/helius-holdings.ts (future use)
+After editing:Create a checkpoint.
+Commit with message: "feat: fully dynamic Helius + Jupiter holdings API - auto-detects any token with logo/ticker/price"
+Push: git push origin main
+Restart any workflows / rebuild if needed.
+PIGEON (and every future token) should now appear automatically in the Agent Portfolio with correct logo, ticker, price, value, and allocation pie chart.Let me know when done and provide the exact git commands / next steps.
+
