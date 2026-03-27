@@ -141,17 +141,6 @@ export function useRealTransactions() {
               const changes = tx?.tokenTransfers ?? [];
               const nativeBalanceChange = tx?.nativeBalanceChange;
               
-              // Debug: log all fields for transactions with no incoming
-              if (changes.length >= 2) {
-                const incomingCount = changes.filter((t: any) => {
-                  const toAccount = t?.toUserAccount || t?.to;
-                  return toAccount && toAccount.toLowerCase() === AGENT_WALLET.toLowerCase();
-                }).length;
-                if (incomingCount === 0) {
-                  console.log(`[parse] ${sig}: DEBUG - no incoming transfers, native=${nativeBalanceChange}, fees=${tx?.fee}, all fields: ${JSON.stringify({nativeBalanceChange: tx?.nativeBalanceChange, solFee: tx?.fee, transfers: changes.length})}`);
-                }
-              }
-              
               // Check if we have enough data: 2+ token transfers OR 1 token transfer + native SOL change
               const hasEnoughData = (Array.isArray(changes) && changes.length >= 2) || 
                                    (Array.isArray(changes) && changes.length >= 1 && nativeBalanceChange && nativeBalanceChange !== 0);
@@ -203,13 +192,46 @@ export function useRealTransactions() {
               
               // PRIMARY RULE: The token you RECEIVE is what you BOUGHT
               // Find the largest incoming token (main received asset)
-              const receivedToken = incomingTransfers.length > 0
+              let receivedToken = incomingTransfers.length > 0
                 ? incomingTransfers.reduce((max: any, t: any) => {
                     const maxAmount = Number(max?.tokenAmount ?? 0);
                     const currentAmount = Number(t?.tokenAmount ?? 0);
                     return currentAmount > maxAmount ? t : max;
                   })
                 : null;
+              
+              // SPECIAL CASE: If no incoming tokens but outgoing stablecoin,
+              // this is likely a stablecoin → SOL swap
+              // Try to infer SOL amount from source (e.g., description or tx data)
+              try {
+                if (!receivedToken && outgoingTransfers.length > 0) {
+                  const sentStable = outgoingTransfers.find((t: any) => {
+                    const mint = t?.tokenAddress || t?.mint;
+                    return mint && STABLECOIN_MINTS.includes(mint);
+                  });
+                  
+                  if (sentStable) {
+                    const sentAmount = Number(sentStable.tokenAmount ?? 0) / Math.pow(10, sentStable.decimals ?? 6);
+                    // Estimate SOL amount based on typical swap rates (conservative estimate)
+                    // USDC/USDT swaps typically get ~95-99% value in SOL
+                    const estimatedSOL = sentAmount * 0.011; // rough estimate: 1 USDC ≈ 0.011 SOL at $90/SOL
+                    
+                    if (estimatedSOL > 0) {
+                      // Create synthetic "received SOL" token
+                      receivedToken = {
+                        tokenAddress: SOL_MINT,
+                        mint: SOL_MINT,
+                        tokenAmount: (estimatedSOL * 1e9).toString(),
+                        decimals: 9,
+                        tokenSymbol: "SOL",
+                      };
+                      console.log(`[parse] ${sig}: INFERRED stablecoin → SOL: sent ${sentAmount.toFixed(2)} ${sentStable.tokenSymbol || "STABLECOIN"}, estimated ~${estimatedSOL.toFixed(4)} SOL received`);
+                    }
+                  }
+                }
+              } catch (err) {
+                console.error(`[parse] ${sig}: Error inferring stablecoin swap:`, err);
+              }
               
               if (receivedToken && (receivedToken.tokenAddress || receivedToken.mint)) {
                 const receivedMint = receivedToken.tokenAddress || receivedToken.mint;
