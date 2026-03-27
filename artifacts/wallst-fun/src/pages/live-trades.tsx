@@ -57,6 +57,7 @@ export default function LiveTradesPage() {
           ...t,
           enrichedSymbol: meta?.symbol || t.tokenSymbol || "???",
           enrichedName: meta?.name || t.description || "Unknown",
+          logo: meta?.logoURI,
         };
       });
       
@@ -220,8 +221,25 @@ export default function LiveTradesPage() {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <div className="flex flex-col">
-                        <span className="font-bold text-foreground">{trade.enrichedSymbol || trade.tokenSymbol || "SOL"}</span>
+                      <div className="flex flex-col gap-1">
+                        <div className="flex items-center gap-2">
+                          <div className="relative w-4 h-4 flex-shrink-0">
+                            {trade.logo && (
+                              <img
+                                src={trade.logo}
+                                alt={trade.enrichedSymbol || trade.tokenSymbol}
+                                className="w-4 h-4 rounded-full object-cover"
+                                onError={(e) => { e.currentTarget.style.display = "none"; }}
+                              />
+                            )}
+                            {!trade.logo && (
+                              <div className="w-4 h-4 rounded-full bg-gradient-to-br from-primary/30 to-primary/10 flex items-center justify-center text-[8px] font-bold text-primary/70">
+                                {(trade.enrichedSymbol || trade.tokenSymbol || "?").charAt(0).toUpperCase()}
+                              </div>
+                            )}
+                          </div>
+                          <span className="font-bold text-foreground">{trade.enrichedSymbol || trade.tokenSymbol || "SOL"}</span>
+                        </div>
                         {trade.enrichedSymbol !== "SOL" && trade.enrichedName && (
                           <span className="text-[10px] text-muted-foreground truncate max-w-[140px]" title={trade.enrichedName}>
                             {trade.enrichedName.slice(0, 50) + (trade.enrichedName.length > 50 ? "..." : "")}

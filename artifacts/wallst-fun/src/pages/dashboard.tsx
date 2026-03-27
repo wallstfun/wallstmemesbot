@@ -115,7 +115,7 @@ function DashboardContent() {
       const enriched = realTrades.map(t => ({
         ...t,
         enrichedSymbol: metadata[t.tokenMint]?.symbol || t.tokenSymbol || "???",
-        logo: metadata[t.tokenMint]?.logo,
+        logo: metadata[t.tokenMint]?.logoURI,
       }));
       
       setEnrichedTrades(enriched);
@@ -502,14 +502,21 @@ function DashboardContent() {
                             </Badge>
                           </TableCell>
                           <TableCell className="font-bold flex items-center gap-2">
-                            {trade.logo && (
-                              <img
-                                src={trade.logo}
-                                alt={trade.enrichedSymbol || trade.tokenSymbol}
-                                className="w-4 h-4 rounded-full object-cover"
-                                onError={(e) => { e.currentTarget.style.display = "none"; }}
-                              />
-                            )}
+                            <div className="relative w-4 h-4 flex-shrink-0">
+                              {trade.logo && (
+                                <img
+                                  src={trade.logo}
+                                  alt={trade.enrichedSymbol || trade.tokenSymbol}
+                                  className="w-4 h-4 rounded-full object-cover"
+                                  onError={(e) => { e.currentTarget.style.display = "none"; }}
+                                />
+                              )}
+                              {!trade.logo && (
+                                <div className="w-4 h-4 rounded-full bg-gradient-to-br from-primary/30 to-primary/10 flex items-center justify-center text-[8px] font-bold text-primary/70">
+                                  {(trade.enrichedSymbol || trade.tokenSymbol || "?").charAt(0).toUpperCase()}
+                                </div>
+                              )}
+                            </div>
                             {trade.enrichedSymbol || trade.tokenSymbol}
                           </TableCell>
                           <TableCell className="text-right text-xs">
