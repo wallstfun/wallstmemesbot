@@ -2,12 +2,10 @@ const HELIUS_KEY2 = "8ffc1afb-b4e5-494e-852e-f80ec0f5033e"; // Primary (working)
 const HELIUS_KEY1 = "54385120-28ac-4baa-9774-3f7ba8ccd656"; // Fallback
 const HELIUS_V0_URL = "https://api-mainnet.helius-rpc.com/v0";
 
-// Server-side cache: 120s TTL per wallet
 const responseCache = new Map();
-// Rate limit backoff: 180s (3 min) on 429
 const rateLimitStates = new Map();
 let lastRequestTime = 0;
-const MIN_INTERVAL = 2000; // 2s minimum between Helius requests
+const MIN_INTERVAL = 2000;
 
 const delay = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -22,16 +20,14 @@ module.exports = async function handler(req, res) {
   const { walletAddress } = req.body || {};
   if (!walletAddress) { res.status(400).json({ error: "walletAddress is required" }); return; }
 
-  const cacheKey = `tx-${walletAddress}`;
+  const cacheKey = "tx-" + walletAddress;
 
-  // 1. Return cached response if fresh
   const cached = responseCache.get(cacheKey);
   if (cached && cached.expiresAt > Date.now()) {
     res.json(cached.data);
     return;
   }
 
-  // 2. Check if paused due to rate limiting
   const state = rateLimitStates.get(cacheKey);
   if (state && state.pausedUntil > Date.now()) {
     const remaining = Math.ceil((state.pausedUntil - Date.now()) / 1000);
@@ -39,7 +35,6 @@ module.exports = async function handler(req, res) {
     return;
   }
 
-  // 3. Enforce 2s minimum between Helius requests
   const now = Date.now();
   const gap = now - lastRequestTime;
   if (gap < MIN_INTERVAL) await delay(MIN_INTERVAL - gap);
@@ -48,24 +43,24 @@ module.exports = async function handler(req, res) {
   let allRateLimited = true;
 
   for (const key of keys) {
-    const url = `${HELIUS_V0_URL}/addresses/${walletAddress}/transactions?api-key=${key}&limit=200`;
+    // limit=100 is the Helius Enhanced TX API maximum
+    const url = HELIUS_V0_URL + "/addresses/" + walletAddress + "/transactions?api-key=" + key + "&limit=100";
     try {
       lastRequestTime = Date.now();
       const r = await fetch(url);
       if (r.ok) {
         rateLimitStates.delete(cacheKey);
         const data = await r.json();
-        responseCache.set(cacheKey, { data, expiresAt: Date.now() + 120000 }); // cache 120s
+        responseCache.set(cacheKey, { data, expiresAt: Date.now() + 120000 });
         res.json(data);
         return;
       }
       if (r.status === 429 || r.status === 401) {
-        console.warn(`[helius-tx] Key ...${key.slice(-6)} returned ${r.status}. Trying next...`);
         await delay(300);
         continue;
       }
       allRateLimited = false;
-      res.status(r.status).json({ error: `Helius returned ${r.status}` });
+      res.status(r.status).json({ error: "Helius returned " + r.status });
       return;
     } catch (err) {
       allRateLimited = false;
@@ -75,7 +70,7 @@ module.exports = async function handler(req, res) {
   }
 
   if (allRateLimited) {
-    rateLimitStates.set(cacheKey, { pausedUntil: Date.now() + 180000 }); // 3 min backoff
+    rateLimitStates.set(cacheKey, { pausedUntil: Date.now() + 180000 });
     res.status(429).json({ error: "Both API keys rate-limited", retryAfter: 180 });
   }
 };

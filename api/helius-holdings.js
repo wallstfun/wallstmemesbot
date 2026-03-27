@@ -2,6 +2,7 @@ const ALCHEMY_URL = "https://solana-mainnet.g.alchemy.com/v2/9vePK8JAvqdzoDs3Q1k
 const DEXSCREENER_URL = "https://api.dexscreener.com/latest/dex/tokens";
 const JUPITER_TOKEN_URL = "https://token.jup.ag/all";
 
+// Returns items in Helius DAS format so the frontend hook can parse correctly
 module.exports = async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
@@ -14,6 +15,7 @@ module.exports = async function handler(req, res) {
   if (!walletAddress) { res.status(400).json({ error: "walletAddress is required" }); return; }
 
   try {
+    // 1. Get token accounts via Alchemy
     const alchemyRes = await fetch(ALCHEMY_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -28,7 +30,7 @@ module.exports = async function handler(req, res) {
       }),
     });
 
-    if (!alchemyRes.ok) throw new Error(`Alchemy failed: ${alchemyRes.status}`);
+    if (!alchemyRes.ok) throw new Error("Alchemy failed: " + alchemyRes.status);
     const alchemyData = await alchemyRes.json();
     if (alchemyData.error) throw new Error(alchemyData.error.message);
 
@@ -38,15 +40,16 @@ module.exports = async function handler(req, res) {
         const info = acc?.account?.data?.parsed?.info;
         return info ? {
           mint: info.mint,
-          balance: info.tokenAmount?.uiAmount ?? 0,
+          rawAmount: Number(info.tokenAmount?.amount ?? 0),
           decimals: info.tokenAmount?.decimals ?? 0,
-          rawAmount: info.tokenAmount?.amount ?? "0",
+          uiAmount: info.tokenAmount?.uiAmount ?? 0,
         } : null;
       })
-      .filter((t) => t && t.balance > 0);
+      .filter((t) => t && t.uiAmount > 0);
 
     if (tokens.length === 0) { res.json({ items: [] }); return; }
 
+    // 2. Fetch Jupiter token metadata for symbols/names/logos
     let jupTokenMap = {};
     try {
       const jupRes = await fetch(JUPITER_TOKEN_URL);
@@ -56,10 +59,11 @@ module.exports = async function handler(req, res) {
       }
     } catch { /* non-fatal */ }
 
+    // 3. Fetch prices from DexScreener
     const mints = tokens.map((t) => t.mint);
     let priceMap = {};
     try {
-      const dexRes = await fetch(`${DEXSCREENER_URL}/${mints.join(",")}`);
+      const dexRes = await fetch(DEXSCREENER_URL + "/" + mints.join(","));
       if (dexRes.ok) {
         const dexData = await dexRes.json();
         (dexData.pairs ?? []).forEach((pair) => {
@@ -70,24 +74,39 @@ module.exports = async function handler(req, res) {
       }
     } catch { /* non-fatal */ }
 
+    // 4. Build response in Helius DAS format (what the frontend hook expects)
     const items = tokens.map((t) => {
       const meta = jupTokenMap[t.mint];
-      const priceUsd = priceMap[t.mint] ?? 0;
+      const pricePerToken = priceMap[t.mint] ?? 0;
+      const totalPrice = t.uiAmount * pricePerToken;
       return {
-        mint: t.mint,
-        symbol: meta?.symbol ?? t.mint.slice(0, 6),
-        name: meta?.name ?? "Unknown Token",
-        logo: meta?.logoURI ?? null,
-        balance: t.balance,
-        decimals: t.decimals,
-        priceUsd,
-        valueUsd: t.balance * priceUsd,
+        id: t.mint,
+        interface: "FungibleToken",
+        token_info: {
+          symbol: meta?.symbol ?? t.mint.slice(0, 6),
+          decimals: t.decimals,
+          balance: t.rawAmount,  // raw lamport-style amount (hook divides by 10^decimals)
+          price_info: pricePerToken > 0 ? {
+            price_per_token: pricePerToken,
+            total_price: totalPrice,
+          } : undefined,
+        },
+        content: {
+          metadata: {
+            name: meta?.name ?? "Unknown Token",
+            symbol: meta?.symbol ?? t.mint.slice(0, 6),
+          },
+          links: {
+            image: meta?.logoURI ?? null,
+          },
+        },
       };
     });
 
     res.json({ items });
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Unknown error";
+    console.error("[helius-holdings]", msg);
     res.status(500).json({ error: "Failed to fetch holdings", message: msg });
   }
 };

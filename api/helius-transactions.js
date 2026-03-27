@@ -20,7 +20,7 @@ module.exports = async function handler(req, res) {
   const { walletAddress } = req.body || {};
   if (!walletAddress) { res.status(400).json({ error: "walletAddress is required" }); return; }
 
-  const cacheKey = `tx-${walletAddress}`;
+  const cacheKey = "tx-" + walletAddress;
 
   const cached = responseCache.get(cacheKey);
   if (cached && cached.expiresAt > Date.now()) {
@@ -43,7 +43,8 @@ module.exports = async function handler(req, res) {
   let allRateLimited = true;
 
   for (const key of keys) {
-    const url = `${HELIUS_V0_URL}/addresses/${walletAddress}/transactions?api-key=${key}&limit=200`;
+    // limit=100 is the Helius Enhanced TX API maximum
+    const url = HELIUS_V0_URL + "/addresses/" + walletAddress + "/transactions?api-key=" + key + "&limit=100";
     try {
       lastRequestTime = Date.now();
       const r = await fetch(url);
@@ -59,7 +60,7 @@ module.exports = async function handler(req, res) {
         continue;
       }
       allRateLimited = false;
-      res.status(r.status).json({ error: `Helius returned ${r.status}` });
+      res.status(r.status).json({ error: "Helius returned " + r.status });
       return;
     } catch (err) {
       allRateLimited = false;
