@@ -33,7 +33,7 @@ function TweetCard({ tweet }: { tweet: DisplayTweet }) {
           <div className="flex items-center gap-2.5">
             <img
               src={`${import.meta.env.BASE_URL}images/agent-avatar.jpg`}
-              alt="WallStSmith"
+              alt="W.S. Smith"
               className="w-9 h-9 rounded-full border border-primary/20 object-cover"
               onError={(e) => { e.currentTarget.style.display = "none"; }}
             />
@@ -154,7 +154,7 @@ export default function XFeedPage() {
           </div>
 
           <div>
-            <h3 className="font-serif font-bold text-lg text-foreground mb-1">WallStSmith is analyzing the market</h3>
+            <h3 className="font-serif font-bold text-lg text-foreground mb-1">W.S. Smith is analyzing the market</h3>
             <p className="text-muted-foreground text-sm max-w-sm">
               The agent is active on X. Posts will appear here.
             </p>

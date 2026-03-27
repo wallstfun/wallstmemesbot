@@ -52657,6 +52657,12 @@ var KNOWN_TOKENS = {
     symbol: "SOL",
     name: "Solana",
     logoURI: "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png"
+  },
+  // PIGEON token
+  "4fSWEw2wbYEUCcMtitzmeGUfqinoafXxkhqZrA9Gpump": {
+    symbol: "PIGEON",
+    name: "Pigeon Token",
+    logoURI: ""
   }
 };
 router6.post("/helius-holdings", async (req, res) => {
@@ -52688,17 +52694,28 @@ router6.post("/helius-holdings", async (req, res) => {
       throw new Error(`Alchemy RPC error: ${alchemyData.error.message}`);
     }
     const accounts = alchemyData.result?.value ?? [];
+    console.log(`[holdings] Alchemy returned ${accounts.length} token accounts`);
     const tokenAccounts = accounts.map((acc) => {
       const info = acc.account?.data?.parsed?.info;
       if (!info) return null;
       const uiAmount = info.tokenAmount?.uiAmount ?? 0;
-      if (uiAmount <= 0) return null;
+      const mint = info.mint;
+      if (uiAmount <= 0) {
+        if (mint === "4fSWEw2wbYEUCcMtitzmeGUfqinoafXxkhqZrA9Gpump") {
+          console.log(`[holdings] PIGEON (${mint}): uiAmount=${uiAmount}, FILTERED OUT`);
+        }
+        return null;
+      }
+      if (mint === "4fSWEw2wbYEUCcMtitzmeGUfqinoafXxkhqZrA9Gpump") {
+        console.log(`[holdings] PIGEON found: uiAmount=${uiAmount}, decimals=${info.tokenAmount?.decimals}`);
+      }
       return {
-        mint: info.mint,
+        mint,
         balance: uiAmount,
         decimals: info.tokenAmount?.decimals ?? 0
       };
     }).filter((t) => t !== null);
+    console.log(`[holdings] After filtering: ${tokenAccounts.length} tokens`);
     if (tokenAccounts.length === 0) {
       res.json({ items: [] });
       return;

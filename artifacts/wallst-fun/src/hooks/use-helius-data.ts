@@ -177,7 +177,11 @@ export function useRealTransactions() {
                 const receivedRawAmount = Number(receivedToken.tokenAmount ?? 0);
                 const receivedDecimals = Number(receivedToken.decimals ?? 0);
                 const receivedAmount = receivedRawAmount / Math.pow(10, receivedDecimals);
+                // Symbol: Helius metadata → known map → mint (auto-fetches from Jupiter at holdings time)
                 const receivedSymbol = receivedToken.tokenSymbol || KNOWN_TOKEN_SYMBOLS[receivedMint] || receivedMint.slice(0, 6).toUpperCase();
+                if (!receivedToken.tokenSymbol && receivedMint !== SOL_MINT) {
+                  console.log(`[parse] ${sig}: New token detected: ${receivedMint.slice(0, 8)}... (will fetch symbol from holdings API)`);
+                }
                 
                 // SIMPLE RULE: 
                 // - If receiving STABLECOIN → SELL the token that was sent
@@ -205,6 +209,9 @@ export function useRealTransactions() {
                     const decimals = Number(sentToken.decimals ?? 0);
                     tokenAmount = rawAmount / Math.pow(10, decimals);
                     tokenSymbol = sentToken.tokenSymbol || KNOWN_TOKEN_SYMBOLS[tokenMint] || tokenMint.slice(0, 6).toUpperCase();
+                    if (!sentToken.tokenSymbol && !KNOWN_TOKEN_SYMBOLS[tokenMint]) {
+                      console.log(`[parse] ${sig}: New token detected (sent): ${tokenMint.slice(0, 8)}... (will fetch symbol from holdings API)`);
+                    }
                     solAmount = receivedAmount; // stablecoin amount as ref
                     console.log(`[parse] ${sig}: SELL ${tokenSymbol}: ${tokenAmount} for ${receivedAmount.toFixed(4)} ${receivedSymbol}`);
                   } else {
@@ -230,6 +237,9 @@ export function useRealTransactions() {
                     const decimals = Number(sentToken.decimals ?? 0);
                     tokenAmount = rawAmount / Math.pow(10, decimals);
                     tokenSymbol = sentToken.tokenSymbol || KNOWN_TOKEN_SYMBOLS[tokenMint] || tokenMint.slice(0, 6).toUpperCase();
+                    if (!sentToken.tokenSymbol && !KNOWN_TOKEN_SYMBOLS[tokenMint]) {
+                      console.log(`[parse] ${sig}: New token detected (sold for SOL): ${tokenMint.slice(0, 8)}... (will fetch symbol from holdings API)`);
+                    }
                     solAmount = receivedAmount;
                     console.log(`[parse] ${sig}: SELL ${tokenSymbol}: ${tokenAmount} for ${receivedAmount.toFixed(4)} SOL`);
                   } else {
@@ -512,9 +522,16 @@ export function useTokenHoldings() {
             const meta = item.content?.metadata || {};
             const decimals = ti.decimals ?? 0;
             const balance = (ti.balance ?? 0) / Math.pow(10, decimals);
+            
+            // Symbol resolution: API symbol → known map → fallback to mint
+            let symbol = ti.symbol || meta.symbol;
+            if (!symbol) {
+              symbol = KNOWN_TOKEN_SYMBOLS[item.id] || item.id.slice(0, 6).toUpperCase();
+            }
+            
             return {
               mint: item.id,
-              symbol: ti.symbol || meta.symbol || item.id.slice(0, 5).toUpperCase(),
+              symbol,
               name: meta.name || ti.name || "Unknown Token",
               logo: item.content?.links?.image || undefined,
               balance,

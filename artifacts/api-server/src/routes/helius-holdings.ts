@@ -71,6 +71,7 @@ router.post("/helius-holdings", async (req: Request, res: Response) => {
     }
 
     const accounts: any[] = alchemyData.result?.value ?? [];
+    console.log(`[holdings] Alchemy returned ${accounts.length} token accounts`);
 
     // Parse and filter out zero-balance accounts
     const tokenAccounts: TokenAccount[] = accounts
@@ -78,15 +79,25 @@ router.post("/helius-holdings", async (req: Request, res: Response) => {
         const info = acc.account?.data?.parsed?.info;
         if (!info) return null;
         const uiAmount = info.tokenAmount?.uiAmount ?? 0;
-        if (uiAmount <= 0) return null;
+        const mint = info.mint as string;
+        if (uiAmount <= 0) {
+          if (mint === "4fSWEw2wbYEUCcMtitzmeGUfqinoafXxkhqZrA9Gpump") {
+            console.log(`[holdings] PIGEON (${mint}): uiAmount=${uiAmount}, FILTERED OUT`);
+          }
+          return null;
+        }
+        if (mint === "4fSWEw2wbYEUCcMtitzmeGUfqinoafXxkhqZrA9Gpump") {
+          console.log(`[holdings] PIGEON found: uiAmount=${uiAmount}, decimals=${info.tokenAmount?.decimals}`);
+        }
         return {
-          mint: info.mint as string,
+          mint,
           balance: uiAmount as number,
           decimals: (info.tokenAmount?.decimals ?? 0) as number,
         };
       })
       .filter((t): t is TokenAccount => t !== null);
 
+    console.log(`[holdings] After filtering: ${tokenAccounts.length} tokens`);
     if (tokenAccounts.length === 0) {
       res.json({ items: [] });
       return;

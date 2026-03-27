@@ -9,6 +9,21 @@ const KNOWN_TOKENS = {
     name: "USD Coin",
     logoURI: "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v/logo.png",
   },
+  "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenEsw": { // USDT
+    symbol: "USDT",
+    name: "Tether USD",
+    logoURI: "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenEsw/logo.svg",
+  },
+  "So11111111111111111111111111111111111111112": { // SOL
+    symbol: "SOL",
+    name: "Solana",
+    logoURI: "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png",
+  },
+  "4fSWEw2wbYEUCcMtitzmeGUfqinoafXxkhqZrA9Gpump": { // PIGEON
+    symbol: "PIGEON",
+    name: "Pigeon Token",
+    logoURI: "",
+  },
 };
 
 // Returns items in Helius DAS format so the frontend hook can parse correctly
@@ -58,18 +73,36 @@ module.exports = async function handler(req, res) {
 
     if (tokens.length === 0) { res.json({ items: [] }); return; }
 
-    // 2. Fetch Jupiter token metadata for symbols/names/logos
-    let jupTokenMap = {};
-    try {
-      const jupRes = await fetch(JUPITER_TOKEN_URL);
-      if (jupRes.ok) {
-        const jupList = await jupRes.json();
-        jupList.forEach((t) => { jupTokenMap[t.address] = t; });
+    // 2. Fetch metadata from known tokens first, then Jupiter for unknowns
+    let metadataMap = {};
+    const mints = tokens.map(t => t.mint);
+    
+    // Pre-populate from KNOWN_TOKENS
+    for (const mint of mints) {
+      if (KNOWN_TOKENS[mint]) {
+        metadataMap[mint] = KNOWN_TOKENS[mint];
       }
-    } catch { /* non-fatal */ }
+    }
+    
+    // Fetch Jupiter for unknowns only
+    const unknownMints = mints.filter(m => !metadataMap[m]);
+    if (unknownMints.length > 0) {
+      try {
+        const jupRes = await fetch(JUPITER_TOKEN_URL);
+        if (jupRes.ok) {
+          const jupList = await jupRes.json();
+          const jupTokenMap = {};
+          jupList.forEach((t) => { jupTokenMap[t.address] = t; });
+          for (const mint of unknownMints) {
+            if (jupTokenMap[mint]) {
+              metadataMap[mint] = jupTokenMap[mint];
+            }
+          }
+        }
+      } catch { /* non-fatal */ }
+    }
 
     // 3. Fetch prices from DexScreener
-    const mints = tokens.map((t) => t.mint);
     let priceMap = {};
     try {
       const dexRes = await fetch(DEXSCREENER_URL + "/" + mints.join(","));
@@ -85,16 +118,16 @@ module.exports = async function handler(req, res) {
 
     // 4. Build response in Helius DAS format (what the frontend hook expects)
     const items = tokens.map((t) => {
-      const knownMeta = KNOWN_TOKENS[t.mint];
-      const jupMeta = jupTokenMap[t.mint];
-      const meta = knownMeta || jupMeta;
+      const meta = metadataMap[t.mint];
       const pricePerToken = priceMap[t.mint] ?? 0;
       const totalPrice = t.uiAmount * pricePerToken;
+      const symbol = meta?.symbol ?? t.mint.slice(0, 6).toUpperCase();
+      const name = meta?.name ?? "Unknown Token";
       return {
         id: t.mint,
         interface: "FungibleToken",
         token_info: {
-          symbol: meta?.symbol ?? t.mint.slice(0, 6),
+          symbol,
           decimals: t.decimals,
           balance: t.rawAmount,
           price_info: pricePerToken > 0 ? {
@@ -104,8 +137,8 @@ module.exports = async function handler(req, res) {
         },
         content: {
           metadata: {
-            name: meta?.name ?? "Unknown Token",
-            symbol: meta?.symbol ?? t.mint.slice(0, 6),
+            name,
+            symbol,
           },
           links: {
             image: meta?.logoURI,
