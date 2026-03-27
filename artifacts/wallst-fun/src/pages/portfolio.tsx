@@ -104,9 +104,14 @@ async function fetchTokenMetadata(mint: string): Promise<any> {
     const res = await fetch(`https://api.coingecko.com/api/v3/coins/solana/contract/${mint}`, { signal: AbortSignal.timeout(5000) });
     if (res.ok) {
       const data = await res.json();
-      if (data.image?.large || data.image?.small) {
-        metadata.logoURI = data.image.large || data.image.small;
-        console.log(`[metadata] CoinGecko success for ${mint}: logo found`);
+      // CoinGecko has: symbol (uppercase), name, image.large/small
+      if (data.symbol || data.name || data.image?.large || data.image?.small) {
+        metadata = {
+          symbol: data.symbol?.toUpperCase() || metadata.symbol,
+          name: data.name || metadata.name,
+          logoURI: data.image?.large || data.image?.small || undefined,
+        };
+        console.log(`[metadata] CoinGecko success for ${mint}: symbol=${metadata.symbol}, name=${metadata.name}, logo=${metadata.logoURI ? "found" : "missing"}`);
         metadataCache.set(mint, metadata);
         return metadata;
       }
@@ -302,26 +307,33 @@ export default function PortfolioPage() {
       
       // Enrich holdings with metadata and prices
       const enriched = merged.map((h, i) => {
-        // Prefer original symbol from trade unless Jupiter returned a clearly superior name
-        // (i.e., not a mint-based fallback like "4FSWEW")
         const metaSymbol = metadataResults[i]?.symbol;
-        const isMetadataFallback = metaSymbol && /^[A-Z0-9]{6}$/.test(metaSymbol) && 
-                                  metaSymbol === h.mint.slice(0, 6).toUpperCase();
-        const symbol = !isMetadataFallback && metaSymbol ? metaSymbol : h.symbol;
+        const metaName = metadataResults[i]?.name;
         const logo = metadataResults[i]?.logoURI || h.logo;
         const price = pricesResult[h.mint];
         const value = price && price > 0 ? h.balance * price : undefined;
+        
+        // Symbol selection strategy:
+        // 1. If metadata has a real symbol (not a 6-char mint prefix), use it (e.g., from CoinGecko)
+        // 2. Otherwise, use trade-derived symbol if available
+        // 3. Fallback to mint prefix
+        const isMintDerivedSymbol = metaSymbol && /^[A-Z0-9]{6}$/.test(metaSymbol) && 
+                                    metaSymbol === h.mint.slice(0, 6).toUpperCase();
+        const symbol = !isMintDerivedSymbol && metaSymbol ? metaSymbol : (h.symbol || metaSymbol || "???");
+        
+        // Name selection: prefer metadata, fallback to trade symbol or "Unknown Token"
+        const name = metaName && metaName !== "Unknown Token" ? metaName : (h.name || "Unknown Token");
         
         // Log detailed enrichment info with price and value
         const priceStr = price ? `$${price.toFixed(6)}` : "N/A";
         const valueStr = value ? `$${value.toFixed(2)}` : "N/A";
         const logoStr = logo ? "✓" : "✗";
-        console.log(`[portfolio] ${symbol}: balance=${h.balance}, price=${priceStr}, value=${valueStr}, logo=${logoStr}`);
+        console.log(`[portfolio] ${symbol} (${name}): balance=${h.balance}, price=${priceStr}, value=${valueStr}, logo=${logoStr}`);
         
         return {
           ...h,
           symbol,
-          name: metadataResults[i]?.name || h.name,
+          name,
           logo,
           priceUsd: price,
           valueUsd: value,
