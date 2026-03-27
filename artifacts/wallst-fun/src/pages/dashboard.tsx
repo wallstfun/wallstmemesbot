@@ -265,22 +265,16 @@ function DashboardContent() {
         
         <div className="relative z-10 bg-background/50 backdrop-blur-sm border border-border p-6 rounded-xl min-w-[280px]">
           <div className="text-sm font-medium text-muted-foreground flex items-center justify-between">
-            CURRENT PORTFOLIO VALUE
+            CURRENT SOL BALANCE
             <Wallet className="w-4 h-4 text-primary" />
           </div>
-          <div className="text-4xl font-bold mt-2 font-mono flex items-baseline gap-2">
+          <div className="text-4xl font-bold mt-2 font-mono">
             {solBalanceLoading ? (
               <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
             ) : (
               (solBalance ?? 0).toFixed(4)
             )}
-            <span className="text-lg text-muted-foreground font-sans">SOL</span>
           </div>
-          {totalUsdValue > 0 && (
-            <div className="text-xs font-mono text-muted-foreground mt-1">
-              [{totalUsdValue.toFixed(2)} USD] Total Value
-            </div>
-          )}
           <div className="text-xs text-gains font-mono mt-2 flex items-center gap-1">
             ● Helius Mainnet · live
           </div>
