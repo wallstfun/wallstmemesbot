@@ -18,13 +18,21 @@ localPort = 23153
 run = "pnpm --filter @workspace/wallst-fun run dev"
 
 [services.production]
-build = [ "pnpm", "--filter", "@workspace/wallst-fun", "run", "build" ]
-publicDir = "artifacts/wallst-fun/dist/public"
-serve = "static"
 
-[[services.production.rewrites]]
-from = "/*"
-to = "/index.html"
+[services.production.build]
+args = ["pnpm", "--filter", "@workspace/wallst-fun", "run", "build"]
+
+[services.production.build.env]
+NODE_ENV = "production"
+
+[services.production.run]
+args = ["pnpm", "--filter", "@workspace/wallst-fun", "run", "start"]
+
+[services.production.run.env]
+NODE_ENV = "production"
+
+[services.production.health.startup]
+path = "/api/health"
 
 [services.env]
 PORT = "23153"
