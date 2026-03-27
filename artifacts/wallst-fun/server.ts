@@ -90,7 +90,7 @@ app.post("/api/helius-transactions", async (req, res) => {
     for (let attempt = 0; attempt < 2; attempt++) {
       const key = keys[txKeyIndex];
       txKeyIndex = (txKeyIndex + 1) % 2;
-      const url = `${HELIUS_V0_URL}/addresses/${walletAddress}/transactions?api-key=${key}&type=SWAP&limit=50`;
+      const url = `${HELIUS_V0_URL}/addresses/${walletAddress}/transactions?api-key=${key}&limit=100`;
       try {
         const r = await fetch(url);
         lastStatus = r.status;
