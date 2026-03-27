@@ -51,7 +51,7 @@ module.exports = async function handler(req, res) {
       if (r.ok) {
         rateLimitStates.delete(cacheKey);
         const data = await r.json();
-        responseCache.set(cacheKey, { data, expiresAt: Date.now() + 120000 });
+        responseCache.set(cacheKey, { data, expiresAt: Date.now() + 30000 }); // 30s cache for fresh data
         res.json(data);
         return;
       }

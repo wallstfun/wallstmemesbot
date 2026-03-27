@@ -67,8 +67,8 @@ router.post("/helius-transactions", async (req: Request, res: Response) => {
         if (response.ok) {
           rateLimitStates.delete(cacheKey);
           const data = await response.json();
-          // Cache for 120 seconds
-          responseCache.set(cacheKey, { data, expiresAt: Date.now() + 120000 });
+          // Cache for 30 seconds (balance freshness vs rate limits)
+          responseCache.set(cacheKey, { data, expiresAt: Date.now() + 30000 });
           res.json(data);
           return;
         }
