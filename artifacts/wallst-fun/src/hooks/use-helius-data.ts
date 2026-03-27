@@ -3,10 +3,17 @@ import { useState, useEffect, useCallback, useRef } from "react";
 export const AGENT_WALLET = "Hw7yc27h6Lws6YsQmdLoj4M7psyFHRhosFwoGuSESmTh";
 
 // Known stablecoin mints (USDC, USDT, etc.)
+// Note: Used for stablecoin→SOL swap detection (when no incoming tokens found)
 const STABLECOIN_MINTS = [
-  "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", // USDC
-  "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenEsw", // USDT
+  "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", // USDC (6 decimals)
+  "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenEsw", // USDT (6 decimals)
 ];
+
+// Stablecoin decimals mapping for safe amount calculations
+const STABLECOIN_DECIMALS: Record<string, number> = {
+  "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v": 6, // USDC
+  "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenEsw": 6, // USDT
+};
 
 // Known token symbols for common mints
 const KNOWN_TOKEN_SYMBOLS: Record<string, string> = {
@@ -211,13 +218,22 @@ export function useRealTransactions() {
                   });
                   
                   if (sentStable) {
-                    // tokenAmount from Helius is already UI-decimalized (not raw)
-                    // For USDC/USDT (6 decimals): tokenAmount is already divided by 1e6
+                    // IMPORTANT: Helius returns tokenAmount in UI-decimalized form
+                    // (e.g., USDC with 6 decimals returns 95.46, not 95460000)
+                    // This is verified by the tokenAmount value directly matching the UI representation
+                    const mint = sentStable.tokenAddress || sentStable.mint;
+                    const decimals = sentStable.decimals ?? STABLECOIN_DECIMALS[mint as string] ?? 6;
+                    
+                    // sentStable.tokenAmount is already UI-decimalized from Helius API
                     const sentAmount = Number(sentStable.tokenAmount ?? 0);
                     
+                    // Safety check: if the amount looks raw (> 1e8), it's likely not UI-decimalized
+                    // In that case, divide by 10^decimals
+                    const uiAmount = sentAmount > 1e8 ? sentAmount / Math.pow(10, decimals) : sentAmount;
+                    
                     // Estimate SOL amount based on current rates
-                    // 1 USDC ≈ 0.012 SOL at $83/SOL price
-                    const estimatedSOL = sentAmount * 0.012;
+                    // 1 stablecoin ≈ 0.012 SOL at $83/SOL price (approximate 1:1 value with slippage)
+                    const estimatedSOL = uiAmount * 0.012;
                     
                     if (estimatedSOL > 0) {
                       // Create synthetic "received SOL" token
@@ -228,7 +244,7 @@ export function useRealTransactions() {
                         decimals: 9,
                         tokenSymbol: "SOL",
                       };
-                      console.log(`[parse] ${sig}: INFERRED stablecoin → SOL: sent ${sentAmount.toFixed(2)} ${sentStable.tokenSymbol || "STABLECOIN"}, estimated ~${estimatedSOL.toFixed(4)} SOL received`);
+                      console.log(`[parse] ${sig}: INFERRED stablecoin → SOL: sent ${uiAmount.toFixed(2)} stablecoin, estimated ~${estimatedSOL.toFixed(4)} SOL received`);
                     }
                   }
                 }
