@@ -140,6 +140,11 @@ export function useRealTransactions() {
               console.log(`[parse] ${sig}: Processing without swap event (jupiter=${isJupiter}, transfers=${hasTransfers})`);
               const changes = tx?.tokenTransfers ?? [];
               
+              if (!Array.isArray(changes) || changes.length < 2) {
+                console.log(`[parse] ${sig}: DROPPED - <2 token transfers or not array`);
+                return null;
+              }
+              
               const SOL_MINT = "So11111111111111111111111111111111111111112";
               const WALLET = AGENT_WALLET;
               
@@ -154,36 +159,6 @@ export function useRealTransactions() {
                 const fromAccount = t?.fromUserAccount || t?.from;
                 return fromAccount && fromAccount.toLowerCase() === WALLET.toLowerCase();
               });
-              
-              // Check for native SOL balance changes (not in tokenTransfers array)
-              const nativeBalanceChange = tx?.nativeBalanceChange;
-              if (nativeBalanceChange && nativeBalanceChange !== 0) {
-                // Add synthetic SOL transfer
-                if (nativeBalanceChange > 0) {
-                  // Received SOL
-                  incomingTransfers.push({
-                    mint: SOL_MINT,
-                    tokenAddress: SOL_MINT,
-                    tokenAmount: nativeBalanceChange.toString(),
-                    decimals: 9,
-                    symbol: "SOL",
-                  });
-                } else {
-                  // Sent SOL
-                  outgoingTransfers.push({
-                    mint: SOL_MINT,
-                    tokenAddress: SOL_MINT,
-                    tokenAmount: Math.abs(nativeBalanceChange).toString(),
-                    decimals: 9,
-                    symbol: "SOL",
-                  });
-                }
-              }
-              
-              if (changes.length < 2 && nativeBalanceChange === undefined) {
-                console.log(`[parse] ${sig}: DROPPED - <2 token transfers and no native balance change`);
-                return null;
-              }
               
               console.log(`[parse] ${sig}: Incoming=${incomingTransfers.length}, Outgoing=${outgoingTransfers.length}`);
               
