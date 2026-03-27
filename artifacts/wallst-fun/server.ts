@@ -69,7 +69,6 @@ app.post("/api/alchemy-balance", async (req, res) => {
 // ── POST /api/helius-transactions ─────────────────────────────────────────────
 const txRateLimitStates = new Map<string, { pausedUntil: number }>();
 const txResponseCache = new Map<string, { data: any; expiresAt: number }>();
-const JUPITER_SWAP_API = "https://api.jup.ag/swap/wallet";
 
 app.post("/api/helius-transactions", async (req, res) => {
   try {
@@ -122,26 +121,10 @@ app.post("/api/helius-transactions", async (req, res) => {
       return;
     }
 
-    // Fetch from Jupiter (supplementary) — non-blocking
-    let jupiterData: any[] = [];
-    try {
-      const jupRes = await fetch(`${JUPITER_SWAP_API}/${walletAddress}?limit=100`);
-      if (jupRes.ok) {
-        const jupJson = await jupRes.json();
-        jupiterData = Array.isArray(jupJson) ? jupJson : (jupJson?.swaps ?? []);
-      }
-    } catch (err) {
-      // Non-blocking
-    }
-
-    // Merge: Helius primary, add Jupiter fills not in Helius
-    const heliusSigs = new Set(heliusData.map((tx) => tx.signature).filter(Boolean));
-    const uniqueJupiterTxs = jupiterData.filter((tx) => !heliusSigs.has(tx.signature));
-    const merged = [...heliusData, ...uniqueJupiterTxs];
-
-    // Cache and return
-    txResponseCache.set(cacheKey, { data: merged, expiresAt: Date.now() + 30000 });
-    res.json(merged);
+    // Cache and return Helius data
+    // (Jupiter fills are now parsed on frontend from tokenTransfers)
+    txResponseCache.set(cacheKey, { data: heliusData, expiresAt: Date.now() + 30000 });
+    res.json(heliusData);
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Unknown error";
     res.status(500).json({ error: "Server error", message: msg });

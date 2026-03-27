@@ -1,7 +1,6 @@
 const HELIUS_KEY2 = "8ffc1afb-b4e5-494e-852e-f80ec0f5033e";
 const HELIUS_KEY1 = "54385120-28ac-4baa-9774-3f7ba8ccd656";
 const HELIUS_V0_URL = "https://api-mainnet.helius-rpc.com/v0";
-const JUPITER_SWAP_API = "https://api.jup.ag/swap/wallet";
 
 const responseCache = new Map();
 const rateLimitStates = new Map();
@@ -23,14 +22,12 @@ module.exports = async function handler(req, res) {
 
   const cacheKey = "tx-" + walletAddress;
 
-  // Check cache
   const cached = responseCache.get(cacheKey);
   if (cached && cached.expiresAt > Date.now()) {
     res.json(cached.data);
     return;
   }
 
-  // Check rate limit
   const state = rateLimitStates.get(cacheKey);
   if (state && state.pausedUntil > Date.now()) {
     const remaining = Math.ceil((state.pausedUntil - Date.now()) / 1000);
@@ -38,68 +35,43 @@ module.exports = async function handler(req, res) {
     return;
   }
 
-  // Throttle Helius requests
   const now = Date.now();
   const gap = now - lastRequestTime;
   if (gap < MIN_INTERVAL) await delay(MIN_INTERVAL - gap);
 
-  try {
-    // 1. Fetch from Helius (primary)
-    let heliusData = [];
-    const keys = [HELIUS_KEY2, HELIUS_KEY1];
-    let allRateLimited = true;
+  const keys = [HELIUS_KEY2, HELIUS_KEY1];
+  let allRateLimited = true;
 
-    for (const key of keys) {
-      const url = HELIUS_V0_URL + "/addresses/" + walletAddress + "/transactions?api-key=" + key + "&limit=100";
-      try {
-        lastRequestTime = Date.now();
-        const r = await fetch(url);
-        if (r.ok) {
-          heliusData = await r.json();
-          rateLimitStates.delete(cacheKey);
-          allRateLimited = false;
-          break;
-        }
-        if (r.status === 429 || r.status === 401) {
-          await delay(300);
-          continue;
-        }
-        allRateLimited = false;
-        break;
-      } catch (err) {
-        // Continue to next key
+  for (const key of keys) {
+    // Helius Enhanced TX API max is 100
+    const url = HELIUS_V0_URL + "/addresses/" + walletAddress + "/transactions?api-key=" + key + "&limit=100";
+    try {
+      lastRequestTime = Date.now();
+      const r = await fetch(url);
+      if (r.ok) {
+        rateLimitStates.delete(cacheKey);
+        const data = await r.json();
+        // Cache for 30 seconds for fresh data
+        responseCache.set(cacheKey, { data, expiresAt: Date.now() + 30000 });
+        res.json(data);
+        return;
       }
-    }
-
-    if (allRateLimited) {
-      rateLimitStates.set(cacheKey, { pausedUntil: Date.now() + 180000 });
-      res.status(429).json({ error: "Both API keys rate-limited", retryAfter: 180 });
+      if (r.status === 429 || r.status === 401) {
+        await delay(300);
+        continue;
+      }
+      allRateLimited = false;
+      res.status(r.status).json({ error: "Helius returned " + r.status });
+      return;
+    } catch (err) {
+      allRateLimited = false;
+      res.status(500).json({ error: "Fetch error", message: err.message });
       return;
     }
+  }
 
-    // 2. Fetch from Jupiter (supplementary) — non-blocking
-    let jupiterData = [];
-    try {
-      const jupRes = await fetch(JUPITER_SWAP_API + "/" + walletAddress + "?limit=100");
-      if (jupRes.ok) {
-        const jupJson = await jupRes.json();
-        jupiterData = Array.isArray(jupJson) ? jupJson : (jupJson?.swaps ?? []);
-      }
-    } catch (err) {
-      // Jupiter fetch failed — use only Helius data
-    }
-
-    // 3. Merge: Helius primary, add Jupiter fills not in Helius
-    const heliusSigs = new Set(heliusData.map((tx) => tx.signature).filter(Boolean));
-    const uniqueJupiterTxs = jupiterData.filter((tx) => !heliusSigs.has(tx.signature));
-
-    const merged = [...heliusData, ...uniqueJupiterTxs];
-
-    // Cache and return
-    responseCache.set(cacheKey, { data: merged, expiresAt: Date.now() + 30000 });
-    res.json(merged);
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : "Unknown error";
-    res.status(500).json({ error: "Fetch error", message: msg });
+  if (allRateLimited) {
+    rateLimitStates.set(cacheKey, { pausedUntil: Date.now() + 180000 });
+    res.status(429).json({ error: "Both API keys rate-limited", retryAfter: 180 });
   }
 };

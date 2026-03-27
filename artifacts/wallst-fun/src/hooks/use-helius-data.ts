@@ -77,7 +77,11 @@ export function useRealTransactions() {
       const parsed: RealTrade[] = txs
         .map((tx: any) => {
           const swap = tx.events?.swap;
-          if (!swap) return null;
+          
+          // Include Jupiter transactions even without a top-level swap event
+          // Jupiter fill orders might not have the standard swap structure
+          const isJupiter = tx.source === "JUPITER";
+          if (!swap && !isJupiter) return null;
 
           const hasNativeIn = swap.nativeInput && Number(swap.nativeInput.amount) > 0;
           const hasNativeOut = swap.nativeOutput && Number(swap.nativeOutput.amount) > 0;
@@ -91,6 +95,50 @@ export function useRealTransactions() {
           let tokenSymbol = "";
           let solFlow: RealTrade["solFlow"] = "none";
 
+          // For Jupiter fills without swap event, parse from token changes
+          if (!swap && isJupiter) {
+            const changes = tx.tokenTransfers || [];
+            if (changes.length >= 2) {
+              // Assume first is sent, second is received
+              const sent = changes[0];
+              const received = changes[1];
+              
+              // Determine if we're buying or selling
+              if (sent?.tokenAddress === "So11111111111111111111111111111111111111112") {
+                // Sent SOL, received token
+                action = "BUY";
+                solFlow = "out";
+                solAmount = Number(sent?.tokenAmount ?? 0) / 1e9;
+                tokenMint = received?.tokenAddress || "";
+                tokenSymbol = received?.tokenSymbol || received?.tokenAddress?.slice(0, 5) || "";
+                tokenAmount = Number(received?.tokenAmount ?? 0) / Math.pow(10, received?.decimals ?? 0);
+              } else if (received?.tokenAddress === "So11111111111111111111111111111111111111112") {
+                // Sent token, received SOL
+                action = "BUY";
+                solFlow = "in";
+                solAmount = Number(received?.tokenAmount ?? 0) / 1e9;
+                tokenMint = "So11111111111111111111111111111111111111112";
+                tokenSymbol = "SOL";
+                tokenAmount = solAmount;
+                if (sent?.tokenAddress) (tx as any).__sentMint__ = sent.tokenAddress;
+              }
+            }
+            
+            return {
+              signature: tx.signature,
+              timestamp: tx.timestamp,
+              action,
+              tokenMint,
+              tokenSymbol,
+              tokenAmount,
+              solAmount,
+              solFlow,
+            } as RealTrade;
+          }
+          
+          // Standard swap event parsing
+          if (!swap) return null;
+          
           if (hasNativeOut && hasTokenIn) {
             // Received SOL, sent a token (e.g. USDC → SOL, or memecoin → SOL)
             // The asset gained is SOL — always label as BUY SOL
