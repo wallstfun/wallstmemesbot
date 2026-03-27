@@ -96,7 +96,8 @@ export function useRealTransactions() {
           let tokenMint = "";
 
           if (hasNativeIn && hasTokenOut) {
-            action = "BUY";
+            // Sending SOL, receiving token → SELL
+            action = "SELL";
             solAmount = Number(swap.nativeInput.amount) / 1e9;
             const out = swap.tokenOutputs[0];
             tokenMint = out.mint;
@@ -104,7 +105,8 @@ export function useRealTransactions() {
               Number(out.rawTokenAmount?.tokenAmount ?? 0) /
               Math.pow(10, out.rawTokenAmount?.decimals ?? 6);
           } else if (hasNativeOut && hasTokenIn) {
-            action = "SELL";
+            // Receiving SOL, sending token (including stablecoins) → BUY
+            action = "BUY";
             solAmount = Number(swap.nativeOutput.amount) / 1e9;
             const inp = swap.tokenInputs[0];
             tokenMint = inp.mint;
