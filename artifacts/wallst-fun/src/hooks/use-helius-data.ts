@@ -81,7 +81,7 @@ export function useRealTransactions() {
             const sig = tx?.signature?.slice(0, 8) || `tx${idx}`;
             
             // Include Jupiter transactions and any tx with tokenTransfers that look like swaps
-            const isJupiter = tx?.source === "JUPITER";
+            const isJupiter = tx?.source === "JUPITER" || !!swap;
             const hasTransfers = (tx?.tokenTransfers?.length ?? 0) >= 2;
             
             console.log(`[parse] ${sig}: swap=${!!swap}, jupiter=${isJupiter}, transfers=${tx?.tokenTransfers?.length || 0}`);
@@ -194,7 +194,7 @@ export function useRealTransactions() {
                     tokenAmount,
                     solAmount,
                     description: tx?.description ?? "",
-                    source: tx?.source ?? "DEX",
+                    source: swap ? "JUPITER" : (tx?.source ?? "DEX"),
                     txUrl: `https://solscan.io/tx/${sig}`,
                     solFlow,
                     sentMint: (tx as any)?.__sentMint__ || undefined,
@@ -290,7 +290,7 @@ export function useRealTransactions() {
               solAmount,
               tokenAmount,
               description: tx?.description ?? "",
-              source: tx?.source ?? "DEX",
+              source: swap ? "JUPITER" : (tx?.source ?? "DEX"),
               txUrl: `https://solscan.io/tx/${sig}`,
               solFlow,
               sentMint: (tx as any)?.__sentMint__ || undefined,
