@@ -475,7 +475,11 @@ function DashboardContent() {
                   </TableHeader>
                   <TableBody>
                     <AnimatePresence>
-                      {enrichedTrades.slice(0, 8).map((trade) => (
+                      {realTrades.slice(0, 8).map((trade) => {
+                        const enrichedData = enrichedTrades.find(t => t.id === trade.id);
+                        const displaySymbol = enrichedData?.enrichedSymbol || trade.tokenSymbol || "???";
+                        const displayLogo = enrichedData?.logo;
+                        return (
                         <motion.tr
                           key={trade.id}
                           initial={{ opacity: 0, y: -10 }}
@@ -503,21 +507,21 @@ function DashboardContent() {
                           </TableCell>
                           <TableCell className="font-bold flex items-center gap-2">
                             <div className="relative w-4 h-4 flex-shrink-0">
-                              {trade.logo && (
+                              {displayLogo && (
                                 <img
-                                  src={trade.logo}
-                                  alt={trade.enrichedSymbol || trade.tokenSymbol}
+                                  src={displayLogo}
+                                  alt={displaySymbol}
                                   className="w-4 h-4 rounded-full object-cover"
                                   onError={(e) => { e.currentTarget.style.display = "none"; }}
                                 />
                               )}
-                              {!trade.logo && (
+                              {!displayLogo && (
                                 <div className="w-4 h-4 rounded-full bg-gradient-to-br from-primary/30 to-primary/10 flex items-center justify-center text-[8px] font-bold text-primary/70">
-                                  {(trade.enrichedSymbol || trade.tokenSymbol || "?").charAt(0).toUpperCase()}
+                                  {displaySymbol.charAt(0).toUpperCase()}
                                 </div>
                               )}
                             </div>
-                            {trade.enrichedSymbol || trade.tokenSymbol}
+                            {displaySymbol}
                           </TableCell>
                           <TableCell className="text-right text-xs">
                             {trade.solAmount > 0 ? `${trade.solAmount.toFixed(3)}` : '—'}
@@ -533,7 +537,8 @@ function DashboardContent() {
                             </a>
                           </TableCell>
                         </motion.tr>
-                      ))}
+                        );
+                      })}
                     </AnimatePresence>
                   </TableBody>
                 </Table>
