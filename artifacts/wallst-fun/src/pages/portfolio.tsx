@@ -38,10 +38,53 @@ function computeDerivedHoldings(trades: any[]) {
   return Object.fromEntries(Object.entries(holdings).filter(([_, h]) => h.tokenAmount > 0));
 }
 
+// Helper: Fetch token metadata from Jupiter
+async function fetchTokenMetadata(mint: string): Promise<any> {
+  try {
+    const res = await fetch(`https://tokens.jup.ag/token/${mint}`);
+    if (res.ok) {
+      const data = await res.json();
+      return {
+        symbol: data.symbol || mint.slice(0, 6).toUpperCase(),
+        name: data.name || "Unknown Token",
+        logoURI: data.logoURI || undefined,
+      };
+    }
+  } catch {}
+  
+  return {
+    symbol: mint.slice(0, 6).toUpperCase(),
+    name: "Unknown Token",
+    logoURI: undefined,
+  };
+}
+
+// Helper: Fetch prices from Jupiter
+async function fetchTokenPrices(mints: string[]): Promise<Record<string, number>> {
+  if (mints.length === 0) return {};
+  
+  try {
+    const res = await fetch(`https://price.jup.ag/v6/price?ids=${mints.join(",")}`);
+    if (res.ok) {
+      const data = await res.json();
+      const prices: Record<string, number> = {};
+      if (data.data) {
+        Object.entries(data.data).forEach(([mint, info]: [string, any]) => {
+          prices[mint] = parseFloat(info.price ?? "0");
+        });
+      }
+      return prices;
+    }
+  } catch {}
+  
+  return {};
+}
+
 export default function PortfolioPage() {
   const { balance: solBalance, loading: solLoading, error: solError, refresh: refreshSol } = useWalletSolBalance();
   const { holdings, loading: holdingsLoading, error: holdingsError, refresh: refreshHoldings } = useTokenHoldings();
   const { trades, loading: tradesLoading } = useRealTransactions();
+  const [enrichedHoldings, setEnrichedHoldings] = useState<any[]>([]);
 
   const refresh = () => { refreshSol(); refreshHoldings(); };
 
@@ -71,39 +114,79 @@ export default function PortfolioPage() {
 
   const solUsdValue = (solBalance ?? 0) * solPrice;
 
-  // Merge API holdings with derived holdings from trades
-  const mergedHoldings = useMemo(() => {
-    console.log('[portfolio] Holdings from API:', holdings);
-    console.log('[portfolio] Trades from API:', trades);
+  // Merge API holdings with derived holdings from trades + enrich metadata
+  useEffect(() => {
+    const enrichHoldings = async () => {
+      console.log('[portfolio] Holdings from API:', holdings);
+      console.log('[portfolio] Trades from API:', trades);
+      
+      const derivedHoldings = computeDerivedHoldings(trades);
+      console.log('[portfolio] Derived holdings:', derivedHoldings);
+      
+      // Start with API holdings
+      let merged = [...holdings];
+      
+      // Add/merge derived holdings (excluding SOL, which we handle natively)
+      const SOL_MINT = "So11111111111111111111111111111111111111112";
+      Object.entries(derivedHoldings).forEach(([mint, derived]) => {
+        // Skip native SOL in token holdings
+        if (mint === SOL_MINT) return;
+        
+        const existing = merged.find(h => h.mint === mint);
+        if (!existing) {
+          // Add new token from derived
+          merged.push({
+            mint,
+            symbol: derived.tokenSymbol,
+            name: derived.tokenSymbol,
+            balance: derived.tokenAmount,
+            decimals: 0,
+            logo: undefined,
+            priceUsd: undefined,
+            valueUsd: undefined,
+          });
+        }
+      });
+      
+      // Filter out SOL from token holdings (deduplicate)
+      merged = merged.filter(h => h.mint !== SOL_MINT);
+      
+      console.log('[portfolio] After deduplication:', merged);
+      
+      // Fetch metadata and prices for all tokens
+      const mints = merged.map(h => h.mint);
+      const [pricesResult, ...metadataResults] = await Promise.all([
+        fetchTokenPrices(mints),
+        ...mints.map(mint => fetchTokenMetadata(mint)),
+      ]);
+      
+      // Enrich holdings with metadata and prices
+      const enriched = merged.map((h, i) => {
+        // Prefer original symbol from trade unless Jupiter returned a clearly superior name
+        // (i.e., not a mint-based fallback like "4FSWEW")
+        const metaSymbol = metadataResults[i]?.symbol;
+        const isMetadataFallback = metaSymbol && /^[A-Z0-9]{6}$/.test(metaSymbol) && 
+                                  metaSymbol === h.mint.slice(0, 6).toUpperCase();
+        const symbol = !isMetadataFallback && metaSymbol ? metaSymbol : h.symbol;
+        
+        return {
+          ...h,
+          symbol,
+          name: metadataResults[i]?.name || h.name,
+          logo: metadataResults[i]?.logoURI || h.logo,
+          priceUsd: pricesResult[h.mint] ?? undefined,
+          valueUsd: (pricesResult[h.mint] ?? 0) > 0 ? h.balance * (pricesResult[h.mint] ?? 0) : undefined,
+        };
+      });
+      
+      console.log('[portfolio] Enriched holdings:', enriched);
+      setEnrichedHoldings(enriched);
+    };
     
-    const derivedHoldings = computeDerivedHoldings(trades);
-    console.log('[portfolio] Derived holdings:', derivedHoldings);
-    
-    // Start with API holdings
-    let merged = [...holdings];
-    
-    // Add/merge derived holdings
-    Object.entries(derivedHoldings).forEach(([mint, derived]) => {
-      const existing = merged.find(h => h.mint === mint);
-      if (!existing) {
-        // Add new token from derived
-        merged.push({
-          mint,
-          symbol: derived.tokenSymbol,
-          name: derived.tokenSymbol,
-          balance: derived.tokenAmount,
-          decimals: 0,
-          logo: undefined,
-          priceUsd: undefined,
-          valueUsd: undefined,
-        });
-      }
-      // If exists in API, use API data (it has better metadata)
-    });
-    
-    console.log('[portfolio] Final merged holdings:', merged);
-    return merged;
+    enrichHoldings();
   }, [holdings, trades]);
+
+  const mergedHoldings = enrichedHoldings;
 
   // Build pie chart data from merged holdings + SOL
   const pieData = useMemo(() => {
