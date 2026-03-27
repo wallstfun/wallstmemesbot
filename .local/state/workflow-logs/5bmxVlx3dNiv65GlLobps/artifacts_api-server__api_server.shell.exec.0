@@ -1,0 +1,1683 @@
+
+> @workspace/api-server@0.0.0 dev /home/runner/workspace/artifacts/api-server
+> export NODE_ENV=development && pnpm run build && pnpm run start
+
+
+> @workspace/api-server@0.0.0 build /home/runner/workspace/artifacts/api-server
+> node ./build.mjs
+
+
+  [37mdist/[0m[1mindex.mjs[0m                       [33m2.9mb ⚠️[0m
+  [37mdist/[0m[1mpino-worker.mjs[0m               [36m153.4kb[0m
+  [37mdist/[0m[1mpino-file.mjs[0m                 [36m142.1kb[0m
+  [37mdist/[0m[1mpino-pretty.mjs[0m               [36m114.6kb[0m
+  [37mdist/[0m[1mthread-stream-worker.mjs[0m        [36m7.3kb[0m
+  [37mdist/[0m[1mindex.mjs.map[0m                   [36m4.8mb[0m
+  [37mdist/[0m[1mpino-worker.mjs.map[0m           [36m256.9kb[0m
+  [37mdist/[0m[1mpino-file.mjs.map[0m             [36m229.0kb[0m
+  [37mdist/[0m[1mpino-pretty.mjs.map[0m           [36m203.9kb[0m
+  [37mdist/[0m[1mthread-stream-worker.mjs.map[0m   [36m12.0kb[0m
+
+⚡ [32mDone in 409ms[0m
+
+> @workspace/api-server@0.0.0 start /home/runner/workspace/artifacts/api-server
+> node --enable-source-maps ./dist/index.mjs
+
+(node:19640) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+(node:19640) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+[06:08:40.019] [32mINFO[39m (19640): [36mServer listening[39m
+    [35mport[39m: 8080
+[06:08:40.019] [32mINFO[39m (19640): [36mFetching tweets from @WSSmith[39m
+[06:08:40.020] [32mINFO[39m (19640): [36mTwitter scraper: using guest auth (add X_TWITTER_AUTH_TOKEN + X_TWITTER_CT0 secrets for better access)[39m
+[06:08:40.322] [32mINFO[39m (19640): [36mTweet fetch completed[39m
+    [35mcount[39m: 0
+    [35musingCookies[39m: false
+[06:08:59.404] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 2,
+      "method": "POST",
+      "url": "/api/alchemy-balance"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 115
+[06:08:59.406] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 3,
+      "method": "POST",
+      "url": "/api/alchemy-balance"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 113
+[helius-tx] Helius returned 9 transactions for wallet Hw7yc27h6Lws6YsQmdLoj4M7psyFHRhosFwoGuSESmTh
+[helius-tx] Jupiter fetch failed: 401
+[06:08:59.827] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 1,
+      "method": "POST",
+      "url": "/api/helius-transactions"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 562
+[helius-tx] Helius returned 9 transactions for wallet Hw7yc27h6Lws6YsQmdLoj4M7psyFHRhosFwoGuSESmTh
+[helius-tx] Jupiter fetch failed: 401
+[06:09:01.691] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 4,
+      "method": "POST",
+      "url": "/api/helius-transactions"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 2397
+[06:11:56.697] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 5,
+      "method": "POST",
+      "url": "/api/alchemy-balance"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 121
+[06:11:56.700] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 6,
+      "method": "POST",
+      "url": "/api/alchemy-balance"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 115
+[06:13:40.046] [32mINFO[39m (19640): [36mFetching tweets from @WSSmith[39m
+[helius-tx] Helius returned 9 transactions for wallet Hw7yc27h6Lws6YsQmdLoj4M7psyFHRhosFwoGuSESmTh
+[helius-tx] Jupiter fetch failed: 401
+[06:13:56.843] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 7,
+      "method": "POST",
+      "url": "/api/helius-transactions"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 560
+[helius-tx] Helius returned 9 transactions for wallet Hw7yc27h6Lws6YsQmdLoj4M7psyFHRhosFwoGuSESmTh
+[helius-tx] Jupiter fetch failed: 401
+[06:13:58.700] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 8,
+      "method": "POST",
+      "url": "/api/helius-transactions"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 2415
+[06:14:14.995] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 9,
+      "method": "POST",
+      "url": "/api/helius-transactions"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 1
+[06:14:15.000] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 12,
+      "method": "POST",
+      "url": "/api/helius-transactions"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 1
+[06:14:15.102] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 11,
+      "method": "POST",
+      "url": "/api/alchemy-balance"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 105
+[06:14:15.108] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 10,
+      "method": "POST",
+      "url": "/api/alchemy-balance"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 112
+[06:14:18.046] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 14,
+      "method": "POST",
+      "url": "/api/helius-transactions"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 1
+[06:14:18.106] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 13,
+      "method": "POST",
+      "url": "/api/alchemy-balance"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 64
+[helius-tx] Helius returned 9 transactions for wallet Hw7yc27h6Lws6YsQmdLoj4M7psyFHRhosFwoGuSESmTh
+[helius-tx] Jupiter fetch failed: 401
+[06:15:39.117] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 15,
+      "method": "POST",
+      "url": "/api/alchemy-balance"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 109
+[06:15:39.138] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 17,
+      "method": "POST",
+      "url": "/api/alchemy-balance"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 127
+[06:15:39.648] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 16,
+      "method": "POST",
+      "url": "/api/helius-transactions"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 637
+[helius-tx] Helius returned 9 transactions for wallet Hw7yc27h6Lws6YsQmdLoj4M7psyFHRhosFwoGuSESmTh
+[helius-tx] Jupiter fetch failed: 401
+[06:15:41.425] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 18,
+      "method": "POST",
+      "url": "/api/helius-transactions"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 2414
+[06:17:07.114] [32mINFO[39m (19640): [36mTweet fetch completed[39m
+    [35mcount[39m: 0
+    [35musingCookies[39m: false
+[06:18:36.140] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 19,
+      "method": "POST",
+      "url": "/api/alchemy-balance"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 133
+[06:18:40.049] [32mINFO[39m (19640): [36mFetching tweets from @WSSmith[39m
+[06:18:40.211] [32mINFO[39m (19640): [36mTweet fetch completed[39m
+    [35mcount[39m: 0
+    [35musingCookies[39m: false
+[helius-tx] Helius returned 9 transactions for wallet Hw7yc27h6Lws6YsQmdLoj4M7psyFHRhosFwoGuSESmTh
+[helius-tx] Jupiter fetch failed: 401
+[06:18:42.357] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 20,
+      "method": "POST",
+      "url": "/api/alchemy-balance"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 87
+[06:18:42.847] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 21,
+      "method": "POST",
+      "url": "/api/helius-transactions"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 575
+[06:18:56.491] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 22,
+      "method": "POST",
+      "url": "/api/helius-transactions"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 0
+[06:18:56.494] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 25,
+      "method": "POST",
+      "url": "/api/helius-transactions"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 0
+[06:18:56.587] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 23,
+      "method": "POST",
+      "url": "/api/alchemy-balance"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 96
+[06:18:56.594] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 24,
+      "method": "POST",
+      "url": "/api/alchemy-balance"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 101
+[helius-tx] Helius returned 9 transactions for wallet Hw7yc27h6Lws6YsQmdLoj4M7psyFHRhosFwoGuSESmTh
+[helius-tx] Jupiter fetch failed: 401
+[06:19:20.442] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 26,
+      "method": "POST",
+      "url": "/api/helius-transactions"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 537
+[06:19:33.983] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 28,
+      "method": "POST",
+      "url": "/api/helius-transactions"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 1
+[06:19:34.051] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 27,
+      "method": "POST",
+      "url": "/api/alchemy-balance"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 72
+[06:19:40.431] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 30,
+      "method": "POST",
+      "url": "/api/alchemy-balance"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 95
+[06:19:40.512] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 29,
+      "method": "POST",
+      "url": "/api/helius-holdings"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 178
+[06:19:45.630] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 32,
+      "method": "POST",
+      "url": "/api/helius-transactions"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 0
+[06:19:45.726] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 31,
+      "method": "POST",
+      "url": "/api/alchemy-balance"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 98
+[06:20:39.307] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 35,
+      "method": "POST",
+      "url": "/api/alchemy-balance"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 87
+[06:20:39.309] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 33,
+      "method": "POST",
+      "url": "/api/alchemy-balance"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 92
+[helius-tx] Helius returned 9 transactions for wallet Hw7yc27h6Lws6YsQmdLoj4M7psyFHRhosFwoGuSESmTh
+[helius-tx] Jupiter fetch failed: 401
+[06:20:39.777] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 34,
+      "method": "POST",
+      "url": "/api/helius-transactions"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 559
+[helius-tx] Helius returned 9 transactions for wallet Hw7yc27h6Lws6YsQmdLoj4M7psyFHRhosFwoGuSESmTh
+[helius-tx] Jupiter fetch failed: 401
+[06:20:41.602] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 36,
+      "method": "POST",
+      "url": "/api/helius-transactions"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 2381
+[06:21:31.038] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 38,
+      "method": "POST",
+      "url": "/api/alchemy-balance"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 110
+[06:21:31.111] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 37,
+      "method": "POST",
+      "url": "/api/helius-holdings"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 185
+[helius-tx] Helius returned 9 transactions for wallet Hw7yc27h6Lws6YsQmdLoj4M7psyFHRhosFwoGuSESmTh
+[helius-tx] Jupiter fetch failed: 401
+[06:21:41.500] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 39,
+      "method": "POST",
+      "url": "/api/helius-transactions"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 604
+[06:23:36.325] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 40,
+      "method": "POST",
+      "url": "/api/alchemy-balance"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 103
+[06:23:40.051] [32mINFO[39m (19640): [36mFetching tweets from @WSSmith[39m
+[06:23:40.228] [32mINFO[39m (19640): [36mTweet fetch completed[39m
+    [35mcount[39m: 0
+    [35musingCookies[39m: false
+[helius-tx] Helius returned 9 transactions for wallet Hw7yc27h6Lws6YsQmdLoj4M7psyFHRhosFwoGuSESmTh
+[helius-tx] Jupiter fetch failed: 401
+[06:25:37.588] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 41,
+      "method": "POST",
+      "url": "/api/helius-transactions"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 615
+[06:26:37.395] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 42,
+      "method": "POST",
+      "url": "/api/alchemy-balance"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 121
+[helius-tx] Helius returned 9 transactions for wallet Hw7yc27h6Lws6YsQmdLoj4M7psyFHRhosFwoGuSESmTh
+[helius-tx] Jupiter fetch failed: 401
+[06:26:38.556] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 43,
+      "method": "POST",
+      "url": "/api/helius-transactions"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 594
+[06:28:13.368] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 44,
+      "method": "POST",
+      "url": "/api/alchemy-balance"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 108
+[helius-tx] Helius returned 9 transactions for wallet Hw7yc27h6Lws6YsQmdLoj4M7psyFHRhosFwoGuSESmTh
+[helius-tx] Jupiter fetch failed: 401
+[06:28:14.016] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 45,
+      "method": "POST",
+      "url": "/api/helius-transactions"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 546
+[06:28:40.059] [32mINFO[39m (19640): [36mFetching tweets from @WSSmith[39m
+[06:29:36.335] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 46,
+      "method": "POST",
+      "url": "/api/alchemy-balance"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 114
+[helius-tx] Helius returned 9 transactions for wallet Hw7yc27h6Lws6YsQmdLoj4M7psyFHRhosFwoGuSESmTh
+[helius-tx] Jupiter fetch failed: 401
+[06:29:47.341] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 47,
+      "method": "POST",
+      "url": "/api/alchemy-balance"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 95
+[06:29:47.342] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 50,
+      "method": "POST",
+      "url": "/api/alchemy-balance"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 93
+[06:29:47.800] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 48,
+      "method": "POST",
+      "url": "/api/helius-transactions"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 552
+[helius-tx] Helius returned 9 transactions for wallet Hw7yc27h6Lws6YsQmdLoj4M7psyFHRhosFwoGuSESmTh
+[helius-tx] Jupiter fetch failed: 401
+[06:29:49.667] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 49,
+      "method": "POST",
+      "url": "/api/helius-transactions"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 2418
+[06:29:57.942] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 51,
+      "method": "POST",
+      "url": "/api/helius-transactions"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 1
+[06:29:57.943] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 52,
+      "method": "POST",
+      "url": "/api/helius-transactions"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 1
+[06:29:58.027] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 54,
+      "method": "POST",
+      "url": "/api/alchemy-balance"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 82
+[06:29:58.043] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 53,
+      "method": "POST",
+      "url": "/api/alchemy-balance"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 100
+[06:30:04.566] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 56,
+      "method": "POST",
+      "url": "/api/helius-transactions"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 1
+[06:30:04.568] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 57,
+      "method": "POST",
+      "url": "/api/helius-transactions"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 1
+[06:30:04.636] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 55,
+      "method": "POST",
+      "url": "/api/alchemy-balance"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 73
+[06:30:04.663] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 58,
+      "method": "POST",
+      "url": "/api/alchemy-balance"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 95
+[helius-tx] Helius returned 9 transactions for wallet Hw7yc27h6Lws6YsQmdLoj4M7psyFHRhosFwoGuSESmTh
+[helius-tx] Jupiter fetch failed: 401
+[06:30:37.953] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 62,
+      "method": "POST",
+      "url": "/api/alchemy-balance"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 121
+[06:30:37.953] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 60,
+      "method": "POST",
+      "url": "/api/alchemy-balance"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 122
+[06:30:38.403] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 59,
+      "method": "POST",
+      "url": "/api/helius-transactions"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 574
+[06:30:38.757] [32mINFO[39m (19640): [36mrequest aborted[39m
+    [35mreq[39m: {
+      "id": 61,
+      "method": "POST",
+      "url": "/api/helius-transactions"
+    }
+    [35mres[39m: {
+      "statusCode": null
+    }
+    [35mresponseTime[39m: 925
+[helius-tx] Helius returned 9 transactions for wallet Hw7yc27h6Lws6YsQmdLoj4M7psyFHRhosFwoGuSESmTh
+[helius-tx] Jupiter fetch failed: 401
+[06:30:44.216] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 64,
+      "method": "POST",
+      "url": "/api/helius-transactions"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 1
+[06:30:44.218] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 66,
+      "method": "POST",
+      "url": "/api/helius-transactions"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 1
+[06:30:44.285] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 63,
+      "method": "POST",
+      "url": "/api/alchemy-balance"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 72
+[06:30:44.301] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 65,
+      "method": "POST",
+      "url": "/api/alchemy-balance"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 85
+[06:30:50.323] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 67,
+      "method": "POST",
+      "url": "/api/helius-transactions"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 1
+[helius-tx] Helius returned 9 transactions for wallet Hw7yc27h6Lws6YsQmdLoj4M7psyFHRhosFwoGuSESmTh
+[helius-tx] Jupiter fetch failed: 401
+[06:31:53.369] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 68,
+      "method": "POST",
+      "url": "/api/alchemy-balance"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 100
+[06:31:53.857] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 69,
+      "method": "POST",
+      "url": "/api/helius-transactions"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 586
+[06:32:07.160] [32mINFO[39m (19640): [36mTweet fetch completed[39m
+    [35mcount[39m: 0
+    [35musingCookies[39m: false
+[06:32:17.790] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 70,
+      "method": "POST",
+      "url": "/api/helius-transactions"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 1
+[06:32:17.793] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 72,
+      "method": "POST",
+      "url": "/api/helius-transactions"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 1
+[06:32:17.871] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 71,
+      "method": "POST",
+      "url": "/api/alchemy-balance"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 80
+[06:32:17.892] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 73,
+      "method": "POST",
+      "url": "/api/alchemy-balance"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 99
+[helius-tx] Helius returned 9 transactions for wallet Hw7yc27h6Lws6YsQmdLoj4M7psyFHRhosFwoGuSESmTh
+[helius-tx] Jupiter fetch failed: 401
+[06:32:41.741] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 74,
+      "method": "POST",
+      "url": "/api/helius-transactions"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 569
+[06:33:40.088] [32mINFO[39m (19640): [36mFetching tweets from @WSSmith[39m
+[06:33:40.238] [32mINFO[39m (19640): [36mTweet fetch completed[39m
+    [35mcount[39m: 0
+    [35musingCookies[39m: false
+[06:34:28.440] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 78,
+      "method": "POST",
+      "url": "/api/alchemy-balance"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 104
+[06:34:28.443] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 75,
+      "method": "POST",
+      "url": "/api/alchemy-balance"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 110
+[helius-tx] Helius returned 9 transactions for wallet Hw7yc27h6Lws6YsQmdLoj4M7psyFHRhosFwoGuSESmTh
+[helius-tx] Jupiter fetch failed: 401
+[06:34:28.886] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 76,
+      "method": "POST",
+      "url": "/api/helius-transactions"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 552
+[helius-tx] Helius returned 9 transactions for wallet Hw7yc27h6Lws6YsQmdLoj4M7psyFHRhosFwoGuSESmTh
+[helius-tx] Jupiter fetch failed: 401
+[06:34:30.792] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 77,
+      "method": "POST",
+      "url": "/api/helius-transactions"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 2456
+[06:37:26.106] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 80,
+      "method": "POST",
+      "url": "/api/alchemy-balance"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 132
+[06:37:26.115] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 79,
+      "method": "POST",
+      "url": "/api/alchemy-balance"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 144
+[06:38:40.113] [32mINFO[39m (19640): [36mFetching tweets from @WSSmith[39m
+[06:38:40.279] [32mINFO[39m (19640): [36mTweet fetch completed[39m
+    [35mcount[39m: 0
+    [35musingCookies[39m: false
+[helius-tx] Helius returned 9 transactions for wallet Hw7yc27h6Lws6YsQmdLoj4M7psyFHRhosFwoGuSESmTh
+[helius-tx] Jupiter fetch failed: 401
+[06:39:25.851] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 81,
+      "method": "POST",
+      "url": "/api/helius-transactions"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 518
+[helius-tx] Helius returned 9 transactions for wallet Hw7yc27h6Lws6YsQmdLoj4M7psyFHRhosFwoGuSESmTh
+[helius-tx] Jupiter fetch failed: 401
+[06:39:27.711] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 82,
+      "method": "POST",
+      "url": "/api/helius-transactions"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 2363
+[helius-tx] Helius returned 9 transactions for wallet Hw7yc27h6Lws6YsQmdLoj4M7psyFHRhosFwoGuSESmTh
+[helius-tx] Jupiter fetch failed: 401
+[06:40:13.929] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 83,
+      "method": "POST",
+      "url": "/api/alchemy-balance"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 111
+[06:40:13.942] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 84,
+      "method": "POST",
+      "url": "/api/alchemy-balance"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 123
+[06:40:14.481] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 85,
+      "method": "POST",
+      "url": "/api/helius-transactions"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 661
+[helius-tx] Helius returned 9 transactions for wallet Hw7yc27h6Lws6YsQmdLoj4M7psyFHRhosFwoGuSESmTh
+[helius-tx] Jupiter fetch failed: 401
+[06:40:16.248] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 86,
+      "method": "POST",
+      "url": "/api/helius-transactions"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 2427
+[06:40:24.205] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 88,
+      "method": "POST",
+      "url": "/api/helius-transactions"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 1
+[06:40:24.207] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 89,
+      "method": "POST",
+      "url": "/api/helius-transactions"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 1
+[06:40:24.285] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 87,
+      "method": "POST",
+      "url": "/api/alchemy-balance"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 82
+[06:40:24.296] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 90,
+      "method": "POST",
+      "url": "/api/alchemy-balance"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 89
+[06:40:40.689] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 91,
+      "method": "POST",
+      "url": "/api/helius-transactions"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 0
+[06:43:21.346] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 92,
+      "method": "POST",
+      "url": "/api/alchemy-balance"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 133
+[06:43:40.123] [32mINFO[39m (19640): [36mFetching tweets from @WSSmith[39m
+[06:44:19.065] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 94,
+      "method": "POST",
+      "url": "/api/alchemy-balance"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 93
+[helius-tx] Helius returned 9 transactions for wallet Hw7yc27h6Lws6YsQmdLoj4M7psyFHRhosFwoGuSESmTh
+[helius-tx] Jupiter fetch failed: 401
+[06:44:19.461] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 93,
+      "method": "POST",
+      "url": "/api/helius-transactions"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 491
+[helius-tx] Helius returned 9 transactions for wallet Hw7yc27h6Lws6YsQmdLoj4M7psyFHRhosFwoGuSESmTh
+[helius-tx] Jupiter fetch failed: 401
+[06:44:21.374] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 95,
+      "method": "POST",
+      "url": "/api/helius-transactions"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 2400
+[06:44:24.387] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 97,
+      "method": "POST",
+      "url": "/api/helius-transactions"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 1
+[06:44:24.388] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 98,
+      "method": "POST",
+      "url": "/api/helius-transactions"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 1
+[06:44:24.513] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 96,
+      "method": "POST",
+      "url": "/api/alchemy-balance"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 129
+[06:44:38.626] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 100,
+      "method": "POST",
+      "url": "/api/helius-transactions"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 1
+[06:44:38.627] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 101,
+      "method": "POST",
+      "url": "/api/helius-transactions"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 1
+[06:44:38.702] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 99,
+      "method": "POST",
+      "url": "/api/alchemy-balance"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 78
+[06:44:38.703] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 102,
+      "method": "POST",
+      "url": "/api/alchemy-balance"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 76
+[06:44:48.571] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 103,
+      "method": "POST",
+      "url": "/api/helius-transactions"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 1
+[helius-tx] Helius returned 9 transactions for wallet Hw7yc27h6Lws6YsQmdLoj4M7psyFHRhosFwoGuSESmTh
+[helius-tx] Jupiter fetch failed: 401
+[06:46:30.372] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 106,
+      "method": "POST",
+      "url": "/api/alchemy-balance"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 117
+[06:46:30.861] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 104,
+      "method": "POST",
+      "url": "/api/helius-transactions"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 609
+[helius-tx] Helius returned 9 transactions for wallet Hw7yc27h6Lws6YsQmdLoj4M7psyFHRhosFwoGuSESmTh
+[helius-tx] Jupiter fetch failed: 401
+[06:46:32.671] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 105,
+      "method": "POST",
+      "url": "/api/helius-transactions"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 2417
+[06:46:36.316] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 108,
+      "method": "POST",
+      "url": "/api/helius-transactions"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 1
+[06:46:36.317] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 109,
+      "method": "POST",
+      "url": "/api/helius-transactions"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 1
+[06:46:36.402] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 107,
+      "method": "POST",
+      "url": "/api/alchemy-balance"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 88
+[06:46:42.613] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 110,
+      "method": "POST",
+      "url": "/api/helius-transactions"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 1
+[06:46:42.616] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 112,
+      "method": "POST",
+      "url": "/api/helius-transactions"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 0
+[06:46:42.703] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 111,
+      "method": "POST",
+      "url": "/api/alchemy-balance"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 89
+[06:46:48.804] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 113,
+      "method": "POST",
+      "url": "/api/helius-transactions"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 1
+[06:46:48.808] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 116,
+      "method": "POST",
+      "url": "/api/helius-transactions"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 1
+[06:46:48.888] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 114,
+      "method": "POST",
+      "url": "/api/alchemy-balance"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 84
+[06:46:48.898] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 115,
+      "method": "POST",
+      "url": "/api/alchemy-balance"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 92
+[06:46:57.781] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 117,
+      "method": "POST",
+      "url": "/api/helius-transactions"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 1
+[06:47:07.160] [32mINFO[39m (19640): [36mTweet fetch completed[39m
+    [35mcount[39m: 0
+    [35musingCookies[39m: false
+[helius-tx] Helius returned 9 transactions for wallet Hw7yc27h6Lws6YsQmdLoj4M7psyFHRhosFwoGuSESmTh
+[helius-tx] Jupiter fetch failed: 401
+[06:47:51.618] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 120,
+      "method": "POST",
+      "url": "/api/alchemy-balance"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 103
+[06:47:51.723] [32mINFO[39m (19640): [36mrequest aborted[39m
+    [35mreq[39m: {
+      "id": 119,
+      "method": "POST",
+      "url": "/api/helius-transactions"
+    }
+    [35mres[39m: {
+      "statusCode": null
+    }
+    [35mresponseTime[39m: 209
+[06:47:51.725] [32mINFO[39m (19640): [36mrequest aborted[39m
+    [35mreq[39m: {
+      "id": 118,
+      "method": "POST",
+      "url": "/api/helius-transactions"
+    }
+    [35mres[39m: {
+      "statusCode": null
+    }
+    [35mresponseTime[39m: 213
+[helius-tx] Helius returned 9 transactions for wallet Hw7yc27h6Lws6YsQmdLoj4M7psyFHRhosFwoGuSESmTh
+[helius-tx] Jupiter fetch failed: 401
+[06:47:57.086] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 121,
+      "method": "POST",
+      "url": "/api/helius-transactions"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 1
+[06:47:57.089] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 123,
+      "method": "POST",
+      "url": "/api/helius-transactions"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 1
+[06:47:57.172] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 122,
+      "method": "POST",
+      "url": "/api/alchemy-balance"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 85
+[06:47:57.175] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 124,
+      "method": "POST",
+      "url": "/api/alchemy-balance"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 86
+[06:48:13.202] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 125,
+      "method": "POST",
+      "url": "/api/helius-transactions"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 1
+[06:48:13.203] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 126,
+      "method": "POST",
+      "url": "/api/helius-transactions"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 1
+[06:48:13.299] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 127,
+      "method": "POST",
+      "url": "/api/alchemy-balance"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 96
+[06:48:13.303] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 128,
+      "method": "POST",
+      "url": "/api/alchemy-balance"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 99
+[06:48:40.143] [32mINFO[39m (19640): [36mFetching tweets from @WSSmith[39m
+[06:48:40.258] [32mINFO[39m (19640): [36mTweet fetch completed[39m
+    [35mcount[39m: 0
+    [35musingCookies[39m: false
+[helius-tx] Helius returned 9 transactions for wallet Hw7yc27h6Lws6YsQmdLoj4M7psyFHRhosFwoGuSESmTh
+[helius-tx] Jupiter fetch failed: 401
+[06:48:46.719] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 129,
+      "method": "POST",
+      "url": "/api/helius-transactions"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 597
+[06:51:11.084] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 130,
+      "method": "POST",
+      "url": "/api/alchemy-balance"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 113
+[helius-tx] Helius returned 10 transactions for wallet Hw7yc27h6Lws6YsQmdLoj4M7psyFHRhosFwoGuSESmTh
+[helius-tx] Jupiter fetch failed: 401
+[06:53:11.913] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 131,
+      "method": "POST",
+      "url": "/api/helius-transactions"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 944
+[06:53:40.153] [32mINFO[39m (19640): [36mFetching tweets from @WSSmith[39m
+[06:53:40.340] [32mINFO[39m (19640): [36mTweet fetch completed[39m
+    [35mcount[39m: 0
+    [35musingCookies[39m: false
+[helius-tx] Helius returned 10 transactions for wallet Hw7yc27h6Lws6YsQmdLoj4M7psyFHRhosFwoGuSESmTh
+[helius-tx] Jupiter fetch failed: 401
+[06:53:44.582] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 132,
+      "method": "POST",
+      "url": "/api/helius-transactions"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 614
+[06:54:11.104] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 133,
+      "method": "POST",
+      "url": "/api/alchemy-balance"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 137
+[helius-tx] Helius returned 10 transactions for wallet Hw7yc27h6Lws6YsQmdLoj4M7psyFHRhosFwoGuSESmTh
+[helius-tx] Jupiter fetch failed: 401
+[06:56:14.869] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 134,
+      "method": "POST",
+      "url": "/api/helius-transactions"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 630
+[06:56:26.630] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 137,
+      "method": "POST",
+      "url": "/api/helius-transactions"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 0
+[06:56:26.632] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 138,
+      "method": "POST",
+      "url": "/api/helius-transactions"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 1
+[06:56:26.743] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 135,
+      "method": "POST",
+      "url": "/api/alchemy-balance"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 116
+[06:56:26.746] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 136,
+      "method": "POST",
+      "url": "/api/alchemy-balance"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 117
+[06:56:34.504] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 139,
+      "method": "POST",
+      "url": "/api/helius-transactions"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 1
+[06:58:40.182] [32mINFO[39m (19640): [36mFetching tweets from @WSSmith[39m
+[06:59:23.758] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 140,
+      "method": "POST",
+      "url": "/api/alchemy-balance"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 123
+[helius-tx] Helius returned 10 transactions for wallet Hw7yc27h6Lws6YsQmdLoj4M7psyFHRhosFwoGuSESmTh
+[helius-tx] Jupiter fetch failed: 401
+[07:01:24.224] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 141,
+      "method": "POST",
+      "url": "/api/helius-transactions"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 588
+[07:01:31.498] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 142,
+      "method": "POST",
+      "url": "/api/helius-transactions"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 1
+[07:02:07.113] [32mINFO[39m (19640): [36mTweet fetch completed[39m
+    [35mcount[39m: 0
+    [35musingCookies[39m: false
+[helius-tx] Helius returned 10 transactions for wallet Hw7yc27h6Lws6YsQmdLoj4M7psyFHRhosFwoGuSESmTh
+[helius-tx] Jupiter fetch failed: 401
+[07:02:14.061] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 143,
+      "method": "POST",
+      "url": "/api/helius-transactions"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 536
+[07:02:23.749] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 144,
+      "method": "POST",
+      "url": "/api/alchemy-balance"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 117
+[07:02:38.864] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 145,
+      "method": "POST",
+      "url": "/api/alchemy-balance"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 90
+[07:02:38.967] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 146,
+      "method": "POST",
+      "url": "/api/helius-transactions"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 1
+[07:03:40.204] [32mINFO[39m (19640): [36mFetching tweets from @WSSmith[39m
+[07:03:40.365] [32mINFO[39m (19640): [36mTweet fetch completed[39m
+    [35mcount[39m: 0
+    [35musingCookies[39m: false
+[07:05:24.400] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 147,
+      "method": "POST",
+      "url": "/api/alchemy-balance"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 110
+[07:05:36.048] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 148,
+      "method": "POST",
+      "url": "/api/alchemy-balance"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 85
+[helius-tx] Helius returned 10 transactions for wallet Hw7yc27h6Lws6YsQmdLoj4M7psyFHRhosFwoGuSESmTh
+[helius-tx] Jupiter fetch failed: 401
+[07:06:24.535] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 149,
+      "method": "POST",
+      "url": "/api/helius-transactions"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 570
+[helius-tx] Helius returned 10 transactions for wallet Hw7yc27h6Lws6YsQmdLoj4M7psyFHRhosFwoGuSESmTh
+[helius-tx] Jupiter fetch failed: 401
+[07:07:36.433] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 150,
+      "method": "POST",
+      "url": "/api/helius-transactions"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 660
+[07:08:23.746] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 151,
+      "method": "POST",
+      "url": "/api/alchemy-balance"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 111
+[07:08:36.059] [32mINFO[39m (19640): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 152,
+      "method": "POST",
+      "url": "/api/alchemy-balance"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 95
+[07:08:40.204] [32mINFO[39m (19640): [36mFetching tweets from @WSSmith[39m
+[07:08:40.356] [32mINFO[39m (19640): [36mTweet fetch completed[39m
+    [35mcount[39m: 0
+    [35musingCookies[39m: false
