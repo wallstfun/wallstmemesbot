@@ -211,10 +211,13 @@ export function useRealTransactions() {
                   });
                   
                   if (sentStable) {
-                    const sentAmount = Number(sentStable.tokenAmount ?? 0) / Math.pow(10, sentStable.decimals ?? 6);
-                    // Estimate SOL amount based on typical swap rates (conservative estimate)
-                    // USDC/USDT swaps typically get ~95-99% value in SOL
-                    const estimatedSOL = sentAmount * 0.011; // rough estimate: 1 USDC ≈ 0.011 SOL at $90/SOL
+                    // tokenAmount from Helius is already UI-decimalized (not raw)
+                    // For USDC/USDT (6 decimals): tokenAmount is already divided by 1e6
+                    const sentAmount = Number(sentStable.tokenAmount ?? 0);
+                    
+                    // Estimate SOL amount based on current rates
+                    // 1 USDC ≈ 0.012 SOL at $83/SOL price
+                    const estimatedSOL = sentAmount * 0.012;
                     
                     if (estimatedSOL > 0) {
                       // Create synthetic "received SOL" token
