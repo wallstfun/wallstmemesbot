@@ -82,10 +82,10 @@ export function useRealTransactions() {
             
             // Include Jupiter transactions and any tx with tokenTransfers that look like swaps
             const hasTransfers = (tx?.tokenTransfers?.length ?? 0) >= 2;
-            // Mark as Jupiter if it has a swap event, comes from Jupiter, or has multi-transfer fills (Jupiter fill pattern)
-            const isJupiter = tx?.source === "JUPITER" || !!swap || hasTransfers;
+            // Mark as Jupiter only if it has a swap event OR explicitly from Jupiter (not all multi-transfers are Jupiter)
+            const isJupiter = tx?.source === "JUPITER" || !!swap;
             
-            console.log(`[parse] ${sig}: swap=${!!swap}, jupiter=${isJupiter}, transfers=${tx?.tokenTransfers?.length || 0}`);
+            console.log(`[parse] ${sig}: source=${tx?.source || "unknown"}, swap=${!!swap}, jupiter=${isJupiter}, transfers=${tx?.tokenTransfers?.length || 0}`);
             
             if (!swap && !isJupiter && !hasTransfers) {
               console.log(`[parse] ${sig}: DROPPED - no swap, not jupiter, <2 transfers`);
