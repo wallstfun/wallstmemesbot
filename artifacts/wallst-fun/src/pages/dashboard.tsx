@@ -94,7 +94,15 @@ function DashboardContent() {
   const { holdings } = useTokenHoldings();
 
   // Enrich trades with token metadata
-  const [enrichedTrades, setEnrichedTrades] = useState<any[]>([]);
+  const [enrichedTrades, setEnrichedTrades] = useState<any[]>(() => {
+    // Initialize with fallback symbols so trades are visible immediately
+    return realTrades.map(t => ({
+      ...t,
+      enrichedSymbol: t.tokenSymbol || t.tokenMint?.slice(0, 6).toUpperCase() || "???",
+      logo: undefined,
+    }));
+  });
+
   useEffect(() => {
     const enrichTrades = async () => {
       const unique_mints = [...new Set(realTrades.filter(t => t.tokenMint).map(t => t.tokenMint))];
@@ -111,10 +119,10 @@ function DashboardContent() {
         }
       }
       
-      // Enrich each trade
+      // Enrich each trade with fetched metadata
       const enriched = realTrades.map(t => ({
         ...t,
-        enrichedSymbol: metadata[t.tokenMint]?.symbol || t.tokenSymbol || "???",
+        enrichedSymbol: metadata[t.tokenMint]?.symbol || t.tokenSymbol || t.tokenMint?.slice(0, 6).toUpperCase() || "???",
         logo: metadata[t.tokenMint]?.logoURI,
       }));
       
@@ -475,11 +483,7 @@ function DashboardContent() {
                   </TableHeader>
                   <TableBody>
                     <AnimatePresence>
-                      {realTrades.slice(0, 8).map((trade) => {
-                        const enrichedData = enrichedTrades.find(t => t.id === trade.id);
-                        const displaySymbol = enrichedData?.enrichedSymbol || trade.tokenSymbol || "???";
-                        const displayLogo = enrichedData?.logo;
-                        return (
+                      {enrichedTrades.slice(0, 8).map((trade) => (
                         <motion.tr
                           key={trade.id}
                           initial={{ opacity: 0, y: -10 }}
@@ -507,21 +511,21 @@ function DashboardContent() {
                           </TableCell>
                           <TableCell className="font-bold flex items-center gap-2">
                             <div className="relative w-4 h-4 flex-shrink-0">
-                              {displayLogo && (
+                              {trade.logo && (
                                 <img
-                                  src={displayLogo}
-                                  alt={displaySymbol}
+                                  src={trade.logo}
+                                  alt={trade.enrichedSymbol || trade.tokenSymbol}
                                   className="w-4 h-4 rounded-full object-cover"
                                   onError={(e) => { e.currentTarget.style.display = "none"; }}
                                 />
                               )}
-                              {!displayLogo && (
+                              {!trade.logo && (
                                 <div className="w-4 h-4 rounded-full bg-gradient-to-br from-primary/30 to-primary/10 flex items-center justify-center text-[8px] font-bold text-primary/70">
-                                  {displaySymbol.charAt(0).toUpperCase()}
+                                  {(trade.enrichedSymbol || trade.tokenSymbol || "?").charAt(0).toUpperCase()}
                                 </div>
                               )}
                             </div>
-                            {displaySymbol}
+                            {trade.enrichedSymbol || trade.tokenSymbol}
                           </TableCell>
                           <TableCell className="text-right text-xs">
                             {trade.solAmount > 0 ? `${trade.solAmount.toFixed(3)}` : '—'}
@@ -537,8 +541,7 @@ function DashboardContent() {
                             </a>
                           </TableCell>
                         </motion.tr>
-                        );
-                      })}
+                      ))}
                     </AnimatePresence>
                   </TableBody>
                 </Table>
