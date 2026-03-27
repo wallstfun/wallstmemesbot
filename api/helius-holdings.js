@@ -16,6 +16,7 @@ module.exports = async function handler(req, res) {
   try {
     // 1. Get all token accounts from Alchemy
     console.log(`[holdings] Fetching token accounts for ${walletAddress}`);
+    const TOKEN_PROGRAM_ID = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA";
     const alchemyRes = await fetch(ALCHEMY_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -24,7 +25,7 @@ module.exports = async function handler(req, res) {
         method: "getTokenAccountsByOwner",
         params: [
           walletAddress,
-          { programId: "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA" },
+          { programId: TOKEN_PROGRAM_ID },
           { encoding: "jsonParsed" },
         ],
       }),
@@ -34,25 +35,35 @@ module.exports = async function handler(req, res) {
     const alchemyData = await alchemyRes.json();
     if (alchemyData.error) throw new Error(alchemyData.error.message);
 
-    const accounts = alchemyData.result?.value ?? [];
-    console.log(`[holdings] Alchemy returned ${accounts.length} token accounts`);
+    const rawAccounts = alchemyData.result?.value ?? [];
+    console.log(`[holdings] Alchemy returned ${rawAccounts.length} token accounts`);
 
-    const tokens = accounts
-      .map((acc) => {
-        const info = acc?.account?.data?.parsed?.info;
-        if (!info) return null;
-        const uiAmount = info.tokenAmount?.uiAmount ?? 0;
+    // Parse and filter tokens (skip native SOL, handle separately)
+    const tokens = rawAccounts
+      .map((account) => {
+        const parsed = account?.account?.data?.parsed;
+        if (!parsed || parsed.type !== "account") return null;
+        
+        const mint = parsed.info?.mint;
+        const tokenAmount = parsed.info?.tokenAmount;
+        if (!mint || !tokenAmount) return null;
+        
+        const balance = parseFloat(tokenAmount.amount ?? "0");
+        const decimals = tokenAmount.decimals ?? 0;
+        const uiAmount = balance / Math.pow(10, decimals);
+        
+        console.log(`[holdings] Token ${mint?.slice(0, 8)}: balance=${balance}, decimals=${decimals}, uiAmount=${uiAmount}`);
         if (uiAmount <= 0) return null;
         return {
-          mint: info.mint,
-          rawAmount: Number(info.tokenAmount?.amount ?? 0),
-          decimals: info.tokenAmount?.decimals ?? 0,
+          mint,
+          rawAmount: balance,
+          decimals,
           uiAmount,
         };
       })
       .filter((t) => t !== null);
 
-    console.log(`[holdings] Found ${tokens.length} tokens with balance > 0`);
+    console.log(`[holdings] Found ${tokens.length} SPL tokens with balance > 0`);
     if (tokens.length === 0) { res.json({ items: [] }); return; }
 
     const mints = tokens.map(t => t.mint);
@@ -93,7 +104,7 @@ module.exports = async function handler(req, res) {
     }
 
     // 4. Build response
-    const items = tokens.map((t) => {
+    const result = tokens.map((t) => {
       const jupMeta = jupTokenMap[t.mint];
       const symbol = jupMeta?.symbol ?? t.mint.slice(0, 6).toUpperCase();
       const name = jupMeta?.name ?? "Unknown Token";
@@ -123,8 +134,8 @@ module.exports = async function handler(req, res) {
       };
     });
 
-    console.log(`[holdings] Returning ${items.length} items`);
-    res.json({ items });
+    console.log(`[holdings] Returning ${result.length} items`);
+    res.json({ items: result });
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Unknown error";
     console.error("[holdings] Error:", msg);

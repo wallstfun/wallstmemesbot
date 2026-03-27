@@ -52661,8 +52661,12 @@ router6.post("/helius-holdings", async (req, res) => {
         method: "getTokenAccountsByOwner",
         params: [
           walletAddress,
-          { programId: TOKEN_PROGRAM_ID },
-          { encoding: "jsonParsed" }
+          {
+            programId: TOKEN_PROGRAM_ID
+          },
+          {
+            encoding: "jsonParsed"
+          }
         ]
       })
     });
@@ -52673,21 +52677,27 @@ router6.post("/helius-holdings", async (req, res) => {
     if (alchemyData.error) {
       throw new Error(`Alchemy RPC error: ${alchemyData.error.message}`);
     }
-    const accounts = alchemyData.result?.value ?? [];
-    console.log(`[holdings] Alchemy returned ${accounts.length} token accounts`);
-    const tokenAccounts = accounts.map((acc) => {
-      const info = acc.account?.data?.parsed?.info;
-      if (!info) return null;
-      const uiAmount = info.tokenAmount?.uiAmount ?? 0;
+    const rawAccounts = alchemyData.result?.value ?? [];
+    console.log(`[holdings] Alchemy returned ${rawAccounts.length} token accounts`);
+    const tokenAccounts = rawAccounts.map((account) => {
+      const parsed = account.account?.data?.parsed;
+      if (!parsed || parsed.type !== "account") return null;
+      const mint = parsed.info?.mint;
+      const tokenAmount = parsed.info?.tokenAmount;
+      if (!mint || !tokenAmount) return null;
+      const balance = parseFloat(tokenAmount.amount ?? "0");
+      const decimals = tokenAmount.decimals ?? 0;
+      const uiAmount = balance / Math.pow(10, decimals);
+      console.log(`[holdings] Token ${mint.slice(0, 8)}: balance=${balance}, decimals=${decimals}, uiAmount=${uiAmount}`);
       if (uiAmount <= 0) return null;
       return {
-        mint: info.mint,
+        mint,
         balance: uiAmount,
-        decimals: info.tokenAmount?.decimals ?? 0,
+        decimals,
         uiAmount
       };
     }).filter((t) => t !== null);
-    console.log(`[holdings] Found ${tokenAccounts.length} tokens with balance > 0`);
+    console.log(`[holdings] Found ${tokenAccounts.length} SPL tokens with balance > 0`);
     if (tokenAccounts.length === 0) {
       res.json({ items: [] });
       return;
@@ -52732,7 +52742,7 @@ router6.post("/helius-holdings", async (req, res) => {
         e instanceof Error ? e.message : e
       );
     }
-    const items = tokenAccounts.map(({ mint, balance, decimals, uiAmount }) => {
+    const resultItems = tokenAccounts.map(({ mint, balance, decimals, uiAmount }) => {
       const jupMeta = jupTokenMap[mint];
       const symbol = jupMeta?.symbol ?? mint.slice(0, 6).toUpperCase();
       const name = jupMeta?.name ?? "Unknown Token";
@@ -52759,8 +52769,8 @@ router6.post("/helius-holdings", async (req, res) => {
         }
       };
     });
-    console.log(`[holdings] Returning ${items.length} items`);
-    res.json({ items });
+    console.log(`[holdings] Returning ${resultItems.length} items`);
+    res.json({ items: resultItems });
   } catch (error) {
     const msg = error instanceof Error ? error.message : "Unknown error";
     console.error("[holdings] Error:", msg);

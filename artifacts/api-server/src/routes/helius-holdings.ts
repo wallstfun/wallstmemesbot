@@ -22,7 +22,7 @@ router.post("/helius-holdings", async (req: Request, res: Response) => {
       return;
     }
 
-    // 1. Fetch all SPL token accounts via Alchemy RPC
+    // 1. Fetch all token accounts via Alchemy getTokenAccountsByOwner
     console.log(`[holdings] Fetching token accounts for ${walletAddress}`);
     const alchemyRes = await fetch(ALCHEMY_URL, {
       method: "POST",
@@ -33,8 +33,12 @@ router.post("/helius-holdings", async (req: Request, res: Response) => {
         method: "getTokenAccountsByOwner",
         params: [
           walletAddress,
-          { programId: TOKEN_PROGRAM_ID },
-          { encoding: "jsonParsed" },
+          {
+            programId: TOKEN_PROGRAM_ID,
+          },
+          {
+            encoding: "jsonParsed",
+          },
         ],
       }),
     });
@@ -48,26 +52,36 @@ router.post("/helius-holdings", async (req: Request, res: Response) => {
       throw new Error(`Alchemy RPC error: ${alchemyData.error.message}`);
     }
 
-    const accounts: any[] = alchemyData.result?.value ?? [];
-    console.log(`[holdings] Alchemy returned ${accounts.length} token accounts`);
+    const rawAccounts = alchemyData.result?.value ?? [];
+    console.log(`[holdings] Alchemy returned ${rawAccounts.length} token accounts`);
 
-    // Parse and filter out zero-balance accounts
-    const tokenAccounts: TokenAccount[] = accounts
-      .map((acc: any) => {
-        const info = acc.account?.data?.parsed?.info;
-        if (!info) return null;
-        const uiAmount = info.tokenAmount?.uiAmount ?? 0;
+    // Parse and filter out zero-balance tokens (only SPL, not native SOL)
+    const tokenAccounts: TokenAccount[] = rawAccounts
+      .map((account: any) => {
+        const parsed = account.account?.data?.parsed;
+        if (!parsed || parsed.type !== "account") return null;
+        
+        const mint = parsed.info?.mint;
+        const tokenAmount = parsed.info?.tokenAmount;
+        if (!mint || !tokenAmount) return null;
+        
+        const balance = parseFloat(tokenAmount.amount ?? "0");
+        const decimals = tokenAmount.decimals ?? 0;
+        const uiAmount = balance / Math.pow(10, decimals);
+        
+        console.log(`[holdings] Token ${mint.slice(0, 8)}: balance=${balance}, decimals=${decimals}, uiAmount=${uiAmount}`);
         if (uiAmount <= 0) return null;
+        
         return {
-          mint: info.mint as string,
-          balance: uiAmount as number,
-          decimals: (info.tokenAmount?.decimals ?? 0) as number,
+          mint,
+          balance: uiAmount,
+          decimals,
           uiAmount,
         };
       })
       .filter((t): t is TokenAccount => t !== null);
 
-    console.log(`[holdings] Found ${tokenAccounts.length} tokens with balance > 0`);
+    console.log(`[holdings] Found ${tokenAccounts.length} SPL tokens with balance > 0`);
     if (tokenAccounts.length === 0) {
       res.json({ items: [] });
       return;
@@ -119,7 +133,7 @@ router.post("/helius-holdings", async (req: Request, res: Response) => {
     }
 
     // 4. Build response
-    const items = tokenAccounts.map(({ mint, balance, decimals, uiAmount }) => {
+    const resultItems = tokenAccounts.map(({ mint, balance, decimals, uiAmount }) => {
       const jupMeta = jupTokenMap[mint];
       const symbol = jupMeta?.symbol ?? mint.slice(0, 6).toUpperCase();
       const name = jupMeta?.name ?? "Unknown Token";
@@ -152,8 +166,8 @@ router.post("/helius-holdings", async (req: Request, res: Response) => {
       };
     });
 
-    console.log(`[holdings] Returning ${items.length} items`);
-    res.json({ items });
+    console.log(`[holdings] Returning ${resultItems.length} items`);
+    res.json({ items: resultItems });
   } catch (error) {
     const msg = error instanceof Error ? error.message : "Unknown error";
     console.error("[holdings] Error:", msg);
