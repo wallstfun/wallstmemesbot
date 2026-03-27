@@ -2,6 +2,13 @@ import { useState, useEffect, useCallback } from "react";
 
 export const AGENT_WALLET = "Hw7yc27h6Lws6YsQmdLoj4M7psyFHRhosFwoGuSESmTh";
 
+// Known stablecoin mints (USDC, USDT, etc.)
+const STABLECOIN_MINTS = [
+  "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", // USDC
+  "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenEsw", // USDT
+  "AQOBEGJGIMBQJNGBT53HBZN5Q528 SOCORRO2QQY5AQOBEGJGIMBQJNGBT53", // USDH (placeholder)
+];
+
 // ── Real Swap Transactions (Enhanced TX API) ──────────────────────────────────
 
 export interface RealTrade {
@@ -95,17 +102,11 @@ export function useRealTransactions() {
           let tokenAmount = 0;
           let tokenMint = "";
 
-          if (hasNativeIn && hasTokenOut) {
-            // Sending SOL, receiving token → SELL
-            action = "SELL";
-            solAmount = Number(swap.nativeInput.amount) / 1e9;
-            const out = swap.tokenOutputs[0];
-            tokenMint = out.mint;
-            tokenAmount =
-              Number(out.rawTokenAmount?.tokenAmount ?? 0) /
-              Math.pow(10, out.rawTokenAmount?.decimals ?? 6);
-          } else if (hasNativeOut && hasTokenIn) {
-            // Receiving SOL, sending token (including stablecoins) → BUY
+          // Apply new logic: classify by received token
+          // Received token rule: if SOL received → BUY; if token received and it's a stablecoin → SELL; otherwise → BUY
+          
+          if (hasNativeOut && hasTokenIn) {
+            // Receiving SOL, sending token → BUY (always)
             action = "BUY";
             solAmount = Number(swap.nativeOutput.amount) / 1e9;
             const inp = swap.tokenInputs[0];
@@ -113,13 +114,29 @@ export function useRealTransactions() {
             tokenAmount =
               Number(inp.rawTokenAmount?.tokenAmount ?? 0) /
               Math.pow(10, inp.rawTokenAmount?.decimals ?? 6);
-          } else if (hasTokenIn && hasTokenOut) {
-            action = "SWAP";
+          } else if (hasNativeIn && hasTokenOut) {
+            // Sending SOL, receiving token
             const out = swap.tokenOutputs[0];
             tokenMint = out.mint;
             tokenAmount =
               Number(out.rawTokenAmount?.tokenAmount ?? 0) /
               Math.pow(10, out.rawTokenAmount?.decimals ?? 6);
+            solAmount = Number(swap.nativeInput.amount) / 1e9;
+            
+            // Classify based on received token: if stablecoin → SELL, otherwise → BUY
+            action = STABLECOIN_MINTS.includes(tokenMint) ? "SELL" : "BUY";
+          } else if (hasTokenIn && hasTokenOut) {
+            // Token-to-token swap
+            const out = swap.tokenOutputs[0];
+            const inp = swap.tokenInputs[0];
+            tokenMint = out.mint;
+            tokenAmount =
+              Number(out.rawTokenAmount?.tokenAmount ?? 0) /
+              Math.pow(10, out.rawTokenAmount?.decimals ?? 6);
+            
+            // Classify based on received token: if stablecoin → SELL, otherwise → BUY
+            action = STABLECOIN_MINTS.includes(tokenMint) ? "SELL" : "BUY";
+            solAmount = 0; // No SOL involved
           } else {
             return null;
           }
