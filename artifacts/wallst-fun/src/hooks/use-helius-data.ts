@@ -196,7 +196,7 @@ export function useRealTransactions() {
                     solAmount,
                     description: tx?.description ?? "",
                     source: isJupiter ? "JUPITER" : (tx?.source ?? "DEX"),
-                    txUrl: `https://solscan.io/tx/${sig}`,
+                    txUrl: `https://solscan.io/tx/${tx?.signature ?? ""}`,
                     solFlow,
                     sentMint: (tx as any)?.__sentMint__ || undefined,
                   } as RealTrade;
@@ -292,7 +292,7 @@ export function useRealTransactions() {
               tokenAmount,
               description: tx?.description ?? "",
               source: isJupiter ? "JUPITER" : (tx?.source ?? "DEX"),
-              txUrl: `https://solscan.io/tx/${sig}`,
+              txUrl: `https://solscan.io/tx/${tx?.signature ?? ""}`,
               solFlow,
               sentMint: (tx as any)?.__sentMint__ || undefined,
             } as RealTrade;
