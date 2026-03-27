@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip } from "recharts";
@@ -23,57 +23,66 @@ export default function PortfolioPage() {
 
   const refresh = () => { refreshSol(); refreshHoldings(); };
 
-  // Build pie chart data from real holdings
+  // SOL price from CoinGecko (with localStorage cache shared with dashboard)
+  const [solPrice, setSolPrice] = useState<number>(() => {
+    try {
+      const cached = localStorage.getItem("wallst-sol-price");
+      if (cached) return JSON.parse(cached).price || 0;
+    } catch {}
+    return 0;
+  });
+
+  useEffect(() => {
+    const fetchPrice = async () => {
+      try {
+        const res = await fetch("https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd");
+        const data = await res.json();
+        if (data.solana?.usd) {
+          setSolPrice(data.solana.usd);
+          localStorage.setItem("wallst-sol-price", JSON.stringify({ price: data.solana.usd }));
+        }
+      } catch {}
+    };
+    // Only fetch if no cached price
+    if (!solPrice) fetchPrice();
+  }, []);
+
+  const solUsdValue = (solBalance ?? 0) * solPrice;
+
+  // Build pie chart data from real holdings + SOL
   const pieData = useMemo(() => {
     const data: { name: string; value: number; color: string }[] = [];
 
-    // Add SOL as first slice (use USD value if sol price known, else just percentage)
-    // We'll compute relative percentages from USD values
-    const solUsd = (solBalance ?? 0); // treat as placeholder; scaled below
-    
-    // Collect items with USD values
-    const withUsd = holdings.filter(h => (h.valueUsd ?? 0) > 0);
-    const withoutUsd = holdings.filter(h => !h.valueUsd || h.valueUsd <= 0);
+    const solUsd = (solBalance ?? 0) * solPrice;
+    const tokenUsd = holdings.reduce((s, h) => s + (h.valueUsd ?? 0), 0);
+    const grandTotal = solUsd + tokenUsd;
 
-    if (withUsd.length > 0 || solBalance) {
-      // Use USD values for the pie
-      const totalUsd = withUsd.reduce((s, h) => s + (h.valueUsd ?? 0), 0);
-      // For SOL: we don't have usd value directly, so treat it proportionally
-      // or show all tokens that have USD values
-      if (withUsd.length > 0) {
-        const grandTotal = totalUsd;
-        withUsd.slice(0, 8).forEach((h, i) => {
-          data.push({
-            name: h.symbol,
-            value: parseFloat(((h.valueUsd! / grandTotal) * 100).toFixed(1)),
-            color: CHART_COLORS[i % CHART_COLORS.length],
-          });
-        });
+    if (grandTotal > 0) {
+      if (solUsd > 0) {
+        data.push({ name: "SOL", value: parseFloat(((solUsd / grandTotal) * 100).toFixed(1)), color: CHART_COLORS[0] });
       }
-    }
-
-    // Fallback: if no USD data, show by token balance count
-    if (data.length === 0 && holdings.length > 0) {
-      holdings.slice(0, 8).forEach((h, i) => {
+      holdings.filter(h => (h.valueUsd ?? 0) > 0).slice(0, 7).forEach((h, i) => {
         data.push({
           name: h.symbol,
-          value: parseFloat(((1 / holdings.length) * 100).toFixed(1)),
-          color: CHART_COLORS[i % CHART_COLORS.length],
+          value: parseFloat(((h.valueUsd! / grandTotal) * 100).toFixed(1)),
+          color: CHART_COLORS[(i + (solUsd > 0 ? 1 : 0)) % CHART_COLORS.length],
         });
       });
-    }
-
-    // Fallback: only SOL
-    if (data.length === 0 && solBalance !== null) {
+    } else if (holdings.length > 0) {
+      // Fallback: equal slices
+      holdings.slice(0, 8).forEach((h, i) => {
+        data.push({ name: h.symbol, value: parseFloat(((1 / holdings.length) * 100).toFixed(1)), color: CHART_COLORS[i % CHART_COLORS.length] });
+      });
+    } else {
       data.push({ name: "SOL", value: 100, color: CHART_COLORS[0] });
     }
 
     return data;
-  }, [holdings, solBalance]);
+  }, [holdings, solBalance, solPrice]);
 
   const totalUsdValue = useMemo(
-    () => holdings.reduce((s, h) => s + (h.valueUsd ?? 0), 0),
-    [holdings]
+    () => solUsdValue + holdings.reduce((s, h) => s + (h.valueUsd ?? 0), 0),
+    [holdings, solUsdValue]
   );
 
   const isLoading = solLoading || holdingsLoading;
@@ -210,18 +219,6 @@ export default function PortfolioPage() {
                 <Loader2 className="w-5 h-5 animate-spin" />
                 <span className="text-sm">Loading token balances from Helius...</span>
               </div>
-            ) : holdings.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-16 gap-3 text-muted-foreground">
-                <p className="text-sm">No SPL token holdings found in this wallet.</p>
-                <a
-                  href={`https://solscan.io/account/${AGENT_WALLET}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-xs text-primary flex items-center gap-1 hover:underline"
-                >
-                  View on Solscan <ExternalLink className="w-3 h-3" />
-                </a>
-              </div>
             ) : (
               <Table>
                 <TableHeader>
@@ -234,6 +231,44 @@ export default function PortfolioPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody className="font-mono">
+                  {/* SOL native balance row */}
+                  {!solLoading && (
+                    <TableRow className="border-border/40 hover:bg-muted/20">
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <img
+                            src="https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png"
+                            alt="SOL"
+                            className="w-6 h-6 rounded-full object-cover"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).style.display = "none";
+                            }}
+                          />
+                          <div>
+                            <div className="font-bold font-sans">SOL</div>
+                            <div className="text-[10px] text-muted-foreground font-sans">Solana</div>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right">{(solBalance ?? 0).toFixed(4)}</TableCell>
+                      <TableCell className="text-right">
+                        {solUsdValue > 0 ? `$${solUsdValue.toFixed(2)}` : <span className="text-muted-foreground">—</span>}
+                      </TableCell>
+                      <TableCell className="text-right text-muted-foreground">
+                        {solPrice > 0 ? `$${solPrice.toFixed(2)}` : <span>—</span>}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <a
+                          href={`https://solscan.io/account/${AGENT_WALLET}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-primary hover:underline bg-primary/5 px-2 py-1 rounded text-xs"
+                        >
+                          wallet <ExternalLink className="w-2.5 h-2.5" />
+                        </a>
+                      </TableCell>
+                    </TableRow>
+                  )}
                   {holdings.map((asset) => (
                     <TableRow key={asset.mint} className="border-border/40 hover:bg-muted/20">
                       <TableCell>
