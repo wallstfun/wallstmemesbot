@@ -38,25 +38,110 @@ function computeDerivedHoldings(trades: any[]) {
   return Object.fromEntries(Object.entries(holdings).filter(([_, h]) => h.tokenAmount > 0));
 }
 
-// Helper: Fetch token metadata from Jupiter
+// In-memory metadata cache (session-level)
+const metadataCache = new Map<string, any>();
+
+// Helper: Fetch token metadata with multiple fallbacks
 async function fetchTokenMetadata(mint: string): Promise<any> {
-  try {
-    const res = await fetch(`https://tokens.jup.ag/token/${mint}`);
-    if (res.ok) {
-      const data = await res.json();
-      return {
-        symbol: data.symbol || mint.slice(0, 6).toUpperCase(),
-        name: data.name || "Unknown Token",
-        logoURI: data.logoURI || undefined,
-      };
-    }
-  } catch {}
-  
-  return {
+  // Check cache first
+  if (metadataCache.has(mint)) {
+    console.log(`[metadata] Cache hit for ${mint}`);
+    return metadataCache.get(mint);
+  }
+
+  let metadata = {
     symbol: mint.slice(0, 6).toUpperCase(),
     name: "Unknown Token",
     logoURI: undefined,
   };
+
+  // Method 1: Try Jupiter single token endpoint
+  try {
+    console.log(`[metadata] Fetching from Jupiter /token/{mint} for ${mint}`);
+    const res = await fetch(`https://tokens.jup.ag/token/${mint}`, { signal: AbortSignal.timeout(5000) });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.symbol || data.name || data.logoURI || data.icon) {
+        metadata = {
+          symbol: data.symbol || metadata.symbol,
+          name: data.name || metadata.name,
+          logoURI: data.logoURI || data.icon || undefined,
+        };
+        console.log(`[metadata] Jupiter success for ${mint}: logo=${metadata.logoURI ? "found" : "missing"}`);
+        metadataCache.set(mint, metadata);
+        return metadata;
+      }
+    }
+  } catch (e) {
+    console.log(`[metadata] Jupiter fetch failed for ${mint}:`, e instanceof Error ? e.message : String(e));
+  }
+
+  // Method 2: Try Jupiter full tokens list (for newer/meme tokens)
+  try {
+    console.log(`[metadata] Fetching from Jupiter tokens list for ${mint}`);
+    const res = await fetch("https://tokens.jup.ag/tokens", { signal: AbortSignal.timeout(8000) });
+    if (res.ok) {
+      const tokens = await res.json();
+      const tokenData = Array.isArray(tokens) ? tokens.find((t: any) => t.address === mint || t.mint === mint) : tokens[mint];
+      if (tokenData && (tokenData.symbol || tokenData.name || tokenData.logoURI || tokenData.icon)) {
+        metadata = {
+          symbol: tokenData.symbol || metadata.symbol,
+          name: tokenData.name || metadata.name,
+          logoURI: tokenData.logoURI || tokenData.icon || undefined,
+        };
+        console.log(`[metadata] Jupiter list success for ${mint}: logo=${metadata.logoURI ? "found" : "missing"}`);
+        metadataCache.set(mint, metadata);
+        return metadata;
+      }
+    }
+  } catch (e) {
+    console.log(`[metadata] Jupiter list fetch failed for ${mint}:`, e instanceof Error ? e.message : String(e));
+  }
+
+  // Method 3: Try searching in CoinGecko for newer tokens
+  try {
+    console.log(`[metadata] Fetching from CoinGecko for ${mint}`);
+    const res = await fetch(`https://api.coingecko.com/api/v3/coins/solana/contract/${mint}`, { signal: AbortSignal.timeout(5000) });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.image?.large || data.image?.small) {
+        metadata.logoURI = data.image.large || data.image.small;
+        console.log(`[metadata] CoinGecko success for ${mint}: logo found`);
+        metadataCache.set(mint, metadata);
+        return metadata;
+      }
+    }
+  } catch (e) {
+    console.log(`[metadata] CoinGecko fetch failed for ${mint}:`, e instanceof Error ? e.message : String(e));
+  }
+
+  // Method 4: Smart fallback - try common image URLs
+  try {
+    console.log(`[metadata] Trying smart fallback URLs for ${mint}`);
+    const fallbackUrls = [
+      `https://arweave.net/images/${mint}.png`,
+      `https://bafybeiclsp2jcvqr5zihfvvhgfz5ijfzhdp7nstcb52q2vpj5bz5ybmea.ipfs.nftstorage.link/${mint}.png`,
+      `https://metadata.solanium.io/images/${mint}.png`,
+    ];
+    
+    for (const url of fallbackUrls) {
+      try {
+        const res = await fetch(url, { method: "HEAD", signal: AbortSignal.timeout(2000) });
+        if (res.ok) {
+          metadata.logoURI = url;
+          console.log(`[metadata] Smart fallback found image at ${url} for ${mint}`);
+          metadataCache.set(mint, metadata);
+          return metadata;
+        }
+      } catch {}
+    }
+  } catch (e) {
+    console.log(`[metadata] Smart fallback failed for ${mint}:`, e instanceof Error ? e.message : String(e));
+  }
+
+  console.log(`[metadata] Final fallback for ${mint}: no logo found, using default`);
+  metadataCache.set(mint, metadata);
+  return metadata;
 }
 
 // Helper: Fetch prices from Jupiter
@@ -168,12 +253,20 @@ export default function PortfolioPage() {
         const isMetadataFallback = metaSymbol && /^[A-Z0-9]{6}$/.test(metaSymbol) && 
                                   metaSymbol === h.mint.slice(0, 6).toUpperCase();
         const symbol = !isMetadataFallback && metaSymbol ? metaSymbol : h.symbol;
+        const logo = metadataResults[i]?.logoURI || h.logo;
+        
+        // Log detailed enrichment info for debugging
+        if (logo) {
+          console.log(`[portfolio] ${symbol} (${h.mint}): logo=${logo}`);
+        } else {
+          console.log(`[portfolio] ${symbol} (${h.mint}): NO LOGO FOUND`);
+        }
         
         return {
           ...h,
           symbol,
           name: metadataResults[i]?.name || h.name,
-          logo: metadataResults[i]?.logoURI || h.logo,
+          logo,
           priceUsd: pricesResult[h.mint] ?? undefined,
           valueUsd: (pricesResult[h.mint] ?? 0) > 0 ? h.balance * (pricesResult[h.mint] ?? 0) : undefined,
         };
