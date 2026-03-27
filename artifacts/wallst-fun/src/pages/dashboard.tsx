@@ -183,20 +183,49 @@ function DashboardContent() {
   //   solFlow="out" → sent SOL (e.g. bought token with SOL) → negative
   //   solFlow="none" → token-to-token, no SOL impact
   const allTimeChartData = useMemo(() => {
-    if (realTrades.length === 0) return [];
-    const sorted = [...realTrades].sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
-    let cumSol = 0;
-    const points: { time: string; value: number }[] = [];
-    sorted.forEach((trade) => {
-      if (trade.solFlow === "in") cumSol += trade.solAmount;
-      else if (trade.solFlow === "out") cumSol -= trade.solAmount;
-      points.push({
-        time: format(trade.timestamp, "MMM dd HH:mm"),
-        value: parseFloat((cumSol * (solPrice || 0)).toFixed(2)),
+    try {
+      if (!realTrades || realTrades.length === 0) return [];
+      
+      // Filter and validate trades before sorting
+      const validTrades = realTrades.filter(trade => {
+        return trade && 
+               trade.timestamp && 
+               (trade.timestamp instanceof Date || typeof trade.timestamp === 'number') &&
+               typeof trade.solFlow === 'string' &&
+               typeof trade.solAmount === 'number';
       });
-    });
-    points.push({ time: format(new Date(), "MMM dd HH:mm"), value: parseFloat((cumSol * (solPrice || 0)).toFixed(2)) });
-    return points;
+      
+      if (validTrades.length === 0) return [];
+      
+      const sorted = [...validTrades].sort((a, b) => {
+        const aTime = a.timestamp instanceof Date ? a.timestamp.getTime() : a.timestamp;
+        const bTime = b.timestamp instanceof Date ? b.timestamp.getTime() : b.timestamp;
+        return aTime - bTime;
+      });
+      
+      let cumSol = 0;
+      const points: { time: string; value: number }[] = [];
+      sorted.forEach((trade) => {
+        try {
+          if (trade.solFlow === "in") cumSol += trade.solAmount;
+          else if (trade.solFlow === "out") cumSol -= trade.solAmount;
+          
+          const tradeTime = trade.timestamp instanceof Date ? trade.timestamp : new Date(trade.timestamp);
+          points.push({
+            time: format(tradeTime, "MMM dd HH:mm"),
+            value: parseFloat((cumSol * (solPrice || 0)).toFixed(2)),
+          });
+        } catch (e) {
+          console.warn('Failed to process trade for chart:', trade, e);
+        }
+      });
+      
+      points.push({ time: format(new Date(), "MMM dd HH:mm"), value: parseFloat((cumSol * (solPrice || 0)).toFixed(2)) });
+      return points;
+    } catch (err) {
+      console.error('[dashboard] Failed to calculate chart data:', err);
+      return [];
+    }
   }, [realTrades, solPrice]);
 
   const handleCopyAddress = (address: string) => {
