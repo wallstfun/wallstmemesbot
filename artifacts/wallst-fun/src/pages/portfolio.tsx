@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip } from "recharts";
 import { RefreshCw, ExternalLink, AlertCircle, Loader2 } from "lucide-react";
-import { useWalletSolBalance, useTokenHoldings, AGENT_WALLET } from "@/hooks/use-helius-data";
+import { useWalletSolBalance, useTokenHoldings, useRealTransactions, AGENT_WALLET } from "@/hooks/use-helius-data";
 
 const CHART_COLORS = [
   "hsl(var(--primary))",
@@ -17,9 +17,31 @@ const CHART_COLORS = [
   "#ec4899",
 ];
 
+// Helper: Compute holdings from trade history
+function computeDerivedHoldings(trades: any[]) {
+  const holdings: Record<string, { tokenAmount: number; tokenSymbol: string; tokenMint: string }> = {};
+  const sortedTrades = [...trades].sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+  
+  for (const trade of sortedTrades) {
+    if (trade.action === "BUY") {
+      if (!holdings[trade.tokenMint]) {
+        holdings[trade.tokenMint] = { tokenAmount: 0, tokenSymbol: trade.tokenSymbol, tokenMint: trade.tokenMint };
+      }
+      holdings[trade.tokenMint].tokenAmount += trade.tokenAmount;
+    } else if (trade.action === "SELL") {
+      if (holdings[trade.tokenMint]) {
+        holdings[trade.tokenMint].tokenAmount -= trade.tokenAmount;
+      }
+    }
+  }
+  
+  return Object.fromEntries(Object.entries(holdings).filter(([_, h]) => h.tokenAmount > 0));
+}
+
 export default function PortfolioPage() {
   const { balance: solBalance, loading: solLoading, error: solError, refresh: refreshSol } = useWalletSolBalance();
   const { holdings, loading: holdingsLoading, error: holdingsError, refresh: refreshHoldings } = useTokenHoldings();
+  const { trades, loading: tradesLoading } = useRealTransactions();
 
   const refresh = () => { refreshSol(); refreshHoldings(); };
 
@@ -49,43 +71,77 @@ export default function PortfolioPage() {
 
   const solUsdValue = (solBalance ?? 0) * solPrice;
 
-  // Build pie chart data from real holdings + SOL
+  // Merge API holdings with derived holdings from trades
+  const mergedHoldings = useMemo(() => {
+    console.log('[portfolio] Holdings from API:', holdings);
+    console.log('[portfolio] Trades from API:', trades);
+    
+    const derivedHoldings = computeDerivedHoldings(trades);
+    console.log('[portfolio] Derived holdings:', derivedHoldings);
+    
+    // Start with API holdings
+    let merged = [...holdings];
+    
+    // Add/merge derived holdings
+    Object.entries(derivedHoldings).forEach(([mint, derived]) => {
+      const existing = merged.find(h => h.mint === mint);
+      if (!existing) {
+        // Add new token from derived
+        merged.push({
+          mint,
+          symbol: derived.tokenSymbol,
+          name: derived.tokenSymbol,
+          balance: derived.tokenAmount,
+          decimals: 0,
+          logo: undefined,
+          priceUsd: undefined,
+          valueUsd: undefined,
+        });
+      }
+      // If exists in API, use API data (it has better metadata)
+    });
+    
+    console.log('[portfolio] Final merged holdings:', merged);
+    return merged;
+  }, [holdings, trades]);
+
+  // Build pie chart data from merged holdings + SOL
   const pieData = useMemo(() => {
     const data: { name: string; value: number; color: string }[] = [];
 
     const solUsd = (solBalance ?? 0) * solPrice;
-    const tokenUsd = holdings.reduce((s, h) => s + (h.valueUsd ?? 0), 0);
+    const tokenUsd = mergedHoldings.reduce((s, h) => s + (h.valueUsd ?? 0), 0);
     const grandTotal = solUsd + tokenUsd;
 
     if (grandTotal > 0) {
       if (solUsd > 0) {
         data.push({ name: "SOL", value: parseFloat(((solUsd / grandTotal) * 100).toFixed(1)), color: CHART_COLORS[0] });
       }
-      holdings.filter(h => (h.valueUsd ?? 0) > 0).slice(0, 7).forEach((h, i) => {
+      mergedHoldings.filter(h => (h.valueUsd ?? 0) > 0).slice(0, 7).forEach((h, i) => {
         data.push({
           name: h.symbol,
           value: parseFloat(((h.valueUsd! / grandTotal) * 100).toFixed(1)),
           color: CHART_COLORS[(i + (solUsd > 0 ? 1 : 0)) % CHART_COLORS.length],
         });
       });
-    } else if (holdings.length > 0) {
-      // Fallback: equal slices
-      holdings.slice(0, 8).forEach((h, i) => {
-        data.push({ name: h.symbol, value: parseFloat(((1 / holdings.length) * 100).toFixed(1)), color: CHART_COLORS[i % CHART_COLORS.length] });
+    } else if (mergedHoldings.length > 0) {
+      // Fallback: show all holdings with equal visual weight (no USD value)
+      mergedHoldings.slice(0, 8).forEach((h, i) => {
+        data.push({ name: h.symbol, value: parseFloat(((1 / mergedHoldings.length) * 100).toFixed(1)), color: CHART_COLORS[i % CHART_COLORS.length] });
       });
     } else {
       data.push({ name: "SOL", value: 100, color: CHART_COLORS[0] });
     }
 
     return data;
-  }, [holdings, solBalance, solPrice]);
+  }, [mergedHoldings, solBalance, solPrice]);
 
   const totalUsdValue = useMemo(
-    () => solUsdValue + holdings.reduce((s, h) => s + (h.valueUsd ?? 0), 0),
-    [holdings, solUsdValue]
+    () => solUsdValue + mergedHoldings.reduce((s, h) => s + (h.valueUsd ?? 0), 0),
+    [mergedHoldings, solUsdValue]
   );
 
-  const isLoading = solLoading || holdingsLoading;
+  const isLoading = solLoading || holdingsLoading || tradesLoading;
   const hasError = solError || holdingsError;
 
   return (
@@ -269,7 +325,7 @@ export default function PortfolioPage() {
                       </TableCell>
                     </TableRow>
                   )}
-                  {holdings.map((asset) => (
+                  {mergedHoldings.map((asset) => (
                     <TableRow key={asset.mint} className="border-border/40 hover:bg-muted/20">
                       <TableCell>
                         <div className="flex items-center gap-2">
@@ -338,7 +394,7 @@ export default function PortfolioPage() {
           </div>
           <div>
             <span className="text-muted-foreground text-xs uppercase tracking-wider">SPL Tokens</span>
-            <div className="font-mono font-bold mt-0.5">{holdings.length}</div>
+            <div className="font-mono font-bold mt-0.5">{mergedHoldings.length}</div>
           </div>
           <div>
             <span className="text-muted-foreground text-xs uppercase tracking-wider">Token Portfolio USD</span>

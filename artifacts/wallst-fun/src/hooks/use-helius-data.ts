@@ -524,27 +524,6 @@ export function useTokenHoldings() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const pausedUntilRef = useRef<number>(0);
-  const [trades, setTrades] = useState<RealTrade[]>([]);
-
-  // Fetch trades first to compute derived holdings
-  useEffect(() => {
-    const fetchTrades = async () => {
-      try {
-        const res = await fetch("/api/helius-transactions", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ walletAddress: AGENT_WALLET }),
-        });
-        if (res.ok) {
-          const data = await res.json();
-          if (data.trades) setTrades(data.trades);
-        }
-      } catch {
-        // Silently fail
-      }
-    };
-    fetchTrades();
-  }, []);
 
   const fetchHoldings = useCallback(async () => {
     if (Date.now() < pausedUntilRef.current) return;
@@ -599,38 +578,14 @@ export function useTokenHoldings() {
           .filter((t: TokenHolding) => t.balance > 0);
       }
 
-      // 2. Compute derived holdings from trades and merge
-      const derivedHoldings = computeDerivedHoldings(trades);
-      const derivedTokens: TokenHolding[] = Object.entries(derivedHoldings).map(([mint, holding]) => {
-        // Check if this token is already in API holdings
-        const existing = tokens.find(t => t.mint === mint);
-        if (existing) return existing; // Use API data if available
-        
-        // Otherwise create from derived data
-        return {
-          mint,
-          symbol: holding.tokenSymbol,
-          name: holding.tokenSymbol,
-          balance: holding.tokenAmount,
-          decimals: 0,
-          logo: undefined,
-          priceUsd: undefined,
-          valueUsd: undefined,
-        };
-      });
-
-      // Merge and deduplicate
-      const allTokens = tokens.concat(derivedTokens.filter(dt => !tokens.some(t => t.mint === dt.mint)));
-      allTokens.sort((a: TokenHolding, b: TokenHolding) => (b.valueUsd ?? 0) - (a.valueUsd ?? 0));
-
-      setHoldings(allTokens);
+      setHoldings(tokens);
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to fetch holdings");
     } finally {
       setLoading(false);
     }
-  }, [trades]);
+  }, []);
 
   useEffect(() => {
     // Stagger 3s after mount (same as transactions), then poll every 3 minutes

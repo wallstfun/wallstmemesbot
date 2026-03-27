@@ -1,0 +1,18 @@
+PIGEON is still not showing in the Agent Portfolio on wallst.fun, even though:The Live Trades / Execution Log correctly shows multiple BUY/SELL trades for PIGEON.
+The wallet Hw7yc27h6Lws6YsQmdLoj4M7psyFHRhosFwoGuSESmTh has a real non-zero balance of 2,700 PIGEON (confirmed on Solscan right now) + SOL.
+The derived holdings logic you added earlier calculates ~8044 PIGEON (or similar) but the Portfolio tab still only displays SOL (100% allocation).
+
+The root problem is:Alchemy/Helius getTokenAccountsByOwner is unreliable here — it only returns the USDC account (with 0 balance) and completely misses the PIGEON token account.
+The frontend's derived holdings computation from trade history is being calculated, but it's not actually being used or passed correctly to the Portfolio component / holdings hook.
+
+Goal: Make the Portfolio tab reliably show all tokens (PIGEON now, and any future tokens automatically) with correct balance, USD value, logo, ticker, and updated allocation pie chart.Please do the following step-by-step:Investigate the current code:Find where the Portfolio component gets its holdings data (look in the frontend, especially any useHoldings, useEffect, or derived holdings logic).
+Check how the computed holdings from trades are being returned/used vs. the API call to /api/helius-holdings.js (or equivalent).
+Add console.log or debug output to see:What the derived holdings object actually contains (balances for SOL and PIGEON).
+What the Portfolio component is receiving as props/data.
+Fix the integration:Ensure the derived holdings logic (the accumulation of BUY/SELL trades) overrides or merges correctly with the API result when the API misses tokens.
+Make the computation robust: correctly handle net balance for each mint from the full trade history (the Live Trades data).
+For each detected token, enrich with metadata (ticker "PIGEON", logo from Jupiter or a fallback, current price via Jupiter Price API if possible).
+Update the allocation pie chart and Assets table to include all tokens with non-zero computed balance.
+Long-term improvement (optional but recommended):Also improve the backend holdings API to use a more reliable method (e.g., Helius getAssetsByOwner with showFungible: true, or properly query both Token Program + Token-2022 Program, or combine with transaction history).
+But prioritize getting the frontend derived holdings to display correctly first.
+
