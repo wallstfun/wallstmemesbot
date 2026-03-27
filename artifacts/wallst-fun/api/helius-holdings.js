@@ -2,6 +2,15 @@ const ALCHEMY_URL = "https://solana-mainnet.g.alchemy.com/v2/9vePK8JAvqdzoDs3Q1k
 const DEXSCREENER_URL = "https://api.dexscreener.com/latest/dex/tokens";
 const JUPITER_TOKEN_URL = "https://token.jup.ag/all";
 
+// Known token metadata
+const KNOWN_TOKENS = {
+  "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v": { // USDC
+    symbol: "USDC",
+    name: "USD Coin",
+    logoURI: "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v/logo.png",
+  },
+};
+
 // Returns items in Helius DAS format so the frontend hook can parse correctly
 module.exports = async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -76,7 +85,9 @@ module.exports = async function handler(req, res) {
 
     // 4. Build response in Helius DAS format (what the frontend hook expects)
     const items = tokens.map((t) => {
-      const meta = jupTokenMap[t.mint];
+      const knownMeta = KNOWN_TOKENS[t.mint];
+      const jupMeta = jupTokenMap[t.mint];
+      const meta = knownMeta || jupMeta;
       const pricePerToken = priceMap[t.mint] ?? 0;
       const totalPrice = t.uiAmount * pricePerToken;
       return {
@@ -85,7 +96,7 @@ module.exports = async function handler(req, res) {
         token_info: {
           symbol: meta?.symbol ?? t.mint.slice(0, 6),
           decimals: t.decimals,
-          balance: t.rawAmount,  // raw lamport-style amount (hook divides by 10^decimals)
+          balance: t.rawAmount,
           price_info: pricePerToken > 0 ? {
             price_per_token: pricePerToken,
             total_price: totalPrice,
@@ -97,7 +108,7 @@ module.exports = async function handler(req, res) {
             symbol: meta?.symbol ?? t.mint.slice(0, 6),
           },
           links: {
-            image: meta?.logoURI ?? null,
+            image: meta?.logoURI,
           },
         },
       };
