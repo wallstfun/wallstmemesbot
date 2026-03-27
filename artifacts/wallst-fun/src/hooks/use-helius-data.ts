@@ -108,7 +108,8 @@ export function useRealTransactions() {
             }
             
             const SOL_MINT = "So11111111111111111111111111111111111111112";
-            const solTransfer = changes.find((t: any) => t.tokenAddress === SOL_MINT);
+            // Support both tokenAddress (standard) and mint (alternative format from Helius)
+            const solTransfer = changes.find((t: any) => (t.tokenAddress || t.mint) === SOL_MINT);
             
             if (solTransfer) {
               console.log(`[parse] ${sig}: Found SOL transfer, amount=${solTransfer.tokenAmount}`);
@@ -117,32 +118,32 @@ export function useRealTransactions() {
               
               if (solAmount_raw > 0) {
                 // SOL being received
-                console.log(`[parse] ${sig}: SOL received (${solAmount_raw / 1e9} SOL) → BUY SOL`);
+                console.log(`[parse] ${sig}: SOL received (${solAmount_raw} SOL) → BUY SOL`);
                 action = "BUY";
                 solFlow = "in";
-                solAmount = solAmount_raw / 1e9;
+                solAmount = solAmount_raw; // Already normalized by Helius
                 tokenMint = SOL_MINT;
                 tokenSymbol = "SOL";
                 tokenAmount = solAmount;
                 
-                // Track which token was sent
-                const sentToken = changes.find((t: any) => t.tokenAddress !== SOL_MINT && Number(t.tokenAmount ?? 0) < 0);
-                if (sentToken?.tokenAddress) {
-                  (tx as any).__sentMint__ = sentToken.tokenAddress;
-                  console.log(`[parse] ${sig}: Sent token=${sentToken.tokenSymbol || sentToken.tokenAddress}`);
+                // Track which token was sent (also support both field names)
+                const sentToken = changes.find((t: any) => (t.tokenAddress || t.mint) !== SOL_MINT && Number(t.tokenAmount ?? 0) > 0);
+                if (sentToken?.tokenAddress || sentToken?.mint) {
+                  (tx as any).__sentMint__ = sentToken.tokenAddress || sentToken.mint;
+                  console.log(`[parse] ${sig}: Also received ${sentToken.tokenSymbol || 'token'}`);
                 }
               } else {
                 // SOL being spent
-                console.log(`[parse] ${sig}: SOL spent (${Math.abs(solAmount_raw) / 1e9} SOL) → BUY token`);
+                console.log(`[parse] ${sig}: SOL spent (${Math.abs(solAmount_raw)} SOL) → BUY token`);
                 action = "BUY";
                 solFlow = "out";
-                solAmount = Math.abs(solAmount_raw) / 1e9;
+                solAmount = Math.abs(solAmount_raw); // Already normalized by Helius
                 
                 // Find received token
-                const receivedToken = changes.find((t: any) => t.tokenAddress !== SOL_MINT && Number(t.tokenAmount ?? 0) > 0);
+                const receivedToken = changes.find((t: any) => (t.tokenAddress || t.mint) !== SOL_MINT && Number(t.tokenAmount ?? 0) > 0);
                 if (receivedToken) {
-                  tokenMint = receivedToken.tokenAddress;
-                  tokenSymbol = receivedToken.tokenSymbol || receivedToken.tokenAddress.slice(0, 6);
+                  tokenMint = receivedToken.tokenAddress || receivedToken.mint;
+                  tokenSymbol = receivedToken.tokenSymbol || tokenMint.slice(0, 6);
                   tokenAmount = Number(receivedToken.tokenAmount ?? 0) / Math.pow(10, receivedToken.decimals ?? 0);
                   console.log(`[parse] ${sig}: Received token=${tokenSymbol} (${tokenAmount})`);
                 }
@@ -162,14 +163,17 @@ export function useRealTransactions() {
             } else {
               // No SOL, but has 2+ transfers — try to extract tokens
               console.log(`[parse] ${sig}: No SOL but has 2+ transfers, attempting token-to-token parse`);
-              const nonSysTokens = changes.filter((t: any) => t.tokenAddress && !t.tokenAddress.includes("11111111111"));
+              const nonSysTokens = changes.filter((t: any) => {
+                const mint = t.tokenAddress || t.mint;
+                return mint && !mint.includes("11111111111");
+              });
               if (nonSysTokens.length >= 2) {
                 // Token to token swap
                 const inToken = nonSysTokens.find((t: any) => Number(t.tokenAmount ?? 0) < 0);
                 const outToken = nonSysTokens.find((t: any) => Number(t.tokenAmount ?? 0) > 0);
                 if (inToken && outToken) {
-                  tokenMint = outToken.tokenAddress;
-                  tokenSymbol = outToken.tokenSymbol || outToken.tokenAddress.slice(0, 6);
+                  tokenMint = outToken.tokenAddress || outToken.mint;
+                  tokenSymbol = outToken.tokenSymbol || tokenMint.slice(0, 6);
                   tokenAmount = Number(outToken.tokenAmount ?? 0) / Math.pow(10, outToken.decimals ?? 0);
                   action = "SWAP";
                   solFlow = "none";
