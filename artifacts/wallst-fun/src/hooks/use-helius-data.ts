@@ -200,9 +200,10 @@ export function useRealTransactions() {
   }, []);
 
   useEffect(() => {
-    fetchTrades();
-    const interval = setInterval(fetchTrades, 90000);
-    return () => clearInterval(interval);
+    // API fetching paused - avoiding rate limit issues
+    // fetchTrades();
+    // const interval = setInterval(fetchTrades, 90000);
+    // return () => clearInterval(interval);
   }, [fetchTrades]);
 
   return { trades, totalTrades, winRate, loading, error, refresh: fetchTrades };
@@ -280,9 +281,10 @@ export function useTokenHoldings() {
   }, []);
 
   useEffect(() => {
-    fetchHoldings();
-    const interval = setInterval(fetchHoldings, 90000);
-    return () => clearInterval(interval);
+    // API fetching paused - avoiding rate limit issues
+    // fetchHoldings();
+    // const interval = setInterval(fetchHoldings, 90000);
+    // return () => clearInterval(interval);
   }, [fetchHoldings]);
 
   return { holdings, loading, error, refresh: fetchHoldings };
@@ -322,9 +324,10 @@ export function useWalletSolBalance() {
   }, []);
 
   useEffect(() => {
-    fetchBalance();
-    const interval = setInterval(fetchBalance, 120000); // Every 120 seconds
-    return () => clearInterval(interval);
+    // API fetching paused - avoiding rate limit issues
+    // fetchBalance();
+    // const interval = setInterval(fetchBalance, 120000);
+    // return () => clearInterval(interval);
   }, [fetchBalance]);
 
   return { balance, loading, error, refresh: fetchBalance };
