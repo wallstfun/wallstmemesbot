@@ -12,6 +12,12 @@ function formatUTC(date: Date): string {
   return date.toISOString().replace('T', ' ').substring(0, 19);
 }
 
+// Generate short signature for TX column
+function getShortSig(fullSig: string): string {
+  if (!fullSig) return "—";
+  return fullSig.slice(0, 8) + "…" + fullSig.slice(-4);
+}
+
 type FilterType = "all" | "buy" | "sell" | "swap";
 
 export default function LiveTradesPage() {
@@ -203,14 +209,18 @@ export default function LiveTradesPage() {
                       <span className="text-xs text-muted-foreground uppercase">{trade.source}</span>
                     </TableCell>
                     <TableCell className="text-right">
-                      <a
-                        href={trade.txUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 text-primary hover:underline bg-primary/5 px-2 py-1 rounded text-xs"
-                      >
-                        {trade.shortSig} <ExternalLink className="w-2.5 h-2.5" />
-                      </a>
+                      {trade.signature && trade.txUrl ? (
+                        <a
+                          href={trade.txUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-primary hover:underline bg-primary/5 px-2 py-1 rounded text-xs font-mono"
+                        >
+                          {trade.shortSig || getShortSig(trade.signature)} <ExternalLink className="w-2.5 h-2.5" />
+                        </a>
+                      ) : (
+                        <span className="text-muted-foreground text-xs">—</span>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}
