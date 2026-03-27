@@ -292,19 +292,40 @@ export function useTokenHoldings() {
 
 export function useWalletSolBalance() {
   const [balance, setBalance] = useState<number | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const fetchBalance = useCallback(async () => {
-    // Placeholder: Balance updates from ticker via localStorage
-    return;
+    try {
+      const res = await fetch("/api/helius-balance", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ walletAddress: AGENT_WALLET }),
+      });
+
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`);
+      }
+
+      const data = await res.json();
+      const bal = data.balance ?? 0;
+      setBalance(bal);
+      setError(null);
+      console.log(`[wallst.fun] SOL balance fetched: ${bal.toFixed(4)} SOL`);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Failed to fetch balance";
+      setError(errorMessage);
+      console.error(`[wallst.fun] Balance fetch error: ${errorMessage}`);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {
-    // Balance is updated via SOL price from dashboard (stored in localStorage)
-    // No need to fetch separately
-    return () => {};
-  }, []);
+    fetchBalance();
+    const interval = setInterval(fetchBalance, 30000); // Every 30 seconds
+    return () => clearInterval(interval);
+  }, [fetchBalance]);
 
   return { balance, loading, error, refresh: fetchBalance };
 }
