@@ -78,10 +78,10 @@ export function useRealTransactions() {
         .map((tx: any) => {
           const swap = tx.events?.swap;
           
-          // Include Jupiter transactions even without a top-level swap event
-          // Jupiter fill orders might not have the standard swap structure
+          // Include Jupiter transactions and any tx with tokenTransfers that look like swaps
           const isJupiter = tx.source === "JUPITER";
-          if (!swap && !isJupiter) return null;
+          const hasSwapLikeTransfers = (tx.tokenTransfers?.length ?? 0) >= 2;
+          if (!swap && !isJupiter && !hasSwapLikeTransfers) return null;
 
           const hasNativeIn = swap.nativeInput && Number(swap.nativeInput.amount) > 0;
           const hasNativeOut = swap.nativeOutput && Number(swap.nativeOutput.amount) > 0;
@@ -95,48 +95,64 @@ export function useRealTransactions() {
           let tokenSymbol = "";
           let solFlow: RealTrade["solFlow"] = "none";
 
-          // For Jupiter fills without swap event, parse from token changes
-          if (!swap && isJupiter) {
+          // For Jupiter fills or swap-like txs without top-level swap event, parse from token changes
+          if (!swap && (isJupiter || hasSwapLikeTransfers)) {
             const changes = tx.tokenTransfers || [];
+            if (changes.length < 2) return null;
+            
+            // Find all unique token addresses involved (excluding system programs)
+            const tokens = [...new Set(changes.map((t) => t.tokenAddress).filter(Boolean))].filter(
+              (t) => t && !t.includes("11111111111111111") // exclude system program
+            );
+            
+            if (tokens.length < 2) return null; // Need at least 2 different tokens for a swap
             
             // Find SOL transfers to determine direction
-            const solSent = changes.find((t) => t.tokenAddress === "So11111111111111111111111111111111111111112" && Number(t.fromUserAccount ? t.tokenAmount : 0) > 0);
-            const solReceived = changes.find((t) => t.tokenAddress === "So11111111111111111111111111111111111111112" && Number(t.toUserAccount ? t.tokenAmount : 0) > 0);
+            const SOL_MINT = "So11111111111111111111111111111111111111112";
+            const solTransfer = changes.find((t) => t.tokenAddress === SOL_MINT);
             
-            if (solReceived) {
-              // SOL received → BUY SOL
-              action = "BUY";
-              solFlow = "in";
-              solAmount = Number(solReceived.tokenAmount ?? 0) / 1e9;
-              tokenMint = "So11111111111111111111111111111111111111112";
-              tokenSymbol = "SOL";
-              tokenAmount = solAmount;
-              // Track which token was sent
-              const sentToken = changes.find((t) => t.tokenAddress !== "So11111111111111111111111111111111111111112");
-              if (sentToken?.tokenAddress) (tx as any).__sentMint__ = sentToken.tokenAddress;
-            } else if (solSent) {
-              // SOL sent → SELL SOL or BUY token
-              action = "BUY";
-              solFlow = "out";
-              solAmount = Number(solSent.tokenAmount ?? 0) / 1e9;
-              const receivedToken = changes.find((t) => t.tokenAddress !== "So11111111111111111111111111111111111111112");
-              if (receivedToken) {
-                tokenMint = receivedToken.tokenAddress;
-                tokenSymbol = receivedToken.tokenSymbol || receivedToken.tokenAddress.slice(0, 5);
-                tokenAmount = Number(receivedToken.tokenAmount ?? 0) / Math.pow(10, receivedToken.decimals ?? 0);
+            if (solTransfer) {
+              // Has SOL — this is a SOL <→ token swap
+              const hasSolOut = Number(solTransfer.tokenAmount ?? 0) > 0;
+              
+              if (hasSolOut) {
+                // SOL being spent → BUY token
+                action = "BUY";
+                solFlow = "out";
+                solAmount = Number(solTransfer.tokenAmount ?? 0) / 1e9;
+                
+                // Find the received token (not SOL)
+                const receivedToken = changes.find((t) => t.tokenAddress !== SOL_MINT && Number(t.tokenAmount ?? 0) > 0);
+                if (receivedToken) {
+                  tokenMint = receivedToken.tokenAddress;
+                  tokenSymbol = receivedToken.tokenSymbol || receivedToken.tokenAddress.slice(0, 6);
+                  tokenAmount = Number(receivedToken.tokenAmount ?? 0) / Math.pow(10, receivedToken.decimals ?? 0);
+                }
+              } else {
+                // SOL being received → SELL token for SOL (or BUY SOL)
+                action = "BUY";
+                solFlow = "in";
+                solAmount = Math.abs(Number(solTransfer.tokenAmount ?? 0)) / 1e9;
+                tokenMint = SOL_MINT;
+                tokenSymbol = "SOL";
+                tokenAmount = solAmount;
+                
+                // Track which token was sent
+                const sentToken = changes.find((t) => t.tokenAddress !== SOL_MINT && Number(t.tokenAmount ?? 0) < 0);
+                if (sentToken?.tokenAddress) (tx as any).__sentMint__ = sentToken.tokenAddress;
               }
+              
+              return {
+                signature: tx.signature,
+                timestamp: tx.timestamp,
+                action,
+                tokenMint,
+                tokenSymbol,
+                tokenAmount,
+                solAmount,
+                solFlow,
+              } as RealTrade;
             }
-            
-            return {
-              signature: tx.signature,
-              timestamp: tx.timestamp,
-              action,
-              tokenMint,
-              tokenSymbol,
-              tokenAmount,
-              solAmount,
-              solFlow,
-            } as RealTrade;
           }
           
           // Standard swap event parsing

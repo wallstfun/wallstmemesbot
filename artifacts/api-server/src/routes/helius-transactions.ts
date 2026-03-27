@@ -5,7 +5,7 @@ const router = Router();
 const KEY_PRIMARY = "8ffc1afb-b4e5-494e-852e-f80ec0f5033e";
 const KEY_FALLBACK = "54385120-28ac-4baa-9774-3f7ba8ccd656";
 const HELIUS_V0_URL = "https://api-mainnet.helius-rpc.com/v0";
-const JUPITER_SWAP_HISTORY_URL = "https://api.jup.ag/swap/v1/swap-history";
+const JUPITER_SWAP_HISTORY_URL = "https://api.jup.ag/ultra";
 const JUPITER_API_KEY = "429e13f2-25f8-4706-9326-24287fa313d4";
 
 const rateLimitStates = new Map<string, { pausedUntil: number }>();
