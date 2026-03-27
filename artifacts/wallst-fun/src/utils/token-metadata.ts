@@ -104,13 +104,60 @@ export async function fetchTokenMetadata(mint: string): Promise<TokenMetadata> {
     console.log(`[metadata] CoinGecko fetch failed for ${mint}:`, e instanceof Error ? e.message : String(e));
   }
 
-  // Method 4: Smart fallback - try common image URLs
+  // Method 4: Try Orca API (more reliable for Solana tokens)
+  try {
+    console.log(`[metadata] Fetching from Orca API for ${mint}`);
+    const res = await fetch(`https://api.orca.so/v1/token?address=${mint}`, { signal: AbortSignal.timeout(5000) });
+    if (res.ok) {
+      const data = await res.json();
+      if (data && (data.symbol || data.name || data.logoURI)) {
+        metadata = {
+          symbol: data.symbol?.toUpperCase() || metadata.symbol,
+          name: data.name || metadata.name,
+          logoURI: data.logoURI || undefined,
+        };
+        if (metadata.logoURI) {
+          console.log(`[metadata] Orca API success for ${mint}: symbol=${metadata.symbol}, name=${metadata.name}`);
+          metadataCache.set(mint, metadata);
+          return metadata;
+        }
+      }
+    }
+  } catch (e) {
+    console.log(`[metadata] Orca API fetch failed for ${mint}:`, e instanceof Error ? e.message : String(e));
+  }
+
+  // Method 5: Try Metaplex API
+  try {
+    console.log(`[metadata] Fetching from Metaplex for ${mint}`);
+    const res = await fetch(`https://api.metaplex.solana.com/tokens/${mint}`, { signal: AbortSignal.timeout(5000) });
+    if (res.ok) {
+      const data = await res.json();
+      if (data && (data.symbol || data.name || data.image)) {
+        metadata = {
+          symbol: data.symbol?.toUpperCase() || metadata.symbol,
+          name: data.name || metadata.name,
+          logoURI: data.image || undefined,
+        };
+        if (metadata.logoURI) {
+          console.log(`[metadata] Metaplex success for ${mint}: symbol=${metadata.symbol}, name=${metadata.name}`);
+          metadataCache.set(mint, metadata);
+          return metadata;
+        }
+      }
+    }
+  } catch (e) {
+    console.log(`[metadata] Metaplex fetch failed for ${mint}:`, e instanceof Error ? e.message : String(e));
+  }
+
+  // Method 6: Smart fallback - try common image URLs
   try {
     console.log(`[metadata] Trying smart fallback URLs for ${mint}`);
     const fallbackUrls = [
       `https://arweave.net/images/${mint}.png`,
       `https://bafybeiclsp2jcvqr5zihfvvhgfz5ijfzhdp7nstcb52q2vpj5bz5ybmea.ipfs.nftstorage.link/${mint}.png`,
       `https://metadata.solanium.io/images/${mint}.png`,
+      `https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/${mint}/logo.png`,
     ];
     
     for (const url of fallbackUrls) {
