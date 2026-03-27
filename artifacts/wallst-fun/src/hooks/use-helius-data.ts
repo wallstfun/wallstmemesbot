@@ -173,59 +173,97 @@ export function useRealTransactions() {
                 : null;
               
               if (receivedToken && (receivedToken.tokenAddress || receivedToken.mint)) {
-                tokenMint = receivedToken.tokenAddress || receivedToken.mint;
-                const rawAmount = Number(receivedToken.tokenAmount ?? 0);
-                const decimals = Number(receivedToken.decimals ?? 0);
-                tokenAmount = rawAmount / Math.pow(10, decimals);
-                tokenSymbol = receivedToken.tokenSymbol || KNOWN_TOKEN_SYMBOLS[tokenMint] || tokenMint.slice(0, 6).toUpperCase();
+                const receivedMint = receivedToken.tokenAddress || receivedToken.mint;
+                const receivedRawAmount = Number(receivedToken.tokenAmount ?? 0);
+                const receivedDecimals = Number(receivedToken.decimals ?? 0);
+                const receivedAmount = receivedRawAmount / Math.pow(10, receivedDecimals);
+                const receivedSymbol = receivedToken.tokenSymbol || KNOWN_TOKEN_SYMBOLS[receivedMint] || receivedMint.slice(0, 6).toUpperCase();
                 
-                // Determine action and solFlow based on WHAT WAS RECEIVED
-                if (tokenMint === SOL_MINT) {
-                  // Received SOL → BUY SOL (sold a token for SOL)
-                  action = "BUY";
-                  solFlow = "in";
-                  solAmount = tokenAmount;
-                  
-                  // Find what was sent (for logging)
-                  const sentTokens = outgoingTransfers.filter((t: any) => (t?.tokenAddress || t?.mint) !== SOL_MINT);
-                  const sentSymbol = sentTokens.length > 0 ? (sentTokens[0].tokenSymbol || "TOKEN") : "UNKNOWN";
-                  console.log(`[parse] ${sig}: Sold ${sentSymbol} → Received SOL: ${solAmount.toFixed(4)}`);
-                } else if (STABLECOIN_MINTS.includes(tokenMint)) {
-                  // Received USDC/USDT → SELL (exiting position)
+                // SIMPLE RULE: 
+                // - If receiving STABLECOIN → SELL the token that was sent
+                // - If receiving SOL by sending non-stablecoin → SELL that token
+                // - Otherwise → BUY what was received
+                
+                if (STABLECOIN_MINTS.includes(receivedMint)) {
+                  // Received stablecoin → SELL (exit position)
+                  // Show the sent token as the asset
                   action = "SELL";
                   solFlow = "none";
                   
-                  // Find SOL or other token that was sent
-                  const outgoingSOL = outgoingTransfers.find((t: any) => (t?.tokenAddress || t?.mint) === SOL_MINT);
-                  if (outgoingSOL) {
-                    solAmount = Number(outgoingSOL.tokenAmount ?? 0) / Math.pow(10, outgoingSOL.decimals ?? 9);
-                    solFlow = "out";
-                  }
+                  const sentNonStable = outgoingTransfers.filter((t: any) => {
+                    const tMint = t?.tokenAddress || t?.mint;
+                    return tMint !== SOL_MINT && !STABLECOIN_MINTS.includes(tMint);
+                  });
                   
-                  console.log(`[parse] ${sig}: SELL: Received ${tokenSymbol}: ${tokenAmount} (exiting position)`);
+                  if (sentNonStable.length > 0) {
+                    // Use the largest non-stablecoin outgoing token
+                    const sentToken = sentNonStable.reduce((max: any, t: any) => {
+                      return (Number(t?.tokenAmount ?? 0) > Number(max?.tokenAmount ?? 0)) ? t : max;
+                    });
+                    tokenMint = sentToken.tokenAddress || sentToken.mint;
+                    const rawAmount = Number(sentToken.tokenAmount ?? 0);
+                    const decimals = Number(sentToken.decimals ?? 0);
+                    tokenAmount = rawAmount / Math.pow(10, decimals);
+                    tokenSymbol = sentToken.tokenSymbol || KNOWN_TOKEN_SYMBOLS[tokenMint] || tokenMint.slice(0, 6).toUpperCase();
+                    solAmount = receivedAmount; // stablecoin amount as ref
+                    console.log(`[parse] ${sig}: SELL ${tokenSymbol}: ${tokenAmount} for ${receivedAmount.toFixed(4)} ${receivedSymbol}`);
+                  } else {
+                    // No clear asset, skip
+                    console.log(`[parse] ${sig}: No clear SELL asset found`);
+                  }
+                } else if (receivedMint === SOL_MINT) {
+                  // Received SOL → check what was sent
+                  const sentNonStable = outgoingTransfers.filter((t: any) => {
+                    const tMint = t?.tokenAddress || t?.mint;
+                    return tMint !== SOL_MINT && !STABLECOIN_MINTS.includes(tMint);
+                  });
+                  
+                  if (sentNonStable.length > 0) {
+                    // Sold token for SOL → SELL that token
+                    action = "SELL";
+                    solFlow = "in";
+                    const sentToken = sentNonStable.reduce((max: any, t: any) => {
+                      return (Number(t?.tokenAmount ?? 0) > Number(max?.tokenAmount ?? 0)) ? t : max;
+                    });
+                    tokenMint = sentToken.tokenAddress || sentToken.mint;
+                    const rawAmount = Number(sentToken.tokenAmount ?? 0);
+                    const decimals = Number(sentToken.decimals ?? 0);
+                    tokenAmount = rawAmount / Math.pow(10, decimals);
+                    tokenSymbol = sentToken.tokenSymbol || KNOWN_TOKEN_SYMBOLS[tokenMint] || tokenMint.slice(0, 6).toUpperCase();
+                    solAmount = receivedAmount;
+                    console.log(`[parse] ${sig}: SELL ${tokenSymbol}: ${tokenAmount} for ${receivedAmount.toFixed(4)} SOL`);
+                  } else {
+                    // Bought SOL (from stablecoin or another SOL) → BUY SOL
+                    action = "BUY";
+                    solFlow = "in";
+                    tokenMint = receivedMint;
+                    tokenAmount = receivedAmount;
+                    tokenSymbol = receivedSymbol;
+                    solAmount = receivedAmount;
+                    console.log(`[parse] ${sig}: BUY SOL: ${receivedAmount.toFixed(4)} SOL`);
+                  }
                 } else {
-                  // Received other token → BUY [token]
+                  // Received other token → BUY that token
                   action = "BUY";
                   solFlow = "none";
+                  tokenMint = receivedMint;
+                  tokenAmount = receivedAmount;
+                  tokenSymbol = receivedSymbol;
                   
-                  // Find SOL that was sent (if any)
-                  // Use the LARGEST SOL transfer (the main spend, not fees)
+                  // Find largest outgoing SOL
                   const solTransfers = outgoingTransfers.filter((t: any) => (t?.tokenAddress || t?.mint) === SOL_MINT);
                   const largestSOL = solTransfers.length > 0
                     ? solTransfers.reduce((max: any, t: any) => {
-                        const maxAmount = Number(max?.tokenAmount ?? 0);
-                        const curAmount = Number(t?.tokenAmount ?? 0);
-                        return curAmount > maxAmount ? t : max;
+                        return (Number(t?.tokenAmount ?? 0) > Number(max?.tokenAmount ?? 0)) ? t : max;
                       })
                     : null;
                   
                   if (largestSOL) {
-                    // Helius already returns SOL amounts in proper units, no need to divide by decimals
                     solAmount = Number(largestSOL.tokenAmount ?? 0);
                     solFlow = "out";
-                    console.log(`[parse] ${sig}: BUY ${tokenSymbol} (mint=${tokenMint}): ${tokenAmount} for ${solAmount.toFixed(4)} SOL`);
+                    console.log(`[parse] ${sig}: BUY ${tokenSymbol}: ${tokenAmount} for ${solAmount.toFixed(4)} SOL`);
                   } else {
-                    console.log(`[parse] ${sig}: BUY ${tokenSymbol} (mint=${tokenMint}): ${tokenAmount} (token-to-token swap)`);
+                    console.log(`[parse] ${sig}: BUY ${tokenSymbol}: ${tokenAmount}`);
                   }
                 }
               } else {

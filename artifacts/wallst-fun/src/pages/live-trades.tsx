@@ -148,9 +148,7 @@ export default function LiveTradesPage() {
                   <TableHead className="w-[160px]">TIMESTAMP (UTC)</TableHead>
                   <TableHead className="w-[90px]">ACTION</TableHead>
                   <TableHead>ASSET</TableHead>
-                  <TableHead className="text-right">SOL AMOUNT</TableHead>
                   <TableHead className="text-right">TOKEN AMOUNT</TableHead>
-                  <TableHead className="text-right">SOURCE</TableHead>
                   <TableHead className="text-right">TX</TableHead>
                 </TableRow>
               </TableHeader>
@@ -188,13 +186,6 @@ export default function LiveTradesPage() {
                       </div>
                     </TableCell>
                     <TableCell className="text-right">
-                      {trade.solAmount > 0 ? (
-                        <span>{trade.solAmount.toFixed(4)} SOL</span>
-                      ) : (
-                        <span className="text-muted-foreground">—</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right">
                       {trade.tokenAmount > 0 ? (
                         trade.tokenAmount >= 1000000
                           ? `${(trade.tokenAmount / 1000000).toFixed(2)}M`
@@ -204,9 +195,6 @@ export default function LiveTradesPage() {
                       ) : (
                         <span className="text-muted-foreground">—</span>
                       )}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <span className="text-xs text-muted-foreground uppercase">{trade.source}</span>
                     </TableCell>
                     <TableCell className="text-right">
                       {trade.signature && trade.txUrl ? (
