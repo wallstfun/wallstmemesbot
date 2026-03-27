@@ -219,7 +219,7 @@ function DashboardContent() {
     }
 
     fetchPrice();
-    const interval = setInterval(fetchPrice, 60000); // every 60s
+    const interval = setInterval(fetchPrice, 300000); // every 5 min (was 60s — aggressive rate limiting)
 
     return () => {
       clearInterval(interval);

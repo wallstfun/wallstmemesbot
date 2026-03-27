@@ -26,28 +26,13 @@ const tokenMetadataCache: Record<string, { symbol: string; name?: string }> = {}
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-// Fetch token metadata from Jupiter API with caching
+// Fetch token metadata from cache only (Dex Screener + hardcoded list now primary)
 async function getTokenMetadata(mint: string): Promise<{ symbol: string; name?: string }> {
   if (tokenMetadataCache[mint]) {
     return tokenMetadataCache[mint];
   }
   
-  try {
-    const res = await fetch(`https://tokens.jup.ag/token/${mint}`);
-    if (res.ok) {
-      const data = await res.json();
-      const metadata = {
-        symbol: data.symbol || mint.slice(0, 6).toUpperCase(),
-        name: data.name,
-      };
-      tokenMetadataCache[mint] = metadata;
-      return metadata;
-    }
-  } catch {
-    // Silently fail
-  }
-  
-  // Fallback
+  // Fallback to short symbol (no extra API calls — we use Dex Screener for unknown tokens)
   const fallback = { symbol: mint.slice(0, 6).toUpperCase() };
   tokenMetadataCache[mint] = fallback;
   return fallback;
