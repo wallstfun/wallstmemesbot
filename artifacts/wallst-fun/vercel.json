@@ -1,23 +1,5 @@
 {
   "version": 2,
   "buildCommand": "pnpm build",
-  "builds": [
-    {
-      "src": "server.ts",
-      "use": "@vercel/node",
-      "config": {
-        "zeroConfig": true
-      }
-    }
-  ],
-  "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "/server.ts"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/server.ts"
-    }
-  ]
+  "devCommand": "pnpm dev"
 }
