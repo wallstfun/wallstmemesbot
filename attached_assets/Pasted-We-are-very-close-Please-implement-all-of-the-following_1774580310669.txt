@@ -1,0 +1,32 @@
+We are very close. Please implement all of the following at the same time:1. Core Architecture (keep everything we already built)Keep the API key separation: Helius Key2 for transactions only, Alchemy exclusively for balance and holdings.
+Keep staggered initial loads (transactions on mount, holdings after 3s, balance after 6s).
+Keep current polling intervals and per-endpoint backoff.
+Keep the unified Express server so there are no 404s on the deployed site.
+
+2. Critical Bugs to Fix Right NowA. SOL Balance Must Be LiveThe dashboard and portfolio still show 0.0000 SOL even though the wallet has real SOL.
+The useWalletSolBalance / Alchemy balance route must return the actual current SOL amount and update the Agent BAL widget + Assets table in real time.
+
+B. P&L / All Time Performance ChartAfter the USDC → SOL swap, the chart should show positive P&L (we are up in profit).
+Currently the chart is flat / showing negative or zero. Fix the P&L calculation so it reflects actual realized profit from swaps.
+
+C. Live Execution Log – Buy/Sell & Asset Labeling (Major Bug)The log currently shows:01:51:29 → BUY USDC 0.115 SOL
+00:56:44 → BUY SOL 0.3178 SOL
+This is wrong.
+Correct behavior:When we sell USDC to buy SOL → show BUY SOL (asset = SOL, not USDC).
+When we sell SOL to buy USDC → show SELL SOL.
+The action and asset column must always reflect the received token (what we actually gained in the swap). USDC should never appear as the asset when we are buying SOL.
+
+D. Data Loading BehaviorAll important data (balance, transactions, holdings) must load automatically on page load (no default pause).
+Keep the staggered delays and backoff so we don’t hit rate limits.
+
+3. Final VerificationAfter these changes:Real SOL balance must appear in the dashboard widget and portfolio assets table.
+The P&L chart must reflect profit from the latest swaps.
+Live Trades log must correctly label both recent swaps as BUY SOL (not BUY USDC).
+No more 404 errors on any /api/* route on the deployed site (wallst.fun).
+
+Please show me:The files you changed (especially the transaction parsing logic and balance hooks)
+The updated buy/sell classification code
+The updated P&L calculation code
+
+Then restart both servers and confirm everything works on the live deployment.
+

@@ -25,6 +25,8 @@ export interface RealTrade {
   description: string;
   source: string;
   txUrl: string;
+  /** Direction of SOL in this swap — used for P&L accounting */
+  solFlow: "in" | "out" | "none";
 }
 
 const extractSymbolFromDescription = (desc: string, mint: string): string => {
@@ -84,30 +86,37 @@ export function useRealTransactions() {
           let solAmount = 0;
           let tokenAmount = 0;
           let tokenMint = "";
+          let tokenSymbol = "";
+          let solFlow: RealTrade["solFlow"] = "none";
 
           if (hasNativeOut && hasTokenIn) {
+            // Received SOL, sent a token (e.g. USDC → SOL)
+            // The asset gained is SOL — always label as BUY SOL
             action = "BUY";
+            solFlow = "in";
             solAmount = Number(swap.nativeOutput.amount) / 1e9;
-            const inp = swap.tokenInputs[0];
-            tokenMint = inp.mint;
-            tokenAmount =
-              Number(inp.rawTokenAmount?.tokenAmount ?? 0) /
-              Math.pow(10, inp.rawTokenAmount?.decimals ?? 6);
+            tokenMint = "So11111111111111111111111111111111111111112"; // native SOL
+            tokenSymbol = "SOL";
+            tokenAmount = solAmount; // amount of SOL received
           } else if (hasNativeIn && hasTokenOut) {
+            // Sent SOL, received a token
             const out = swap.tokenOutputs[0];
             tokenMint = out.mint;
             tokenAmount =
               Number(out.rawTokenAmount?.tokenAmount ?? 0) /
               Math.pow(10, out.rawTokenAmount?.decimals ?? 6);
             solAmount = Number(swap.nativeInput.amount) / 1e9;
+            solFlow = "out";
+            // Classify by the received token: stablecoin = SELL, otherwise = BUY
             action = STABLECOIN_MINTS.includes(tokenMint) ? "SELL" : "BUY";
           } else if (hasTokenIn && hasTokenOut) {
+            // Token-to-token swap (no SOL involved)
             const out = swap.tokenOutputs[0];
-            const inp = swap.tokenInputs[0];
             tokenMint = out.mint;
             tokenAmount =
               Number(out.rawTokenAmount?.tokenAmount ?? 0) /
               Math.pow(10, out.rawTokenAmount?.decimals ?? 6);
+            solFlow = "none";
             action = STABLECOIN_MINTS.includes(tokenMint) ? "SELL" : "BUY";
             solAmount = 0;
           } else {
@@ -116,13 +125,15 @@ export function useRealTransactions() {
 
           if (!tokenMint) return null;
 
-          let tokenSymbol = "";
-          if (tx.tokenTransfers?.length > 0) {
-            const match = tx.tokenTransfers.find((t: any) => t.mint === tokenMint);
-            if (match?.symbol) tokenSymbol = match.symbol;
-          }
+          // Resolve symbol for non-SOL tokens
           if (!tokenSymbol) {
-            tokenSymbol = extractSymbolFromDescription(tx.description || "", tokenMint);
+            if (tx.tokenTransfers?.length > 0) {
+              const match = tx.tokenTransfers.find((t: any) => t.mint === tokenMint);
+              if (match?.symbol) tokenSymbol = match.symbol;
+            }
+            if (!tokenSymbol) {
+              tokenSymbol = extractSymbolFromDescription(tx.description || "", tokenMint);
+            }
           }
 
           const sig: string = tx.signature ?? "";
@@ -139,6 +150,7 @@ export function useRealTransactions() {
             description: tx.description ?? "",
             source: tx.source ?? "DEX",
             txUrl: `https://solscan.io/tx/${sig}`,
+            solFlow,
           } as RealTrade;
         })
         .filter((t): t is RealTrade => t !== null);

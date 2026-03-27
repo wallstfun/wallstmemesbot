@@ -38,8 +38,9 @@ router.post("/alchemy-balance", async (req: Request, res: Response) => {
     }
 
     // 1. Fetch SOL balance
-    const solLamports = await alchemyRpcCall("getBalance", [wallet]);
-    const solBalance = solLamports / 1e9;
+    // getBalance returns { context: { slot }, value: <lamports> } — read .value
+    const balanceResult = await alchemyRpcCall("getBalance", [wallet]);
+    const solBalance = (balanceResult?.value ?? 0) / 1e9;
 
     // 2. Fetch token accounts
     const tokenAccounts = await alchemyRpcCall("getTokenAccountsByOwner", [

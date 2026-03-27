@@ -177,15 +177,19 @@ function DashboardContent() {
     };
   }, []);
 
-  // All-time performance chart: cumulative SOL P&L from real on-chain swaps
+  // All-time performance chart: cumulative SOL P&L from real on-chain swaps.
+  // Uses solFlow to track actual SOL movement regardless of action label:
+  //   solFlow="in"  → received SOL (e.g. sold token/USDC → got SOL) → positive
+  //   solFlow="out" → sent SOL (e.g. bought token with SOL) → negative
+  //   solFlow="none" → token-to-token, no SOL impact
   const allTimeChartData = useMemo(() => {
     if (realTrades.length === 0) return [];
     const sorted = [...realTrades].sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
     let cumSol = 0;
     const points: { time: string; value: number }[] = [];
     sorted.forEach((trade) => {
-      if (trade.action === "BUY") cumSol -= trade.solAmount;
-      else if (trade.action === "SELL") cumSol += trade.solAmount;
+      if (trade.solFlow === "in") cumSol += trade.solAmount;
+      else if (trade.solFlow === "out") cumSol -= trade.solAmount;
       points.push({
         time: format(trade.timestamp, "MMM dd HH:mm"),
         value: parseFloat((cumSol * (solPrice || 0)).toFixed(2)),
