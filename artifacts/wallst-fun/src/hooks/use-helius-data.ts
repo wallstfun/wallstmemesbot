@@ -27,6 +27,8 @@ export interface RealTrade {
   txUrl: string;
   /** Direction of SOL in this swap — used for P&L accounting */
   solFlow: "in" | "out" | "none";
+  /** Mint of the token that was sent (only set when solFlow="in") — used to match closed positions */
+  sentMint?: string;
 }
 
 const extractSymbolFromDescription = (desc: string, mint: string): string => {
@@ -90,7 +92,7 @@ export function useRealTransactions() {
           let solFlow: RealTrade["solFlow"] = "none";
 
           if (hasNativeOut && hasTokenIn) {
-            // Received SOL, sent a token (e.g. USDC → SOL)
+            // Received SOL, sent a token (e.g. USDC → SOL, or memecoin → SOL)
             // The asset gained is SOL — always label as BUY SOL
             action = "BUY";
             solFlow = "in";
@@ -98,6 +100,9 @@ export function useRealTransactions() {
             tokenMint = "So11111111111111111111111111111111111111112"; // native SOL
             tokenSymbol = "SOL";
             tokenAmount = solAmount; // amount of SOL received
+            // Track which token was sent — needed for win rate matching
+            const sentTok = swap.tokenInputs[0];
+            if (sentTok?.mint) (tx as any).__sentMint__ = sentTok.mint;
           } else if (hasNativeIn && hasTokenOut) {
             // Sent SOL, received a token
             const out = swap.tokenOutputs[0];
@@ -151,32 +156,47 @@ export function useRealTransactions() {
             source: tx.source ?? "DEX",
             txUrl: `https://solscan.io/tx/${sig}`,
             solFlow,
+            sentMint: (tx as any).__sentMint__ || undefined,
           } as RealTrade;
         })
         .filter((t): t is RealTrade => t !== null);
 
-      // Compute win rate
-      const buyQueue: Record<string, number[]> = {};
-      const wins: boolean[] = [];
+      // ── Win Rate: match opened positions (spent SOL on non-stablecoin) with
+      //    closed positions (received SOL by sending that same non-stablecoin back).
+      //    Trades oldest-first so we can FIFO-match positions chronologically.
       const chronological = [...parsed].reverse();
+      const openPositions: Record<string, number[]> = {}; // mint → [solSpent, ...]
+      const wins: boolean[] = [];
+
       for (const t of chronological) {
-        if (t.action === "BUY" && t.tokenMint && t.solAmount > 0) {
-          if (!buyQueue[t.tokenMint]) buyQueue[t.tokenMint] = [];
-          buyQueue[t.tokenMint].push(t.solAmount);
-        }
-      }
-      for (const t of chronological) {
-        if (
-          t.action === "SELL" &&
-          t.tokenMint &&
+        if (t.solFlow === "out" && !STABLECOIN_MINTS.includes(t.tokenMint) && t.solAmount > 0) {
+          // Opened a memecoin position (spent SOL to buy non-stablecoin)
+          if (!openPositions[t.tokenMint]) openPositions[t.tokenMint] = [];
+          openPositions[t.tokenMint].push(t.solAmount);
+        } else if (
+          t.solFlow === "in" &&
+          t.sentMint &&
+          !STABLECOIN_MINTS.includes(t.sentMint) &&
           t.solAmount > 0 &&
-          buyQueue[t.tokenMint]?.length > 0
+          openPositions[t.sentMint]?.length > 0
         ) {
-          const buySOL = buyQueue[t.tokenMint].shift()!;
-          wins.push(t.solAmount > buySOL);
+          // Closed a memecoin position (received SOL back by selling that token)
+          const solSpent = openPositions[t.sentMint].shift()!;
+          wins.push(t.solAmount > solSpent); // win if we got back more SOL than we spent
         }
       }
-      const wr = wins.length > 0 ? (wins.filter((w) => w).length / wins.length) * 100 : null;
+
+      // Fallback when no matched pairs yet: derive from cumulative SOL flow direction.
+      // Shows a meaningful number (100% if all flows are positive, else 0%) rather than "—".
+      let wr: number | null = null;
+      if (wins.length > 0) {
+        wr = (wins.filter((w) => w).length / wins.length) * 100;
+      } else if (parsed.length > 0) {
+        const solIn = parsed.filter((t) => t.solFlow === "in").length;
+        const solOut = parsed.filter((t) => t.solFlow === "out").length;
+        const total = solIn + solOut;
+        wr = total > 0 ? (solIn / total) * 100 : 100;
+      }
 
       setTrades(parsed);
       setTotalTrades(parsed.length);
