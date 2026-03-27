@@ -52679,6 +52679,11 @@ router6.post("/helius-holdings", async (req, res) => {
     }
     const rawAccounts = alchemyData.result?.value ?? [];
     console.log(`[holdings] Alchemy returned ${rawAccounts.length} token accounts`);
+    rawAccounts.forEach((acc) => {
+      const parsed = acc.account?.data?.parsed;
+      const mint = parsed?.info?.mint;
+      if (mint) console.log(`[holdings] Account mint: ${mint}`);
+    });
     const tokenAccounts = rawAccounts.map((account) => {
       const parsed = account.account?.data?.parsed;
       if (!parsed || parsed.type !== "account") return null;
@@ -52688,7 +52693,7 @@ router6.post("/helius-holdings", async (req, res) => {
       const balance = parseFloat(tokenAmount.amount ?? "0");
       const decimals = tokenAmount.decimals ?? 0;
       const uiAmount = balance / Math.pow(10, decimals);
-      console.log(`[holdings] Token ${mint.slice(0, 8)}: balance=${balance}, decimals=${decimals}, uiAmount=${uiAmount}`);
+      console.log(`[holdings] Token ${mint.slice(0, 8)}: balance=${balance}, decimals=${decimals}, uiAmount=${uiAmount}` + (uiAmount > 0 ? " \u2713 INCLUDED" : " (zero balance)"));
       if (uiAmount <= 0) return null;
       return {
         mint,

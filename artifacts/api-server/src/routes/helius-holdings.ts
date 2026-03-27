@@ -54,6 +54,13 @@ router.post("/helius-holdings", async (req: Request, res: Response) => {
 
     const rawAccounts = alchemyData.result?.value ?? [];
     console.log(`[holdings] Alchemy returned ${rawAccounts.length} token accounts`);
+    
+    // Debug: log all account mints
+    rawAccounts.forEach((acc: any) => {
+      const parsed = acc.account?.data?.parsed;
+      const mint = parsed?.info?.mint;
+      if (mint) console.log(`[holdings] Account mint: ${mint}`);
+    });
 
     // Parse and filter out zero-balance tokens (only SPL, not native SOL)
     const tokenAccounts: TokenAccount[] = rawAccounts
@@ -69,7 +76,7 @@ router.post("/helius-holdings", async (req: Request, res: Response) => {
         const decimals = tokenAmount.decimals ?? 0;
         const uiAmount = balance / Math.pow(10, decimals);
         
-        console.log(`[holdings] Token ${mint.slice(0, 8)}: balance=${balance}, decimals=${decimals}, uiAmount=${uiAmount}`);
+        console.log(`[holdings] Token ${mint.slice(0, 8)}: balance=${balance}, decimals=${decimals}, uiAmount=${uiAmount}` + (uiAmount > 0 ? " ✓ INCLUDED" : " (zero balance)"));
         if (uiAmount <= 0) return null;
         
         return {

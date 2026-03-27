@@ -487,11 +487,64 @@ export interface TokenHolding {
   valueUsd?: number;
 }
 
+// Helper: Compute derived holdings from trade history
+function computeDerivedHoldings(trades: RealTrade[]): Record<string, { tokenAmount: number; tokenSymbol: string; tokenMint: string }> {
+  const holdings: Record<string, { tokenAmount: number; tokenSymbol: string; tokenMint: string }> = {};
+  
+  // Process trades in reverse chronological order (oldest first) to accumulate balances
+  const sortedTrades = [...trades].sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+  
+  for (const trade of sortedTrades) {
+    if (trade.action === "BUY") {
+      // BUY: add tokens
+      if (!holdings[trade.tokenMint]) {
+        holdings[trade.tokenMint] = {
+          tokenAmount: 0,
+          tokenSymbol: trade.tokenSymbol,
+          tokenMint: trade.tokenMint,
+        };
+      }
+      holdings[trade.tokenMint].tokenAmount += trade.tokenAmount;
+    } else if (trade.action === "SELL") {
+      // SELL: subtract tokens
+      if (holdings[trade.tokenMint]) {
+        holdings[trade.tokenMint].tokenAmount -= trade.tokenAmount;
+      }
+    }
+  }
+  
+  // Filter out zero/negative balances
+  return Object.fromEntries(
+    Object.entries(holdings).filter(([_, h]) => h.tokenAmount > 0)
+  );
+}
+
 export function useTokenHoldings() {
   const [holdings, setHoldings] = useState<TokenHolding[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const pausedUntilRef = useRef<number>(0);
+  const [trades, setTrades] = useState<RealTrade[]>([]);
+
+  // Fetch trades first to compute derived holdings
+  useEffect(() => {
+    const fetchTrades = async () => {
+      try {
+        const res = await fetch("/api/helius-transactions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ walletAddress: AGENT_WALLET }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.trades) setTrades(data.trades);
+        }
+      } catch {
+        // Silently fail
+      }
+    };
+    fetchTrades();
+  }, []);
 
   const fetchHoldings = useCallback(async () => {
     if (Date.now() < pausedUntilRef.current) return;
@@ -511,8 +564,11 @@ export function useTokenHoldings() {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
 
+      let tokens: TokenHolding[] = [];
+
+      // 1. Parse API holdings
       if (data?.items) {
-        const tokens: TokenHolding[] = data.items
+        tokens = data.items
           .filter(
             (item: any) =>
               item.interface === "FungibleToken" || item.interface === "FungibleAsset"
@@ -540,18 +596,41 @@ export function useTokenHoldings() {
               valueUsd: ti.price_info?.total_price ?? undefined,
             };
           })
-          .filter((t: TokenHolding) => t.balance > 0)
-          .sort((a: TokenHolding, b: TokenHolding) => (b.valueUsd ?? 0) - (a.valueUsd ?? 0));
-
-        setHoldings(tokens);
-        setError(null);
+          .filter((t: TokenHolding) => t.balance > 0);
       }
+
+      // 2. Compute derived holdings from trades and merge
+      const derivedHoldings = computeDerivedHoldings(trades);
+      const derivedTokens: TokenHolding[] = Object.entries(derivedHoldings).map(([mint, holding]) => {
+        // Check if this token is already in API holdings
+        const existing = tokens.find(t => t.mint === mint);
+        if (existing) return existing; // Use API data if available
+        
+        // Otherwise create from derived data
+        return {
+          mint,
+          symbol: holding.tokenSymbol,
+          name: holding.tokenSymbol,
+          balance: holding.tokenAmount,
+          decimals: 0,
+          logo: undefined,
+          priceUsd: undefined,
+          valueUsd: undefined,
+        };
+      });
+
+      // Merge and deduplicate
+      const allTokens = tokens.concat(derivedTokens.filter(dt => !tokens.some(t => t.mint === dt.mint)));
+      allTokens.sort((a: TokenHolding, b: TokenHolding) => (b.valueUsd ?? 0) - (a.valueUsd ?? 0));
+
+      setHoldings(allTokens);
+      setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to fetch holdings");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [trades]);
 
   useEffect(() => {
     // Stagger 3s after mount (same as transactions), then poll every 3 minutes
