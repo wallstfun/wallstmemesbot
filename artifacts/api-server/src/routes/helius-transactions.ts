@@ -75,6 +75,7 @@ router.post("/helius-transactions", async (req: Request, res: Response) => {
 
         if (response.ok) {
           heliusData = await response.json();
+          console.log(`[helius-tx] Helius returned ${heliusData.length} transactions for wallet ${walletAddress}`);
           rateLimitStates.delete(cacheKey);
           allRateLimited = false;
           break;
