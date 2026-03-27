@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useRealTransactions, AGENT_WALLET } from "@/hooks/use-helius-data";
 import { LiveIndicator } from "@/components/ui/LiveIndicator";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ExternalLink, Filter, RefreshCw, AlertCircle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { fetchTokenMetadata } from "@/utils/token-metadata";
 
 // Format timestamp in UTC
 function formatUTC(date: Date): string {
@@ -20,11 +21,54 @@ function getShortSig(fullSig: string): string {
 
 type FilterType = "all" | "buy" | "sell" | "swap";
 
+// Trade with enriched metadata
+interface EnrichedTrade {
+  [key: string]: any;
+  enrichedSymbol: string;
+  enrichedName: string;
+}
+
 export default function LiveTradesPage() {
   const { trades, loading, error, refresh } = useRealTransactions();
   const [filter, setFilter] = useState<FilterType>("all");
+  const [enrichedTrades, setEnrichedTrades] = useState<EnrichedTrade[]>([]);
 
-  const filtered = trades.filter((t) => {
+  // Enrich trades with token metadata
+  useEffect(() => {
+    const enrichTrades = async () => {
+      const unique_mints = [...new Set(trades.filter(t => t.tokenMint && t.tokenMint !== "So11111111111111111111111111111111111111112").map(t => t.tokenMint))];
+      console.log(`[live-trades] Enriching ${unique_mints.length} unique token mints...`);
+      
+      const metadata: Record<string, any> = {};
+      for (const mint of unique_mints) {
+        try {
+          const meta = await fetchTokenMetadata(mint);
+          metadata[mint] = meta;
+          console.log(`[live-trades] Resolved ${mint} to ${meta.symbol} (${meta.name})`);
+        } catch (e) {
+          console.log(`[live-trades] Failed to enrich ${mint}:`, e);
+        }
+      }
+      
+      // Enrich each trade
+      const enriched = trades.map(t => {
+        const meta = metadata[t.tokenMint];
+        return {
+          ...t,
+          enrichedSymbol: meta?.symbol || t.tokenSymbol || "???",
+          enrichedName: meta?.name || t.description || "Unknown",
+        };
+      });
+      
+      setEnrichedTrades(enriched);
+    };
+    
+    if (trades.length > 0) {
+      enrichTrades();
+    }
+  }, [trades]);
+
+  const filtered = enrichedTrades.filter((t) => {
     if (filter === "all") return true;
     if (filter === "buy") return t.action === "BUY";
     if (filter === "sell") return t.action === "SELL";
@@ -177,10 +221,10 @@ export default function LiveTradesPage() {
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-col">
-                        <span className="font-bold text-foreground">{trade.tokenSymbol || "SOL"}</span>
-                        {trade.tokenSymbol !== "SOL" && trade.description && (
-                          <span className="text-[10px] text-muted-foreground truncate max-w-[140px]">
-                            {trade.description.slice(0, 50) + (trade.description.length > 50 ? "..." : "")}
+                        <span className="font-bold text-foreground">{trade.enrichedSymbol || trade.tokenSymbol || "SOL"}</span>
+                        {trade.enrichedSymbol !== "SOL" && trade.enrichedName && (
+                          <span className="text-[10px] text-muted-foreground truncate max-w-[140px]" title={trade.enrichedName}>
+                            {trade.enrichedName.slice(0, 50) + (trade.enrichedName.length > 50 ? "..." : "")}
                           </span>
                         )}
                       </div>
