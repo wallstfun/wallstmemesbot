@@ -1,6 +1,8 @@
 {
   "version": 2,
-  "buildCommand": "pnpm build",
+  "installCommand": "cd ../.. && pnpm install",
+  "buildCommand": "cd ../.. && pnpm --filter @workspace/wallst-fun run build",
+  "outputDirectory": "dist",
   "rewrites": [
     { "source": "/((?!api/).*)", "destination": "/index.html" }
   ]
