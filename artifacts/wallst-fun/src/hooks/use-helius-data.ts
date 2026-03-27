@@ -8,6 +8,12 @@ const STABLECOIN_MINTS = [
   "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenEsw", // USDT
 ];
 
+// Known token symbols for common mints
+const KNOWN_TOKEN_SYMBOLS: Record<string, string> = {
+  "4fSWEw2wbYEUCcMtitzmeGUfqinoafXxkhqZrA9Gpump": "PIGEON",
+  "So11111111111111111111111111111111111111112": "SOL",
+};
+
 // Token metadata cache for symbol/name lookups
 const tokenMetadataCache: Record<string, { symbol: string; name?: string }> = {};
 
@@ -171,7 +177,7 @@ export function useRealTransactions() {
                 const rawAmount = Number(receivedToken.tokenAmount ?? 0);
                 const decimals = Number(receivedToken.decimals ?? 0);
                 tokenAmount = rawAmount / Math.pow(10, decimals);
-                tokenSymbol = receivedToken.tokenSymbol || tokenMint.slice(0, 6).toUpperCase();
+                tokenSymbol = receivedToken.tokenSymbol || KNOWN_TOKEN_SYMBOLS[tokenMint] || tokenMint.slice(0, 6).toUpperCase();
                 
                 // Determine action and solFlow based on WHAT WAS RECEIVED
                 if (tokenMint === SOL_MINT) {
@@ -203,13 +209,23 @@ export function useRealTransactions() {
                   solFlow = "none";
                   
                   // Find SOL that was sent (if any)
-                  const outgoingSOL = outgoingTransfers.find((t: any) => (t?.tokenAddress || t?.mint) === SOL_MINT);
-                  if (outgoingSOL) {
-                    solAmount = Number(outgoingSOL.tokenAmount ?? 0) / Math.pow(10, outgoingSOL.decimals ?? 9);
+                  // Use the LARGEST SOL transfer (the main spend, not fees)
+                  const solTransfers = outgoingTransfers.filter((t: any) => (t?.tokenAddress || t?.mint) === SOL_MINT);
+                  const largestSOL = solTransfers.length > 0
+                    ? solTransfers.reduce((max: any, t: any) => {
+                        const maxAmount = Number(max?.tokenAmount ?? 0);
+                        const curAmount = Number(t?.tokenAmount ?? 0);
+                        return curAmount > maxAmount ? t : max;
+                      })
+                    : null;
+                  
+                  if (largestSOL) {
+                    // Helius already returns SOL amounts in proper units, no need to divide by decimals
+                    solAmount = Number(largestSOL.tokenAmount ?? 0);
                     solFlow = "out";
-                    console.log(`[parse] ${sig}: BUY ${tokenSymbol}: ${tokenAmount} for ${solAmount.toFixed(4)} SOL`);
+                    console.log(`[parse] ${sig}: BUY ${tokenSymbol} (mint=${tokenMint}): ${tokenAmount} for ${solAmount.toFixed(4)} SOL`);
                   } else {
-                    console.log(`[parse] ${sig}: BUY ${tokenSymbol}: ${tokenAmount} (token-to-token swap)`);
+                    console.log(`[parse] ${sig}: BUY ${tokenSymbol} (mint=${tokenMint}): ${tokenAmount} (token-to-token swap)`);
                   }
                 }
               } else {

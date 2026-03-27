@@ -23,6 +23,12 @@ const KNOWN_TOKENS: Record<string, { symbol: string; name: string; logoURI: stri
     name: "Solana",
     logoURI: "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png",
   },
+  // PIGEON token
+  "4fSWEw2wbYEUCcMtitzmeGUfqinoafXxkhqZrA9Gpump": {
+    symbol: "PIGEON",
+    name: "Pigeon Token",
+    logoURI: "",
+  },
 };
 
 interface TokenAccount {
