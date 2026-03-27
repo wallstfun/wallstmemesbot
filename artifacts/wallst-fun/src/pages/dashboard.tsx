@@ -3,7 +3,7 @@ import { Link } from "wouter";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { useLiveMetrics } from "@/hooks/use-simulated-data";
 import { useScopeTokens } from "@/hooks/use-scope-data";
-import { useWalletSolBalance, useRealTransactions } from "@/hooks/use-helius-data";
+import { useWalletSolBalance, useRealTransactions, useTokenHoldings } from "@/hooks/use-helius-data";
 import { LiveIndicator } from "@/components/ui/LiveIndicator";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -90,6 +90,7 @@ function DashboardContent() {
   // Real blockchain data
   const { balance: solBalance, loading: solBalanceLoading } = useWalletSolBalance();
   const { trades: realTrades, totalTrades, winRate, loading: tradesLoading } = useRealTransactions();
+  const { holdings } = useTokenHoldings();
 
   // Real SOL Price from CoinGecko API
   const [solPrice, setSolPrice] = useState(() => {
@@ -107,6 +108,13 @@ function DashboardContent() {
   });
   const [priceChange5m, setPriceChange5m] = useState(0);
   const [isLive] = useState(true);
+
+  // Calculate total portfolio USD value
+  const solUsdValue = (solBalance ?? 0) * solPrice;
+  const totalUsdValue = useMemo(
+    () => solUsdValue + holdings.reduce((s, h) => s + (h.valueUsd ?? 0), 0),
+    [holdings, solUsdValue]
+  );
 
   useEffect(() => {
     let retryTimeout: NodeJS.Timeout | null = null;
@@ -268,6 +276,11 @@ function DashboardContent() {
             )}
             <span className="text-lg text-muted-foreground font-sans">SOL</span>
           </div>
+          {totalUsdValue > 0 && (
+            <div className="text-xs font-mono text-muted-foreground mt-1">
+              [{totalUsdValue.toFixed(2)} USD] Total Value
+            </div>
+          )}
           <div className="text-xs text-gains font-mono mt-2 flex items-center gap-1">
             ● Helius Mainnet · live
           </div>
