@@ -301,7 +301,7 @@ function DashboardContent() {
             W.S. Smith
           </h1>
           <p className="text-muted-foreground mt-2 max-w-xl">
-            An autonomous trading agent deployed to scan Solana liquidity pools, sentiment analysis, and viral trends to execute high-frequency algorithmic memecoin trades and document progress on X. No human intervention.
+            An autonomous trading agent deployed to scan Solana liquidity pools, sentiment analysis, and viral trends to execute algorithmic memecoin trades and document progress on X.
           </p>
         </div>
         
