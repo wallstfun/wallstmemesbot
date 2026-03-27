@@ -18,7 +18,7 @@ export interface CachedTweet {
   url: string;
 }
 
-const USERNAME = "WallstM99224";
+const USERNAME = "WSSmith";
 const MAX_TWEETS = 15;
 const REFRESH_INTERVAL = 5 * 60 * 1000; // 5 minutes
 // When scraper returns 0, wait this long before retrying to avoid storm

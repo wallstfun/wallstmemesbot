@@ -57,14 +57,18 @@ router.post("/helius-transactions", async (req: Request, res: Response) => {
           return;
         }
 
-        if (response.status !== 429) {
-          // Non-rate-limit error - break out and return error
+        if (response.status !== 429 && response.status !== 401) {
+          // Non-retryable error - break out and return error
           lastError = `HTTP ${response.status}`;
           break;
         }
 
-        // 429 on this key - try the other one
-        console.warn(`Key ${attempt + 1} rate-limited (429). Trying alternate key...`);
+        // 429 or 401 on this key - try the other one
+        if (response.status === 429) {
+          console.warn(`Key ${attempt + 1} rate-limited (429). Trying alternate key...`);
+        } else {
+          console.warn(`Key ${attempt + 1} unauthorized (401). Trying alternate key...`);
+        }
         await delay(300); // Small delay before trying alternate key
       } catch (fetchErr) {
         lastError = fetchErr instanceof Error ? fetchErr.message : "Fetch error";

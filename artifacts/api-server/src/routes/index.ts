@@ -4,6 +4,7 @@ import tweetsRouter from "./tweets";
 import heliusRouter from "./helius-transactions";
 import heliusBalanceRouter from "./helius-balance";
 import alchemyBalanceRouter from "./alchemy-balance";
+import heliusHoldingsRouter from "./helius-holdings";
 
 const router: IRouter = Router();
 
@@ -12,5 +13,6 @@ router.use(tweetsRouter);
 router.use(heliusRouter);
 router.use(heliusBalanceRouter);
 router.use(alchemyBalanceRouter);
+router.use(heliusHoldingsRouter);
 
 export default router;

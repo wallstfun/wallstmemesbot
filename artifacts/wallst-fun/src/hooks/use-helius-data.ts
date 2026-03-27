@@ -6,7 +6,6 @@ export const AGENT_WALLET = "Hw7yc27h6Lws6YsQmdLoj4M7psyFHRhosFwoGuSESmTh";
 const STABLECOIN_MINTS = [
   "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", // USDC
   "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenEsw", // USDT
-  "AQOBEGJGIMBQJNGBT53HBZN5Q528 SOCORRO2QQY5AQOBEGJGIMBQJNGBT53", // USDH (placeholder)
 ];
 
 // ── Real Swap Transactions (Enhanced TX API) ──────────────────────────────────
@@ -247,15 +246,17 @@ export function useTokenHoldings() {
 
   const fetchHoldings = useCallback(async () => {
     try {
-      const res = await fetch("/api/helius-transactions", {
+      const res = await fetch("/api/helius-holdings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ walletAddress: AGENT_WALLET }),
       });
+
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
 
-      if (data.result?.items) {
-        const tokens: TokenHolding[] = data.result.items
+      if (data?.items) {
+        const tokens: TokenHolding[] = data.items
           .filter(
             (item: any) =>
               item.interface === "FungibleToken" ||
