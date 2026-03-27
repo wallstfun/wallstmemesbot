@@ -96,9 +96,14 @@ module.exports = async function handler(req, res) {
     // Non-blocking: Jupiter failure doesn't crash response
   }
 
-  // Merge: Helius primary + unique Jupiter txs
+  // Merge: Helius primary + ALL unique Jupiter txs
   const heliusSigs = new Set(heliusData.map((tx) => tx.signature).filter(Boolean));
-  const uniqueJupiterTxs = jupiterData.filter((tx) => !heliusSigs.has(tx.signature));
+  const uniqueJupiterTxs = jupiterData.filter((tx) => {
+    // Include if signature not in Helius, OR if Helius version lacks swap event but Jupiter has it
+    if (!heliusSigs.has(tx.signature)) return true;
+    const heliusTx = heliusData.find((h) => h.signature === tx.signature);
+    return !heliusTx?.events?.swap && tx.events?.swap;
+  });
   const merged = [...heliusData, ...uniqueJupiterTxs];
 
   responseCache.set(cacheKey, { data: merged, expiresAt: Date.now() + 30000 });

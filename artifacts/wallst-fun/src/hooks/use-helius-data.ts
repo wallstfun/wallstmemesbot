@@ -98,29 +98,32 @@ export function useRealTransactions() {
           // For Jupiter fills without swap event, parse from token changes
           if (!swap && isJupiter) {
             const changes = tx.tokenTransfers || [];
-            if (changes.length >= 2) {
-              // Assume first is sent, second is received
-              const sent = changes[0];
-              const received = changes[1];
-              
-              // Determine if we're buying or selling
-              if (sent?.tokenAddress === "So11111111111111111111111111111111111111112") {
-                // Sent SOL, received token
-                action = "BUY";
-                solFlow = "out";
-                solAmount = Number(sent?.tokenAmount ?? 0) / 1e9;
-                tokenMint = received?.tokenAddress || "";
-                tokenSymbol = received?.tokenSymbol || received?.tokenAddress?.slice(0, 5) || "";
-                tokenAmount = Number(received?.tokenAmount ?? 0) / Math.pow(10, received?.decimals ?? 0);
-              } else if (received?.tokenAddress === "So11111111111111111111111111111111111111112") {
-                // Sent token, received SOL
-                action = "BUY";
-                solFlow = "in";
-                solAmount = Number(received?.tokenAmount ?? 0) / 1e9;
-                tokenMint = "So11111111111111111111111111111111111111112";
-                tokenSymbol = "SOL";
-                tokenAmount = solAmount;
-                if (sent?.tokenAddress) (tx as any).__sentMint__ = sent.tokenAddress;
+            
+            // Find SOL transfers to determine direction
+            const solSent = changes.find((t) => t.tokenAddress === "So11111111111111111111111111111111111111112" && Number(t.fromUserAccount ? t.tokenAmount : 0) > 0);
+            const solReceived = changes.find((t) => t.tokenAddress === "So11111111111111111111111111111111111111112" && Number(t.toUserAccount ? t.tokenAmount : 0) > 0);
+            
+            if (solReceived) {
+              // SOL received → BUY SOL
+              action = "BUY";
+              solFlow = "in";
+              solAmount = Number(solReceived.tokenAmount ?? 0) / 1e9;
+              tokenMint = "So11111111111111111111111111111111111111112";
+              tokenSymbol = "SOL";
+              tokenAmount = solAmount;
+              // Track which token was sent
+              const sentToken = changes.find((t) => t.tokenAddress !== "So11111111111111111111111111111111111111112");
+              if (sentToken?.tokenAddress) (tx as any).__sentMint__ = sentToken.tokenAddress;
+            } else if (solSent) {
+              // SOL sent → SELL SOL or BUY token
+              action = "BUY";
+              solFlow = "out";
+              solAmount = Number(solSent.tokenAmount ?? 0) / 1e9;
+              const receivedToken = changes.find((t) => t.tokenAddress !== "So11111111111111111111111111111111111111112");
+              if (receivedToken) {
+                tokenMint = receivedToken.tokenAddress;
+                tokenSymbol = receivedToken.tokenSymbol || receivedToken.tokenAddress.slice(0, 5);
+                tokenAmount = Number(receivedToken.tokenAmount ?? 0) / Math.pow(10, receivedToken.decimals ?? 0);
               }
             }
             

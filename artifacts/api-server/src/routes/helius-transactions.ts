@@ -108,14 +108,23 @@ router.post("/helius-transactions", async (req: Request, res: Response) => {
       if (jupRes.ok) {
         const jupJson = await jupRes.json();
         jupiterData = Array.isArray(jupJson) ? jupJson : (jupJson?.swaps ?? jupJson?.history ?? []);
+        console.log(`[helius-tx] Jupiter returned ${jupiterData.length} txs`);
+      } else {
+        console.warn(`[helius-tx] Jupiter fetch failed: ${jupRes.status}`);
       }
     } catch (err) {
-      // Non-blocking: Jupiter failure doesn't crash response
+      console.warn(`[helius-tx] Jupiter fetch error: ${err instanceof Error ? err.message : "Unknown"}`);
     }
 
-    // 3. Merge: Helius primary + unique Jupiter txs
+    // 3. Merge: Helius primary + ALL unique Jupiter txs
+    // Include Jupiter txs even if they duplicate Helius (Jupiter may have better fill details)
     const heliusSigs = new Set(heliusData.map((tx) => tx.signature).filter(Boolean));
-    const uniqueJupiterTxs = jupiterData.filter((tx) => !heliusSigs.has(tx.signature));
+    const uniqueJupiterTxs = jupiterData.filter((tx) => {
+      // Include if signature not in Helius, OR if Helius version lacks swap event but Jupiter has it
+      if (!heliusSigs.has(tx.signature)) return true;
+      const heliusTx = heliusData.find((h) => h.signature === tx.signature);
+      return !heliusTx?.events?.swap && tx.events?.swap;
+    });
     const merged = [...heliusData, ...uniqueJupiterTxs];
 
     // Cache and return merged data
