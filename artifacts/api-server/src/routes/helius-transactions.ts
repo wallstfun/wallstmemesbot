@@ -6,21 +6,34 @@ const KEY_PRIMARY = "8ffc1afb-b4e5-494e-852e-f80ec0f5033e";
 const KEY_FALLBACK = "54385120-28ac-4baa-9774-3f7ba8ccd656";
 const HELIUS_V0_URL = "https://api-mainnet.helius-rpc.com/v0";
 const JUPITER_SWAP_HISTORY_URL = "https://api.jup.ag/swap/v1/swap-history";
+const JUPITER_API_KEY = "429e13f2-25f8-4706-9326-24287fa313d4";
 
 const rateLimitStates = new Map<string, { pausedUntil: number }>();
 const responseCache = new Map<string, { data: any; expiresAt: number }>();
 let lastHeliusRequestTime = 0;
-const MIN_REQUEST_INTERVAL = 2000;
+let lastJupiterRequestTime = 0;
+const MIN_HELIUS_INTERVAL = 2000; // 2s between Helius requests
+const MIN_JUPITER_INTERVAL = 1000; // 1000ms = 1 RPS limit for Jupiter
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-const throttledFetch = async (url: string) => {
+const throttledHeliusFetch = async (url: string) => {
   const now = Date.now();
   const timeSinceLastRequest = now - lastHeliusRequestTime;
-  if (timeSinceLastRequest < MIN_REQUEST_INTERVAL) {
-    await delay(MIN_REQUEST_INTERVAL - timeSinceLastRequest);
+  if (timeSinceLastRequest < MIN_HELIUS_INTERVAL) {
+    await delay(MIN_HELIUS_INTERVAL - timeSinceLastRequest);
   }
   lastHeliusRequestTime = Date.now();
+  return fetch(url, { method: "GET" });
+};
+
+const throttledJupiterFetch = async (url: string) => {
+  const now = Date.now();
+  const timeSinceLastRequest = now - lastJupiterRequestTime;
+  if (timeSinceLastRequest < MIN_JUPITER_INTERVAL) {
+    await delay(MIN_JUPITER_INTERVAL - timeSinceLastRequest);
+  }
+  lastJupiterRequestTime = Date.now();
   return fetch(url, { method: "GET" });
 };
 
@@ -58,7 +71,7 @@ router.post("/helius-transactions", async (req: Request, res: Response) => {
     for (const key of keys) {
       const url = `${HELIUS_V0_URL}/addresses/${walletAddress}/transactions?api-key=${key}&limit=100`;
       try {
-        const response = await throttledFetch(url);
+        const response = await throttledHeliusFetch(url);
 
         if (response.ok) {
           heliusData = await response.json();
@@ -87,10 +100,11 @@ router.post("/helius-transactions", async (req: Request, res: Response) => {
       return;
     }
 
-    // 2. Fetch from Jupiter (supplementary, non-blocking)
+    // 2. Fetch from Jupiter (supplementary, non-blocking, rate-limited to 1 RPS)
     let jupiterData: any[] = [];
     try {
-      const jupRes = await fetch(`${JUPITER_SWAP_HISTORY_URL}?wallet=${walletAddress}&limit=100`);
+      const jupUrl = `${JUPITER_SWAP_HISTORY_URL}?wallet=${walletAddress}&limit=100`;
+      const jupRes = await throttledJupiterFetch(jupUrl);
       if (jupRes.ok) {
         const jupJson = await jupRes.json();
         jupiterData = Array.isArray(jupJson) ? jupJson : (jupJson?.swaps ?? jupJson?.history ?? []);

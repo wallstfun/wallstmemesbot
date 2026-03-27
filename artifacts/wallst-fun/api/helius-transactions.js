@@ -2,11 +2,14 @@ const HELIUS_KEY2 = "8ffc1afb-b4e5-494e-852e-f80ec0f5033e";
 const HELIUS_KEY1 = "54385120-28ac-4baa-9774-3f7ba8ccd656";
 const HELIUS_V0_URL = "https://api-mainnet.helius-rpc.com/v0";
 const JUPITER_SWAP_HISTORY_URL = "https://api.jup.ag/swap/v1/swap-history";
+const JUPITER_API_KEY = "429e13f2-25f8-4706-9326-24287fa313d4";
 
 const responseCache = new Map();
 const rateLimitStates = new Map();
-let lastRequestTime = 0;
-const MIN_INTERVAL = 2000;
+let lastHeliusRequestTime = 0;
+let lastJupiterRequestTime = 0;
+const MIN_HELIUS_INTERVAL = 2000;
+const MIN_JUPITER_INTERVAL = 1000;
 
 const delay = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -36,9 +39,10 @@ module.exports = async function handler(req, res) {
     return;
   }
 
-  const now = Date.now();
-  const gap = now - lastRequestTime;
-  if (gap < MIN_INTERVAL) await delay(MIN_INTERVAL - gap);
+  // Throttle Helius requests
+  let now = Date.now();
+  let gap = now - lastHeliusRequestTime;
+  if (gap < MIN_HELIUS_INTERVAL) await delay(MIN_HELIUS_INTERVAL - gap);
 
   const keys = [HELIUS_KEY2, HELIUS_KEY1];
   let heliusData = [];
@@ -47,7 +51,7 @@ module.exports = async function handler(req, res) {
   for (const key of keys) {
     const url = HELIUS_V0_URL + "/addresses/" + walletAddress + "/transactions?api-key=" + key + "&limit=100";
     try {
-      lastRequestTime = Date.now();
+      lastHeliusRequestTime = Date.now();
       const r = await fetch(url);
       if (r.ok) {
         heliusData = await r.json();
@@ -75,9 +79,14 @@ module.exports = async function handler(req, res) {
     return;
   }
 
-  // Fetch from Jupiter (supplementary, non-blocking)
+  // Fetch from Jupiter (supplementary, non-blocking, rate-limited to 1 RPS)
   let jupiterData = [];
   try {
+    now = Date.now();
+    gap = now - lastJupiterRequestTime;
+    if (gap < MIN_JUPITER_INTERVAL) await delay(MIN_JUPITER_INTERVAL - gap);
+    lastJupiterRequestTime = Date.now();
+    
     const jupRes = await fetch(JUPITER_SWAP_HISTORY_URL + "?wallet=" + walletAddress + "&limit=100");
     if (jupRes.ok) {
       const jupJson = await jupRes.json();
