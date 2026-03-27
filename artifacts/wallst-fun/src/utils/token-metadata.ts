@@ -22,6 +22,18 @@ export async function fetchTokenMetadata(mint: string): Promise<TokenMetadata> {
     return metadataCache.get(mint);
   }
 
+  // Special case: SOL token
+  if (mint === "So11111111111111111111111111111111111111112") {
+    const solMetadata: TokenMetadata = {
+      symbol: "SOL",
+      name: "Solana",
+      logoURI: "https://tokens.jup.ag/token/So11111111111111111111111111111111111111112/So11111111111111111111111111111111111111112.png",
+    };
+    metadataCache.set(mint, solMetadata);
+    console.log(`[metadata] SOL token resolved`);
+    return solMetadata;
+  }
+
   let metadata: TokenMetadata = {
     symbol: mint.slice(0, 6).toUpperCase(),
     name: "Unknown Token",

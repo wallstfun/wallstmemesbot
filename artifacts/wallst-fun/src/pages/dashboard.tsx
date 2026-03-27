@@ -97,8 +97,8 @@ function DashboardContent() {
   const [enrichedTrades, setEnrichedTrades] = useState<any[]>([]);
   useEffect(() => {
     const enrichTrades = async () => {
-      const unique_mints = [...new Set(realTrades.filter(t => t.tokenMint && t.tokenMint !== "So11111111111111111111111111111111111111112").map(t => t.tokenMint))];
-      console.log(`[dashboard] Enriching ${unique_mints.length} unique token mints...`);
+      const unique_mints = [...new Set(realTrades.filter(t => t.tokenMint).map(t => t.tokenMint))];
+      console.log(`[dashboard] Enriching ${unique_mints.length} unique token mints (including SOL)...`);
       
       const metadata: Record<string, any> = {};
       for (const mint of unique_mints) {
