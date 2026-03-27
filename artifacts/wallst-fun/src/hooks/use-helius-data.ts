@@ -323,7 +323,7 @@ export function useWalletSolBalance() {
 
   useEffect(() => {
     fetchBalance();
-    const interval = setInterval(fetchBalance, 30000); // Every 30 seconds
+    const interval = setInterval(fetchBalance, 120000); // Every 120 seconds
     return () => clearInterval(interval);
   }, [fetchBalance]);
 
