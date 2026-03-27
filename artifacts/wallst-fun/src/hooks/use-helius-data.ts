@@ -140,11 +140,6 @@ export function useRealTransactions() {
               console.log(`[parse] ${sig}: Processing without swap event (jupiter=${isJupiter}, transfers=${hasTransfers})`);
               const changes = tx?.tokenTransfers ?? [];
               
-              if (!Array.isArray(changes) || changes.length < 2) {
-                console.log(`[parse] ${sig}: DROPPED - <2 token transfers or not array`);
-                return null;
-              }
-              
               const SOL_MINT = "So11111111111111111111111111111111111111112";
               const WALLET = AGENT_WALLET;
               
@@ -159,6 +154,36 @@ export function useRealTransactions() {
                 const fromAccount = t?.fromUserAccount || t?.from;
                 return fromAccount && fromAccount.toLowerCase() === WALLET.toLowerCase();
               });
+              
+              // Check for native SOL balance changes (not in tokenTransfers array)
+              const nativeBalanceChange = tx?.nativeBalanceChange;
+              if (nativeBalanceChange && nativeBalanceChange !== 0) {
+                // Add synthetic SOL transfer
+                if (nativeBalanceChange > 0) {
+                  // Received SOL
+                  incomingTransfers.push({
+                    mint: SOL_MINT,
+                    tokenAddress: SOL_MINT,
+                    tokenAmount: nativeBalanceChange.toString(),
+                    decimals: 9,
+                    symbol: "SOL",
+                  });
+                } else {
+                  // Sent SOL
+                  outgoingTransfers.push({
+                    mint: SOL_MINT,
+                    tokenAddress: SOL_MINT,
+                    tokenAmount: Math.abs(nativeBalanceChange).toString(),
+                    decimals: 9,
+                    symbol: "SOL",
+                  });
+                }
+              }
+              
+              if (changes.length < 2 && nativeBalanceChange === undefined) {
+                console.log(`[parse] ${sig}: DROPPED - <2 token transfers and no native balance change`);
+                return null;
+              }
               
               console.log(`[parse] ${sig}: Incoming=${incomingTransfers.length}, Outgoing=${outgoingTransfers.length}`);
               
@@ -324,14 +349,38 @@ export function useRealTransactions() {
               const hasTokenIn = (swap?.tokenInputs?.length ?? 0) > 0;
               
               if (hasNativeOut && hasTokenIn) {
-                action = "BUY";
-                solFlow = "in";
-                solAmount = Number(swap.nativeOutput.amount) / 1e9;
-                tokenMint = "So11111111111111111111111111111111111111112";
-                tokenSymbol = "SOL";
-                tokenAmount = solAmount;
+                // Received native SOL, sent token(s) → could be SELL or BUY SOL depending on what token sent
                 const sentTok = swap.tokenInputs?.[0];
-                if (sentTok?.mint) (tx as any).__sentMint__ = sentTok.mint;
+                const sentMint = sentTok?.mint;
+                const receivedSOL = Number(swap.nativeOutput.amount) / 1e9;
+                
+                if (sentMint && STABLECOIN_MINTS.includes(sentMint)) {
+                  // Sold stablecoin for SOL → SELL the stablecoin
+                  action = "SELL";
+                  solFlow = "none";
+                  tokenMint = sentMint;
+                  const rawAmount = Number(sentTok.rawTokenAmount?.tokenAmount ?? 0);
+                  const decimals = Number(sentTok.rawTokenAmount?.decimals ?? 6);
+                  tokenAmount = rawAmount / Math.pow(10, decimals);
+                  tokenSymbol = sentTok.symbol || KNOWN_TOKEN_SYMBOLS[sentMint] || sentMint.slice(0, 6).toUpperCase();
+                  solAmount = receivedSOL;
+                  console.log(`[parse] ${sig}: SELL ${tokenSymbol}: ${tokenAmount} for ${receivedSOL.toFixed(4)} SOL`);
+                } else {
+                  // Sold other token for SOL → SELL that token
+                  action = "SELL";
+                  solFlow = "in";
+                  solAmount = receivedSOL;
+                  tokenMint = sentMint || "So11111111111111111111111111111111111111112";
+                  tokenSymbol = sentTok?.symbol || KNOWN_TOKEN_SYMBOLS[sentMint || ""] || sentMint?.slice(0, 6).toUpperCase() || "SOL";
+                  const rawAmount = Number(sentTok?.rawTokenAmount?.tokenAmount ?? 0);
+                  const decimals = Number(sentTok?.rawTokenAmount?.decimals ?? 0);
+                  tokenAmount = rawAmount > 0 ? rawAmount / Math.pow(10, decimals) : 0;
+                  if (sentMint && sentTok?.symbol) {
+                    tokenSymbol = sentTok.symbol;
+                  }
+                  if (sentTok?.mint) (tx as any).__sentMint__ = sentTok.mint;
+                  console.log(`[parse] ${sig}: SELL ${tokenSymbol}: ${tokenAmount} for ${receivedSOL.toFixed(4)} SOL`);
+                }
               } else if (hasNativeIn && hasTokenOut) {
                 const out = swap.tokenOutputs?.[0];
                 if (out?.mint) {
@@ -342,7 +391,9 @@ export function useRealTransactions() {
                   solAmount = Number(swap.nativeInput.amount) / 1e9;
                   solFlow = "out";
                   action = STABLECOIN_MINTS.includes(tokenMint) ? "SELL" : "BUY";
+                  console.log(`[parse] ${sig}: ${action} ${out.symbol || tokenMint.slice(0, 6).toUpperCase()}: ${tokenAmount} for ${solAmount.toFixed(4)} SOL`);
                 } else {
+                  console.log(`[parse] ${sig}: DROPPED - hasNativeIn && hasTokenOut but no output mint`);
                   return null;
                 }
               } else if (hasTokenIn && hasTokenOut) {
@@ -355,10 +406,13 @@ export function useRealTransactions() {
                   solFlow = "none";
                   action = STABLECOIN_MINTS.includes(tokenMint) ? "SELL" : "BUY";
                   solAmount = 0;
+                  console.log(`[parse] ${sig}: ${action} ${out.symbol || tokenMint.slice(0, 6).toUpperCase()}: token-to-token swap`);
                 } else {
+                  console.log(`[parse] ${sig}: DROPPED - hasTokenIn && hasTokenOut but no output mint`);
                   return null;
                 }
               } else {
+                console.log(`[parse] ${sig}: DROPPED - no matching swap pattern (hasNativeIn=${hasNativeIn}, hasNativeOut=${hasNativeOut}, hasTokenIn=${hasTokenIn}, hasTokenOut=${hasTokenOut})`);
                 return null;
               }
             } // end if (swap)
