@@ -6,6 +6,25 @@ const router = Router();
 const ALCHEMY_URL = "https://solana-mainnet.g.alchemy.com/v2/9vePK8JAvqdzoDs3Q1kZ4";
 const TOKEN_PROGRAM_ID = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA";
 
+// Hardcoded metadata for well-known tokens — always correct, no API needed
+const KNOWN_TOKENS: Record<string, { symbol: string; name: string; logoURI: string }> = {
+  "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v": {
+    symbol: "USDC",
+    name: "USD Coin",
+    logoURI: "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v/logo.png",
+  },
+  "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenEsw": {
+    symbol: "USDT",
+    name: "Tether USD",
+    logoURI: "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenEsw/logo.svg",
+  },
+  "So11111111111111111111111111111111111111112": {
+    symbol: "SOL",
+    name: "Solana",
+    logoURI: "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png",
+  },
+};
+
 interface TokenAccount {
   mint: string;
   balance: number;
@@ -69,10 +88,20 @@ router.post("/helius-holdings", async (req: Request, res: Response) => {
 
     const mints = tokenAccounts.map((t) => t.mint);
 
-    // 2. Fetch token metadata from Jupiter in parallel
+    // 2. Fetch token metadata — use hardcoded map first, then Jupiter API for unknowns
     const metadataMap: Record<string, { symbol: string; name: string; logoURI?: string }> = {};
+
+    // Pre-populate from KNOWN_TOKENS (never needs a network call)
+    for (const mint of mints) {
+      if (KNOWN_TOKENS[mint]) {
+        metadataMap[mint] = KNOWN_TOKENS[mint];
+      }
+    }
+
+    // Only call Jupiter for mints not already resolved
+    const unknownMints = mints.filter((m) => !metadataMap[m]);
     await Promise.allSettled(
-      mints.map(async (mint) => {
+      unknownMints.map(async (mint) => {
         try {
           const r = await fetch(`https://tokens.jup.ag/token/${mint}`, {
             headers: { Accept: "application/json" },
