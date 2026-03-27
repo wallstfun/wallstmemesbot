@@ -182,14 +182,20 @@ export function useRealTransactions() {
                   }
                   
                   return {
-                    signature: tx?.signature,
+                    id: tx?.signature ?? "",
+                    signature: tx?.signature ?? "",
+                    shortSig: (tx?.signature ?? "").slice(0, 8) + "…" + (tx?.signature ?? "").slice(-4),
                     timestamp: timestamp,
                     action,
                     tokenMint,
                     tokenSymbol,
                     tokenAmount,
                     solAmount,
+                    description: tx?.description ?? "",
+                    source: tx?.source ?? "DEX",
+                    txUrl: `https://solscan.io/tx/${sig}`,
                     solFlow,
+                    sentMint: (tx as any)?.__sentMint__ || undefined,
                   } as RealTrade;
                 }
               }
