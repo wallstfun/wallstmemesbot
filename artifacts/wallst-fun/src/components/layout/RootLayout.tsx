@@ -81,7 +81,7 @@ export function RootLayout({ children }: { children: React.ReactNode }) {
             <span className="text-muted-foreground">///</span>
             <span>AGENT BAL:&nbsp;<span className="font-bold">{realSolBalance !== null ? `${realSolBalance.toFixed(4)} SOL` : '— SOL'}</span></span>
             <span className="text-muted-foreground">///</span>
-            <span>WIN RATE:&nbsp;<span className="font-bold">{winRate !== null ? `${winRate.toFixed(1)}%` : '—'}</span></span>
+            <span>WIN RATE:&nbsp;<span className="font-bold">{typeof winRate === 'number' ? `${winRate.toFixed(1)}%` : '—'}</span></span>
             <span className="text-muted-foreground">///</span>
             <span>TOTAL TRADES:&nbsp;<span className="font-bold">{totalTrades}</span></span>
             <span className="text-muted-foreground">///</span>
@@ -96,7 +96,7 @@ export function RootLayout({ children }: { children: React.ReactNode }) {
             <span className="text-muted-foreground">///</span>
             <span>AGENT BAL:&nbsp;<span className="font-bold">{realSolBalance !== null ? `${realSolBalance.toFixed(4)} SOL` : '— SOL'}</span></span>
             <span className="text-muted-foreground">///</span>
-            <span>WIN RATE:&nbsp;<span className="font-bold">{winRate !== null ? `${winRate.toFixed(1)}%` : '—'}</span></span>
+            <span>WIN RATE:&nbsp;<span className="font-bold">{typeof winRate === 'number' ? `${winRate.toFixed(1)}%` : '—'}</span></span>
             <span className="text-muted-foreground">///</span>
             <span>TOTAL TRADES:&nbsp;<span className="font-bold">{totalTrades}</span></span>
             <span className="text-muted-foreground">///</span>

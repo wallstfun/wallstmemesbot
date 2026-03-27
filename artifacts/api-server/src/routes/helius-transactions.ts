@@ -2,13 +2,12 @@ import { Router, type Request, type Response } from "express";
 
 const router = Router();
 
-const KEY1 = "54385120-28ac-4baa-9774-3f7ba8ccd656";
-const KEY2 = "8ffc1afb-b4e5-494e-852e-f80ec0f5033e";
+// Key2 is the working key. Key1 returns 401 — kept as last-resort fallback only.
+const KEY_PRIMARY = "8ffc1afb-b4e5-494e-852e-f80ec0f5033e";
+const KEY_FALLBACK = "54385120-28ac-4baa-9774-3f7ba8ccd656";
 const HELIUS_V0_URL = "https://api-mainnet.helius-rpc.com/v0";
 
-let currentKeyIndex = 0;
 const rateLimitStates = new Map<string, { pausedUntil: number }>();
-
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 router.post("/helius-transactions", async (req: Request, res: Response) => {
@@ -20,88 +19,66 @@ router.post("/helius-transactions", async (req: Request, res: Response) => {
       return;
     }
 
-    const cacheKey = `helius-${walletAddress}`;
-    const rateLimitState = rateLimitStates.get(cacheKey) || { pausedUntil: 0 };
-
-    // Check if wallet is paused due to rate limiting both keys
-    if (rateLimitState.pausedUntil > Date.now()) {
-      const remainingSeconds = Math.ceil((rateLimitState.pausedUntil - Date.now()) / 1000);
+    const cacheKey = `tx-${walletAddress}`;
+    const state = rateLimitStates.get(cacheKey);
+    if (state && state.pausedUntil > Date.now()) {
+      const remaining = Math.ceil((state.pausedUntil - Date.now()) / 1000);
       res.status(429).json({
-        error: "Rate limit hit on both API keys",
-        retryAfter: remainingSeconds,
-        message: `Both keys rate-limited. Try again in ${remainingSeconds}s`,
+        error: "Rate limited",
+        retryAfter: remaining,
+        message: `Rate limited. Retry in ${remaining}s`,
       });
       return;
     }
 
-    // Try both keys with fallback
-    const keys = [KEY1, KEY2];
-    let lastError: any = null;
-    let lastStatus = 0;
+    // Try primary key (Key2), then fallback (Key1) only if primary fails
+    const keys = [KEY_PRIMARY, KEY_FALLBACK];
+    let allRateLimited = true;
 
-    for (let attempt = 0; attempt < 2; attempt++) {
-      const key = keys[currentKeyIndex];
-      currentKeyIndex = (currentKeyIndex + 1) % 2; // round-robin
-
+    for (const key of keys) {
       const url = `${HELIUS_V0_URL}/addresses/${walletAddress}/transactions?api-key=${key}&type=SWAP&limit=50`;
-
       try {
         const response = await fetch(url, { method: "GET" });
-        lastStatus = response.status;
 
         if (response.ok) {
-          // Success - clear any paused state
           rateLimitStates.delete(cacheKey);
           const data = await response.json();
           res.json(data);
           return;
         }
 
-        if (response.status !== 429 && response.status !== 401) {
-          // Non-retryable error - break out and return error
-          lastError = `HTTP ${response.status}`;
-          break;
+        if (response.status === 429 || response.status === 401) {
+          console.warn(`[helius-tx] Key ending ...${key.slice(-6)} returned ${response.status}. Trying next key...`);
+          await delay(300);
+          continue;
         }
 
-        // 429 or 401 on this key - try the other one
-        if (response.status === 429) {
-          console.warn(`Key ${attempt + 1} rate-limited (429). Trying alternate key...`);
-        } else {
-          console.warn(`Key ${attempt + 1} unauthorized (401). Trying alternate key...`);
-        }
-        await delay(300); // Small delay before trying alternate key
+        // Non-retryable error
+        allRateLimited = false;
+        res.status(response.status).json({ error: `Helius returned ${response.status}` });
+        return;
       } catch (fetchErr) {
-        lastError = fetchErr instanceof Error ? fetchErr.message : "Fetch error";
-        break;
+        allRateLimited = false;
+        const msg = fetchErr instanceof Error ? fetchErr.message : "Fetch error";
+        console.error("[helius-tx] Fetch error:", msg);
+        res.status(500).json({ error: "Fetch failed", message: msg });
+        return;
       }
     }
 
-    // If we got here, both keys failed with 429 or we hit a non-429 error
-    if (lastStatus === 429) {
-      // Both keys rate-limited - pause for 60 seconds
-      const pauseUntil = Date.now() + 60000;
+    if (allRateLimited) {
+      const pauseUntil = Date.now() + 75000; // 75s backoff
       rateLimitStates.set(cacheKey, { pausedUntil: pauseUntil });
-
       res.status(429).json({
-        error: "Rate limit hit on both API keys",
-        retryAfter: 60,
-        message: "Both keys rate-limited. Try again in 60 seconds",
+        error: "Both API keys rate-limited",
+        retryAfter: 75,
+        message: "Both keys rate-limited. Retry in 75s",
       });
-      return;
     }
-
-    // Some other error occurred
-    res.status(lastStatus || 500).json({
-      error: "Failed to fetch from Helius",
-      message: lastError,
-    });
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
-    console.error("Helius proxy error:", errorMessage);
-    res.status(500).json({
-      error: "Server error",
-      message: errorMessage,
-    });
+    const msg = error instanceof Error ? error.message : "Unknown error";
+    console.error("[helius-tx] Server error:", msg);
+    res.status(500).json({ error: "Server error", message: msg });
   }
 });
 

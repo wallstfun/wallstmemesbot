@@ -119,11 +119,16 @@ export function useSolPrice() {
       }
     };
 
-    // Fetching paused - use fallback price only
+    // Read SOL price from CoinGecko cache written by dashboard
+    const cached = localStorage.getItem("wallst-sol-price");
+    if (cached) {
+      try {
+        const { price } = JSON.parse(cached);
+        if (price > 0) { setSolPrice(price); setIsLive(true); }
+      } catch {}
+    }
     setLoading(false);
-    // fetchPrice();
-    // const interval = setInterval(fetchPrice, 15000);
-    // return () => clearInterval(interval);
+    // Live price fetched by dashboard.tsx every 60s via CoinGecko (shared via localStorage)
   }, []);
 
   return { solPrice, isLive, loading };

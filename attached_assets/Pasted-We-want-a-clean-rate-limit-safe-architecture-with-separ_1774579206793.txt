@@ -1,0 +1,25 @@
+We want a clean, rate-limit-safe architecture with separated API keys and reliable fetching on page load.1. API Key Separation (Critical)Helius Key 1 → Dedicated only for transaction history (/api/helius-transactions – the Enhanced Transaction API).
+Helius Key 2 → Backup / fallback for Helius calls if needed.
+Alchemy → Dedicated only for balances and token holdings (/api/alchemy-balance and any holdings route). This keeps balance fetching completely independent from Helius limits.
+CoinGecko → For SOL price only.
+
+No single key or provider should handle both transactions and balances.2. Backend StructureUse the existing Express backend (artifacts/api-server/).
+Create / update a unified server.ts (or main server file) that:Handles all /api/* routes (transactions, alchemy-balance, holdings, etc.).
+Also serves the static Vite build (dist/) for the frontend.
+In production, the app must run this unified Express server (not as a static site).
+
+3. Fetching Behavior (Important Change)All important data must load automatically when the page loads (on mount).
+Do not pause fetching by default.
+Use sensible intervals to avoid rate limits:Transactions (/api/helius-transactions): every 90–120 seconds
+Balance & holdings (/api/alchemy-balance): every 120–180 seconds
+SOL price: every 60 seconds
+Add a small delay (2–3 seconds) between different fetches on initial page load to prevent bursts.
+Include exponential backoff: if any route returns 429 or 401, pause that specific fetch for 60–90 seconds and then retry.
+
+4. Other RequirementsAll API keys must stay server-side only (never visible in browser or console).
+Buy/Sell logic should remain based on the received token (USDC → SOL = BUY, SOL → USDC = SELL, etc.).
+When SOL is received, the Agent BAL and portfolio must update correctly.
+On the deployed site (wallst.fun), all /api/* routes must return 200, not 404.
+
+Please implement the above architecture cleanly so the site loads real data on page load without hitting rate limits.
+

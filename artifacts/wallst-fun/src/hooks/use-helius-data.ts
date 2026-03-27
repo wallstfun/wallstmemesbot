@@ -1,9 +1,6 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 
 export const AGENT_WALLET = "Hw7yc27h6Lws6YsQmdLoj4M7psyFHRhosFwoGuSESmTh";
-
-// Set to true to pause all API fetching (use when hitting rate limits)
-const FETCHING_PAUSED = true;
 
 // Known stablecoin mints (USDC, USDT, etc.)
 const STABLECOIN_MINTS = [
@@ -11,7 +8,9 @@ const STABLECOIN_MINTS = [
   "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenEsw", // USDT
 ];
 
-// ── Real Swap Transactions (Enhanced TX API) ──────────────────────────────────
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+// ── Real Swap Transactions (Enhanced TX API via Helius Key2) ──────────────────
 
 export interface RealTrade {
   id: string;
@@ -42,27 +41,17 @@ export function useRealTransactions() {
   const [winRate, setWinRate] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isPaused, setIsPaused] = useState(false);
-  const [pauseUntil, setPauseUntil] = useState<number>(0);
+  const pausedUntilRef = useRef<number>(0);
 
   const fetchTrades = useCallback(async () => {
-    // Check if paused due to rate limiting both keys
-    if (isPaused && Date.now() < pauseUntil) {
-      const remainingSeconds = Math.ceil((pauseUntil - Date.now()) / 1000);
-      setError(`Rate limit hit on both keys. Pausing for ${remainingSeconds}s...`);
+    // Respect backoff window
+    if (Date.now() < pausedUntilRef.current) {
+      const remaining = Math.ceil((pausedUntilRef.current - Date.now()) / 1000);
+      setError(`Rate limited. Retrying in ${remaining}s…`);
       return;
     }
 
-    // If was paused, add 3-5s delay before resuming
-    if (isPaused) {
-      setIsPaused(false);
-      setPauseUntil(0);
-      const resumeDelay = 3000 + Math.random() * 2000; // 3-5 seconds
-      await new Promise(resolve => setTimeout(resolve, resumeDelay));
-    }
-
     try {
-      // Call the server proxy route instead of Helius directly
       const res = await fetch("/api/helius-transactions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -70,21 +59,15 @@ export function useRealTransactions() {
       });
 
       if (res.status === 429) {
-        const data = await res.json();
-        const retryAfter = data.retryAfter || 60;
-        
-        // Both keys failed - pause for 60 seconds
-        setIsPaused(true);
-        setPauseUntil(Date.now() + retryAfter * 1000);
-        setError(`Rate limit hit on both keys. Pausing for ${retryAfter}s...`);
-        console.warn(`Both API keys rate-limited (429). Pausing for ${retryAfter}s...`);
+        const data = await res.json().catch(() => ({}));
+        const retryAfter = (data.retryAfter ?? 75) as number;
+        pausedUntilRef.current = Date.now() + retryAfter * 1000;
+        setError(`Rate limited. Retrying in ${retryAfter}s…`);
         return;
       }
 
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      setError(null); // Clear error on success
       const txs: any[] = await res.json();
-
       if (!Array.isArray(txs)) throw new Error("Unexpected response format");
 
       const parsed: RealTrade[] = txs
@@ -92,10 +75,8 @@ export function useRealTransactions() {
           const swap = tx.events?.swap;
           if (!swap) return null;
 
-          const hasNativeIn =
-            swap.nativeInput && Number(swap.nativeInput.amount) > 0;
-          const hasNativeOut =
-            swap.nativeOutput && Number(swap.nativeOutput.amount) > 0;
+          const hasNativeIn = swap.nativeInput && Number(swap.nativeInput.amount) > 0;
+          const hasNativeOut = swap.nativeOutput && Number(swap.nativeOutput.amount) > 0;
           const hasTokenOut = (swap.tokenOutputs?.length ?? 0) > 0;
           const hasTokenIn = (swap.tokenInputs?.length ?? 0) > 0;
 
@@ -104,11 +85,7 @@ export function useRealTransactions() {
           let tokenAmount = 0;
           let tokenMint = "";
 
-          // Apply new logic: classify by received token
-          // Received token rule: if SOL received → BUY; if token received and it's a stablecoin → SELL; otherwise → BUY
-          
           if (hasNativeOut && hasTokenIn) {
-            // Receiving SOL, sending token → BUY (always)
             action = "BUY";
             solAmount = Number(swap.nativeOutput.amount) / 1e9;
             const inp = swap.tokenInputs[0];
@@ -117,28 +94,22 @@ export function useRealTransactions() {
               Number(inp.rawTokenAmount?.tokenAmount ?? 0) /
               Math.pow(10, inp.rawTokenAmount?.decimals ?? 6);
           } else if (hasNativeIn && hasTokenOut) {
-            // Sending SOL, receiving token
             const out = swap.tokenOutputs[0];
             tokenMint = out.mint;
             tokenAmount =
               Number(out.rawTokenAmount?.tokenAmount ?? 0) /
               Math.pow(10, out.rawTokenAmount?.decimals ?? 6);
             solAmount = Number(swap.nativeInput.amount) / 1e9;
-            
-            // Classify based on received token: if stablecoin → SELL, otherwise → BUY
             action = STABLECOIN_MINTS.includes(tokenMint) ? "SELL" : "BUY";
           } else if (hasTokenIn && hasTokenOut) {
-            // Token-to-token swap
             const out = swap.tokenOutputs[0];
             const inp = swap.tokenInputs[0];
             tokenMint = out.mint;
             tokenAmount =
               Number(out.rawTokenAmount?.tokenAmount ?? 0) /
               Math.pow(10, out.rawTokenAmount?.decimals ?? 6);
-            
-            // Classify based on received token: if stablecoin → SELL, otherwise → BUY
             action = STABLECOIN_MINTS.includes(tokenMint) ? "SELL" : "BUY";
-            solAmount = 0; // No SOL involved
+            solAmount = 0;
           } else {
             return null;
           }
@@ -147,24 +118,18 @@ export function useRealTransactions() {
 
           let tokenSymbol = "";
           if (tx.tokenTransfers?.length > 0) {
-            const match = tx.tokenTransfers.find(
-              (t: any) => t.mint === tokenMint
-            );
+            const match = tx.tokenTransfers.find((t: any) => t.mint === tokenMint);
             if (match?.symbol) tokenSymbol = match.symbol;
           }
           if (!tokenSymbol) {
-            tokenSymbol = extractSymbolFromDescription(
-              tx.description || "",
-              tokenMint
-            );
+            tokenSymbol = extractSymbolFromDescription(tx.description || "", tokenMint);
           }
 
           const sig: string = tx.signature ?? "";
-
           return {
             id: sig,
             signature: sig,
-            shortSig: sig.slice(0, 8) + "..." + sig.slice(-4),
+            shortSig: sig.slice(0, 8) + "…" + sig.slice(-4),
             timestamp: new Date((tx.timestamp ?? 0) * 1000),
             action,
             tokenSymbol,
@@ -178,12 +143,9 @@ export function useRealTransactions() {
         })
         .filter((t): t is RealTrade => t !== null);
 
-      // ── Compute derived stats from parsed trades ──────────────────────────
-      const totalTrades = parsed.length;
-
+      // Compute win rate
       const buyQueue: Record<string, number[]> = {};
       const wins: boolean[] = [];
-
       const chronological = [...parsed].reverse();
       for (const t of chronological) {
         if (t.action === "BUY" && t.tokenMint && t.solAmount > 0) {
@@ -202,35 +164,30 @@ export function useRealTransactions() {
           wins.push(t.solAmount > buySOL);
         }
       }
-      const winRate =
-        wins.length > 0
-          ? (wins.filter((w) => w).length / wins.length) * 100
-          : null;
+      const wr = wins.length > 0 ? (wins.filter((w) => w).length / wins.length) * 100 : null;
 
       setTrades(parsed);
-      setTotalTrades(totalTrades);
-      setWinRate(winRate);
+      setTotalTrades(parsed.length);
+      setWinRate(wr);
       setError(null);
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to fetch transactions"
-      );
+      setError(err instanceof Error ? err.message : "Failed to fetch transactions");
     } finally {
       setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    if (FETCHING_PAUSED) { setLoading(false); return; }
+    // Fetch transactions immediately on mount
     fetchTrades();
-    const interval = setInterval(fetchTrades, 90000);
+    const interval = setInterval(fetchTrades, 100000); // every 100s
     return () => clearInterval(interval);
   }, [fetchTrades]);
 
   return { trades, totalTrades, winRate, loading, error, refresh: fetchTrades };
 }
 
-// ── Token Holdings (DAS API) ─────────────────────────────────────────────────
+// ── Token Holdings (Alchemy RPC) ─────────────────────────────────────────────
 
 export interface TokenHolding {
   mint: string;
@@ -247,14 +204,22 @@ export function useTokenHoldings() {
   const [holdings, setHoldings] = useState<TokenHolding[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const pausedUntilRef = useRef<number>(0);
 
   const fetchHoldings = useCallback(async () => {
+    if (Date.now() < pausedUntilRef.current) return;
+
     try {
       const res = await fetch("/api/helius-holdings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ walletAddress: AGENT_WALLET }),
       });
+
+      if (res.status === 429) {
+        pausedUntilRef.current = Date.now() + 75000;
+        return;
+      }
 
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
@@ -263,8 +228,7 @@ export function useTokenHoldings() {
         const tokens: TokenHolding[] = data.items
           .filter(
             (item: any) =>
-              item.interface === "FungibleToken" ||
-              item.interface === "FungibleAsset"
+              item.interface === "FungibleToken" || item.interface === "FungibleAsset"
           )
           .map((item: any) => {
             const ti = item.token_info || {};
@@ -273,10 +237,7 @@ export function useTokenHoldings() {
             const balance = (ti.balance ?? 0) / Math.pow(10, decimals);
             return {
               mint: item.id,
-              symbol:
-                ti.symbol ||
-                meta.symbol ||
-                item.id.slice(0, 5).toUpperCase(),
+              symbol: ti.symbol || meta.symbol || item.id.slice(0, 5).toUpperCase(),
               name: meta.name || ti.name || "Unknown Token",
               logo: item.content?.links?.image || undefined,
               balance,
@@ -286,41 +247,42 @@ export function useTokenHoldings() {
             };
           })
           .filter((t: TokenHolding) => t.balance > 0)
-          .sort(
-            (a: TokenHolding, b: TokenHolding) =>
-              (b.valueUsd ?? 0) - (a.valueUsd ?? 0)
-          );
+          .sort((a: TokenHolding, b: TokenHolding) => (b.valueUsd ?? 0) - (a.valueUsd ?? 0));
 
         setHoldings(tokens);
         setError(null);
       }
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to fetch holdings"
-      );
+      setError(err instanceof Error ? err.message : "Failed to fetch holdings");
     } finally {
       setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    if (FETCHING_PAUSED) { setLoading(false); return; }
-    fetchHoldings();
-    const interval = setInterval(fetchHoldings, 90000);
-    return () => clearInterval(interval);
+    // Stagger 3s after mount so transactions fetch first
+    const initTimer = setTimeout(fetchHoldings, 3000);
+    const interval = setInterval(fetchHoldings, 150000); // every 150s
+    return () => {
+      clearTimeout(initTimer);
+      clearInterval(interval);
+    };
   }, [fetchHoldings]);
 
   return { holdings, loading, error, refresh: fetchHoldings };
 }
 
-// ── SOL Balance ──────────────────────────────────────────────────────────────
+// ── SOL Balance (Alchemy) ─────────────────────────────────────────────────────
 
 export function useWalletSolBalance() {
   const [balance, setBalance] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const pausedUntilRef = useRef<number>(0);
 
   const fetchBalance = useCallback(async () => {
+    if (Date.now() < pausedUntilRef.current) return;
+
     try {
       const res = await fetch("/api/alchemy-balance", {
         method: "POST",
@@ -328,29 +290,32 @@ export function useWalletSolBalance() {
         body: JSON.stringify({ wallet: AGENT_WALLET }),
       });
 
-      if (!res.ok) {
-        throw new Error(`HTTP ${res.status}`);
+      if (res.status === 429) {
+        pausedUntilRef.current = Date.now() + 60000;
+        return;
       }
 
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       const bal = data.solBalance ?? 0;
       setBalance(bal);
       setError(null);
-      console.log(`[wallst.fun] SOL balance fetched: ${bal.toFixed(4)} SOL`);
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Failed to fetch balance";
-      setError(errorMessage);
-      console.error(`[wallst.fun] Balance fetch error: ${errorMessage}`);
+      const msg = err instanceof Error ? err.message : "Failed to fetch balance";
+      setError(msg);
     } finally {
       setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    if (FETCHING_PAUSED) { setLoading(false); return; }
-    fetchBalance();
-    const interval = setInterval(fetchBalance, 120000); // Every 120 seconds
-    return () => clearInterval(interval);
+    // Stagger 6s after mount so transactions and holdings fetch first
+    const initTimer = setTimeout(fetchBalance, 6000);
+    const interval = setInterval(fetchBalance, 150000); // every 150s
+    return () => {
+      clearTimeout(initTimer);
+      clearInterval(interval);
+    };
   }, [fetchBalance]);
 
   return { balance, loading, error, refresh: fetchBalance };

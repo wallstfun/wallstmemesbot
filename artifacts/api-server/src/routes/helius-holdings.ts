@@ -2,83 +2,148 @@ import { Router, type Request, type Response } from "express";
 
 const router = Router();
 
-const KEY1 = "54385120-28ac-4baa-9774-3f7ba8ccd656";
-const KEY2 = "8ffc1afb-b4e5-494e-852e-f80ec0f5033e";
-const HELIUS_DAS_BASE = "https://mainnet.helius-rpc.com/?api-key=";
+// Holdings now use Alchemy exclusively — keeps Helius keys free for transactions only
+const ALCHEMY_URL = "https://solana-mainnet.g.alchemy.com/v2/9vePK8JAvqdzoDs3Q1kZ4";
+const TOKEN_PROGRAM_ID = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA";
 
-const dasCall = async (key: string, method: string, params: object) => {
-  const response = await fetch(HELIUS_DAS_BASE + key, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      jsonrpc: "2.0",
-      id: 1,
-      method,
-      params,
-    }),
-  });
-
-  if (!response.ok) {
-    const err = new Error(`DAS request failed with status ${response.status}`);
-    (err as any).status = response.status;
-    throw err;
-  }
-
-  const data = await response.json();
-  if (data.error) {
-    throw new Error(`DAS error: ${data.error.message}`);
-  }
-
-  return data.result;
-};
+interface TokenAccount {
+  mint: string;
+  balance: number;
+  decimals: number;
+}
 
 router.post("/helius-holdings", async (req: Request, res: Response) => {
   try {
     const { walletAddress } = req.body;
-
     if (!walletAddress) {
       res.status(400).json({ error: "walletAddress is required" });
       return;
     }
 
-    const keys = [KEY2, KEY1]; // Try Key2 first since Key1 has auth issues
-    let lastError: string = "Unknown error";
+    // 1. Fetch all SPL token accounts via Alchemy RPC
+    const alchemyRes = await fetch(ALCHEMY_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        id: 1,
+        method: "getTokenAccountsByOwner",
+        params: [
+          walletAddress,
+          { programId: TOKEN_PROGRAM_ID },
+          { encoding: "jsonParsed" },
+        ],
+      }),
+    });
 
-    for (let attempt = 0; attempt < keys.length; attempt++) {
-      const key = keys[attempt];
-      try {
-        const result = await dasCall(key, "getAssetsByOwner", {
-          ownerAddress: walletAddress,
-          page: 1,
-          limit: 1000,
-          options: {
-            showFungible: true,
-            showNativeBalance: false,
-          },
-        });
-
-        res.json(result);
-        return;
-      } catch (err: any) {
-        lastError = err.message || "Unknown error";
-        const status = err.status;
-        if (status === 401 || status === 429) {
-          console.warn(`Holdings key ${attempt + 1} failed (${status}). Trying alternate...`);
-          continue;
-        }
-        break;
-      }
+    if (!alchemyRes.ok) {
+      throw new Error(`Alchemy returned ${alchemyRes.status}`);
     }
 
-    console.error("Failed to fetch holdings:", lastError);
-    res.status(500).json({
-      error: "Failed to fetch holdings from Helius DAS",
-      message: lastError,
+    const alchemyData = await alchemyRes.json();
+    if (alchemyData.error) {
+      throw new Error(`Alchemy RPC error: ${alchemyData.error.message}`);
+    }
+
+    const accounts: any[] = alchemyData.result?.value ?? [];
+
+    // Parse and filter out zero-balance accounts
+    const tokenAccounts: TokenAccount[] = accounts
+      .map((acc: any) => {
+        const info = acc.account?.data?.parsed?.info;
+        if (!info) return null;
+        const uiAmount = info.tokenAmount?.uiAmount ?? 0;
+        if (uiAmount <= 0) return null;
+        return {
+          mint: info.mint as string,
+          balance: uiAmount as number,
+          decimals: (info.tokenAmount?.decimals ?? 0) as number,
+        };
+      })
+      .filter((t): t is TokenAccount => t !== null);
+
+    if (tokenAccounts.length === 0) {
+      res.json({ items: [] });
+      return;
+    }
+
+    const mints = tokenAccounts.map((t) => t.mint);
+
+    // 2. Fetch token metadata from Jupiter in parallel
+    const metadataMap: Record<string, { symbol: string; name: string; logoURI?: string }> = {};
+    await Promise.allSettled(
+      mints.map(async (mint) => {
+        try {
+          const r = await fetch(`https://tokens.jup.ag/token/${mint}`, {
+            headers: { Accept: "application/json" },
+          });
+          if (r.ok) {
+            const t = await r.json();
+            metadataMap[mint] = {
+              symbol: t.symbol || mint.slice(0, 6).toUpperCase(),
+              name: t.name || "Unknown Token",
+              logoURI: t.logoURI || undefined,
+            };
+          }
+        } catch {
+          // Silently skip — fallback applied below
+        }
+      })
+    );
+
+    // 3. Fetch prices from DexScreener (batch, up to 30 mints)
+    const priceMap: Record<string, number> = {};
+    try {
+      const mintList = mints.slice(0, 30).join(",");
+      const dexRes = await fetch(`https://api.dexscreener.com/tokens/v1/solana/${mintList}`, {
+        headers: { Accept: "application/json" },
+      });
+      if (dexRes.ok) {
+        const dexData = await dexRes.json();
+        const pairs = Array.isArray(dexData) ? dexData : [];
+        for (const pair of pairs) {
+          const addr = pair.baseToken?.address;
+          const price = parseFloat(pair.priceUsd ?? "0");
+          if (addr && price > 0 && !priceMap[addr]) {
+            priceMap[addr] = price;
+          }
+        }
+      }
+    } catch (e) {
+      console.warn("[holdings] DexScreener price fetch failed:", e instanceof Error ? e.message : e);
+    }
+
+    // 4. Build response in the same shape the frontend expects
+    const items = tokenAccounts.map(({ mint, balance, decimals }) => {
+      const meta = metadataMap[mint];
+      const priceUsd = priceMap[mint] ?? 0;
+      const valueUsd = priceUsd > 0 ? balance * priceUsd : undefined;
+      const symbol = meta?.symbol || mint.slice(0, 6).toUpperCase();
+      const name = meta?.name || "Unknown Token";
+
+      return {
+        id: mint,
+        interface: "FungibleToken",
+        token_info: {
+          symbol,
+          decimals,
+          balance: balance * Math.pow(10, decimals),
+          price_info: priceUsd > 0
+            ? { price_per_token: priceUsd, total_price: valueUsd }
+            : undefined,
+        },
+        content: {
+          metadata: { name, symbol },
+          links: { image: meta?.logoURI || undefined },
+        },
+      };
     });
+
+    res.json({ items });
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
-    console.error("Holdings proxy error:", errorMessage);
-    res.status(500).json({ error: "Server error", message: errorMessage });
+    const msg = error instanceof Error ? error.message : "Unknown error";
+    console.error("[holdings] Error:", msg);
+    res.status(500).json({ error: "Server error", message: msg });
   }
 });
 
