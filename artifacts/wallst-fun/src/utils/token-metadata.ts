@@ -13,7 +13,7 @@ export interface TokenMetadata {
 }
 
 /**
- * Fetch token metadata with multiple fallbacks (Jupiter → CoinGecko → Smart URLs)
+ * Fetch token metadata with multiple fallbacks (Pump.fun → Birdeye → Jupiter → CoinGecko → Orca → Metaplex → Smart URLs)
  */
 export async function fetchTokenMetadata(mint: string): Promise<TokenMetadata> {
   // Check cache first
@@ -40,7 +40,61 @@ export async function fetchTokenMetadata(mint: string): Promise<TokenMetadata> {
     logoURI: undefined,
   };
 
-  // Method 1: Try Jupiter single token endpoint
+  // Method 1: Try Pump.fun (fastest for new tokens)
+  try {
+    console.log(`[metadata] Fetching from Pump.fun for ${mint}`);
+    const res = await fetch(`https://frontend-api-v3.pump.fun/coins/${mint}?sync=true`, {
+      headers: { Accept: "application/json" },
+      signal: AbortSignal.timeout(5000),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data && (data.symbol || data.name)) {
+        metadata = {
+          symbol: data.symbol || metadata.symbol,
+          name: data.name || metadata.name,
+          logoURI: data.image_uri || data.icon || undefined,
+        };
+        console.log(`[metadata] Pump.fun success for ${mint}: symbol=${metadata.symbol}, name=${metadata.name}`);
+        metadataCache.set(mint, metadata);
+        return metadata;
+      }
+    }
+  } catch (e) {
+    console.log(`[metadata] Pump.fun fetch failed for ${mint}:`, e instanceof Error ? e.message : String(e));
+  }
+
+  // Method 2: Try Birdeye (fast indexer for Pump.fun)
+  try {
+    console.log(`[metadata] Fetching from Birdeye for ${mint}`);
+    const res = await fetch(
+      `https://public-api.birdeye.so/defi/v3/token/meta-data/single?address=${mint}&chain=solana`,
+      {
+        headers: {
+          "x-chain": "solana",
+          Accept: "application/json",
+        },
+        signal: AbortSignal.timeout(5000),
+      }
+    );
+    if (res.ok) {
+      const { data } = await res.json();
+      if (data && (data.symbol || data.name)) {
+        metadata = {
+          symbol: data.symbol || metadata.symbol,
+          name: data.name || metadata.name,
+          logoURI: data.logoURI || data.image || undefined,
+        };
+        console.log(`[metadata] Birdeye success for ${mint}: symbol=${metadata.symbol}, name=${metadata.name}`);
+        metadataCache.set(mint, metadata);
+        return metadata;
+      }
+    }
+  } catch (e) {
+    console.log(`[metadata] Birdeye fetch failed for ${mint}:`, e instanceof Error ? e.message : String(e));
+  }
+
+  // Method 3: Try Jupiter single token endpoint
   try {
     console.log(`[metadata] Fetching from Jupiter /token/{mint} for ${mint}`);
     const res = await fetch(`https://tokens.jup.ag/token/${mint}`, { signal: AbortSignal.timeout(5000) });
@@ -61,7 +115,7 @@ export async function fetchTokenMetadata(mint: string): Promise<TokenMetadata> {
     console.log(`[metadata] Jupiter fetch failed for ${mint}:`, e instanceof Error ? e.message : String(e));
   }
 
-  // Method 2: Try Jupiter full tokens list (for newer/meme tokens)
+  // Method 4: Try Jupiter full tokens list (for newer/meme tokens)
   try {
     console.log(`[metadata] Fetching from Jupiter tokens list for ${mint}`);
     const res = await fetch("https://tokens.jup.ag/tokens", { signal: AbortSignal.timeout(8000) });
@@ -83,7 +137,7 @@ export async function fetchTokenMetadata(mint: string): Promise<TokenMetadata> {
     console.log(`[metadata] Jupiter list fetch failed for ${mint}:`, e instanceof Error ? e.message : String(e));
   }
 
-  // Method 3: Try CoinGecko for newer tokens
+  // Method 5: Try CoinGecko for established tokens
   try {
     console.log(`[metadata] Fetching from CoinGecko for ${mint}`);
     const res = await fetch(`https://api.coingecko.com/api/v3/coins/solana/contract/${mint}`, { signal: AbortSignal.timeout(5000) });
@@ -104,7 +158,7 @@ export async function fetchTokenMetadata(mint: string): Promise<TokenMetadata> {
     console.log(`[metadata] CoinGecko fetch failed for ${mint}:`, e instanceof Error ? e.message : String(e));
   }
 
-  // Method 4: Try Orca API (more reliable for Solana tokens)
+  // Method 6: Try Orca API (more reliable for Solana tokens)
   try {
     console.log(`[metadata] Fetching from Orca API for ${mint}`);
     const res = await fetch(`https://api.orca.so/v1/token?address=${mint}`, { signal: AbortSignal.timeout(5000) });
@@ -125,7 +179,7 @@ export async function fetchTokenMetadata(mint: string): Promise<TokenMetadata> {
     console.log(`[metadata] Orca API fetch failed for ${mint}:`, e instanceof Error ? e.message : String(e));
   }
 
-  // Method 5: Try Metaplex API
+  // Method 7: Try Metaplex API
   try {
     console.log(`[metadata] Fetching from Metaplex for ${mint}`);
     const res = await fetch(`https://api.metaplex.solana.com/tokens/${mint}`, { signal: AbortSignal.timeout(5000) });
@@ -146,7 +200,7 @@ export async function fetchTokenMetadata(mint: string): Promise<TokenMetadata> {
     console.log(`[metadata] Metaplex fetch failed for ${mint}:`, e instanceof Error ? e.message : String(e));
   }
 
-  // Method 6: Smart fallback - try common image URLs
+  // Method 8: Smart fallback - try common image URLs
   try {
     console.log(`[metadata] Trying smart fallback URLs for ${mint}`);
     const fallbackUrls = [
