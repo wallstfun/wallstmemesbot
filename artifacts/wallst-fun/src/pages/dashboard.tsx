@@ -115,6 +115,7 @@ function DashboardContent() {
       const enriched = realTrades.map(t => ({
         ...t,
         enrichedSymbol: metadata[t.tokenMint]?.symbol || t.tokenSymbol || "???",
+        logo: metadata[t.tokenMint]?.logo,
       }));
       
       setEnrichedTrades(enriched);
@@ -500,7 +501,17 @@ function DashboardContent() {
                               {trade.action}
                             </Badge>
                           </TableCell>
-                          <TableCell className="font-bold">{trade.enrichedSymbol || trade.tokenSymbol}</TableCell>
+                          <TableCell className="font-bold flex items-center gap-2">
+                            {trade.logo && (
+                              <img
+                                src={trade.logo}
+                                alt={trade.enrichedSymbol || trade.tokenSymbol}
+                                className="w-4 h-4 rounded-full object-cover"
+                                onError={(e) => { e.currentTarget.style.display = "none"; }}
+                              />
+                            )}
+                            {trade.enrichedSymbol || trade.tokenSymbol}
+                          </TableCell>
                           <TableCell className="text-right text-xs">
                             {trade.solAmount > 0 ? `${trade.solAmount.toFixed(3)}` : '—'}
                           </TableCell>
