@@ -113,8 +113,25 @@ export function useRealTransactions() {
               const solTransfer = changes.find((t: any) => (t?.tokenAddress || t?.mint) === SOL_MINT);
               
               if (solTransfer) {
-                console.log(`[parse] ${sig}: Found SOL transfer, amount=${solTransfer.tokenAmount}`);
-                const solAmount_raw = Number(solTransfer.tokenAmount ?? 0);
+                console.log(`[parse] ${sig}: Found SOL transfer(s)`);
+                
+                // Sum all SOL transfers in case there are multiple
+                const allSolTransfers = changes.filter((t: any) => (t?.tokenAddress || t?.mint) === SOL_MINT);
+                let solAmount_raw = 0;
+                allSolTransfers.forEach((transfer: any) => {
+                  const amount = Number(transfer.tokenAmount ?? 0);
+                  // Only sum positive amounts (received SOL)
+                  if (amount > 0) {
+                    solAmount_raw += amount;
+                    console.log(`[parse] ${sig}: SOL received: ${amount}`);
+                  }
+                });
+                
+                if (!solAmount_raw) {
+                  solAmount_raw = Number(solTransfer.tokenAmount ?? 0);
+                }
+                
+                console.log(`[parse] ${sig}: Total SOL received: ${solAmount_raw}`);
                 
                 if (solAmount_raw > 0) {
                   // SOL being received
@@ -135,17 +152,38 @@ export function useRealTransactions() {
                   const receivedToken = changes.find((t: any) => (t?.tokenAddress || t?.mint) !== SOL_MINT && Number(t?.tokenAmount ?? 0) > 0);
                   if (receivedToken && (receivedToken.tokenAddress || receivedToken.mint)) {
                     tokenMint = receivedToken.tokenAddress || receivedToken.mint;
-                    tokenSymbol = receivedToken.tokenSymbol || (tokenMint ? tokenMint.slice(0, 6) : "TOKEN");
-                    tokenAmount = Number(receivedToken.tokenAmount ?? 0) / Math.pow(10, receivedToken.decimals ?? 0);
+                    // Don't override tokenSymbol if we're swapping for SOL
+                    if (!tokenSymbol || tokenSymbol === "SWAP") {
+                      tokenSymbol = receivedToken.tokenSymbol || (tokenMint ? tokenMint.slice(0, 6) : "TOKEN");
+                    }
+                    // Only set tokenAmount if trading for another token (not SOL)
+                    if (tokenMint !== SOL_MINT) {
+                      tokenAmount = Number(receivedToken.tokenAmount ?? 0) / Math.pow(10, receivedToken.decimals ?? 0);
+                    }
                     console.log(`[parse] ${sig}: Received token=${tokenSymbol}`);
                   }
                 }
                 
                 if (tokenMint) {
                   console.log(`[parse] ${sig}: ✅ CREATED ${action} trade`);
+                  // Ensure timestamp is a Date
+                  let timestamp = tx?.timestamp;
+                  if (typeof timestamp === 'number') {
+                    // Convert Unix timestamp to Date
+                    if (timestamp < 10000000000) {
+                      // Likely in seconds
+                      timestamp = new Date(timestamp * 1000);
+                    } else {
+                      // Likely in milliseconds
+                      timestamp = new Date(timestamp);
+                    }
+                  } else if (!timestamp || !(timestamp instanceof Date)) {
+                    timestamp = new Date();
+                  }
+                  
                   return {
-                    signature: tx.signature,
-                    timestamp: tx.timestamp,
+                    signature: tx?.signature,
+                    timestamp: timestamp,
                     action,
                     tokenMint,
                     tokenSymbol,
@@ -219,11 +257,25 @@ export function useRealTransactions() {
               }
             }
 
+            // Fix timestamp handling for both Unix seconds and milliseconds
+            let timestamp = tx?.timestamp;
+            if (typeof timestamp === 'number') {
+              if (timestamp < 10000000000) {
+                // Likely in seconds
+                timestamp = new Date(timestamp * 1000);
+              } else {
+                // Likely in milliseconds
+                timestamp = new Date(timestamp);
+              }
+            } else if (!timestamp || !(timestamp instanceof Date)) {
+              timestamp = new Date();
+            }
+
             return {
               id: tx?.signature ?? "",
               signature: tx?.signature ?? "",
               shortSig: (tx?.signature ?? "").slice(0, 8) + "…" + (tx?.signature ?? "").slice(-4),
-              timestamp: new Date((tx?.timestamp ?? 0) * 1000),
+              timestamp: timestamp,
               action,
               tokenSymbol,
               tokenMint,
