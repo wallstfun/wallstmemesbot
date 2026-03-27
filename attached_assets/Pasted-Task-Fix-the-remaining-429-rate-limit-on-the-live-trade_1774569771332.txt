@@ -1,0 +1,51 @@
+Task: Fix the remaining 429 rate limit on the live-trades page. API keys are now hidden, so focus on using both keys + better protection.Current situation:Frontend calls /api/helius-transactions (no more direct Helius calls or visible keys — good)
+Still getting HTTP 429 when fetching transactions
+Page shows "Failed to fetch transaction history" and "No swap transactions found"
+
+Fixes needed:Update the proxy route at app/api/helius-transactions/route.ts
+Use both keys with round-robin + fallback:ts
+import { NextRequest, NextResponse } from 'next/server';
+
+const KEY1 = "54385120-28ac-4baa-9774-3f7ba8ccd656";
+const KEY2 = "YOUR_SECOND_HELIUS_KEY_HERE";   // ← replace with your actual second key
+
+let currentKeyIndex = 0;
+
+export async function POST(request: NextRequest) {
+  try {
+    const { wallet } = await request.json();
+    if (!wallet) return NextResponse.json({ error: "Wallet required" }, { status: 400 });
+
+    const keys = [KEY1, KEY2];
+    let lastError = null;
+
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const key = keys[currentKeyIndex];
+      currentKeyIndex = (currentKeyIndex + 1) % 2;  // round-robin
+
+      const url = `https://api-mainnet.helius-rpc.com/v0/addresses/${wallet}/transactions?api-key=${key}&type=SWAP&limit=50`;
+
+      const res = await fetch(url, { method: "GET" });
+
+      if (res.ok) {
+        const data = await res.json();
+        return NextResponse.json(data);
+      }
+
+      if (res.status !== 429) {
+        lastError = res.status;
+        break;
+      }
+      // If 429, try the other key
+      await new Promise(r => setTimeout(r, 300)); // small delay
+    }
+
+    return NextResponse.json({ error: "Rate limit or Helius error" }, { status: lastError || 429 });
+  } catch (err) {
+    return NextResponse.json({ error: "Server error" }, { status: 500 });
+  }
+}
+Frontend improvements (in live-trades page):Keep pause/resume logic
+Add a short delay (3–5 seconds) before first fetch when resuming
+On 429, automatically pause and show "Rate limit hit — paused for 60 seconds"
+

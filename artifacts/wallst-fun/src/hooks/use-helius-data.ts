@@ -40,13 +40,16 @@ export function useRealTransactions() {
     // Check if paused due to rate limiting both keys
     if (isPaused && Date.now() < pauseUntil) {
       const remainingSeconds = Math.ceil((pauseUntil - Date.now()) / 1000);
-      setError(`Rate limit hit on both API keys. Pausing for ${remainingSeconds}s...`);
+      setError(`Rate limit hit on both keys. Pausing for ${remainingSeconds}s...`);
       return;
     }
 
+    // If was paused, add 3-5s delay before resuming
     if (isPaused) {
       setIsPaused(false);
       setPauseUntil(0);
+      const resumeDelay = 3000 + Math.random() * 2000; // 3-5 seconds
+      await new Promise(resolve => setTimeout(resolve, resumeDelay));
     }
 
     try {
@@ -59,21 +62,14 @@ export function useRealTransactions() {
 
       if (res.status === 429) {
         const data = await res.json();
-        const retryAfter = data.retryAfter || 30;
+        const retryAfter = data.retryAfter || 60;
         
-        if (data.error?.includes("both API keys")) {
-          // Both keys failed - pause for 30 seconds
-          setIsPaused(true);
-          setPauseUntil(Date.now() + retryAfter * 1000);
-          setError(`Rate limit hit on both API keys. Retrying in ${retryAfter}s...`);
-          console.warn(`Both API keys rate-limited. Pausing for ${retryAfter}s...`);
-          return;
-        }
-
-        // Single key failed - will retry with alternate key on server side
-        console.warn(`Rate limited. Retrying in ${retryAfter}s...`);
-        await new Promise(resolve => setTimeout(resolve, retryAfter * 1000));
-        return fetchTrades(); // Recursively retry
+        // Both keys failed - pause for 60 seconds
+        setIsPaused(true);
+        setPauseUntil(Date.now() + retryAfter * 1000);
+        setError(`Rate limit hit on both keys. Pausing for ${retryAfter}s...`);
+        console.warn(`Both API keys rate-limited (429). Pausing for ${retryAfter}s...`);
+        return;
       }
 
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
