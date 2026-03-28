@@ -292,6 +292,11 @@ export function useRealTransactions() {
                     return tMint !== SOL_MINT && !STABLECOIN_MINTS.includes(tMint);
                   });
                   
+                  const sentStable = outgoingTransfers.filter((t: any) => {
+                    const tMint = t?.tokenAddress || t?.mint;
+                    return STABLECOIN_MINTS.includes(tMint);
+                  });
+                  
                   if (sentNonStable.length > 0) {
                     // Sold token for SOL → SELL that token
                     action = "SELL";
@@ -309,8 +314,22 @@ export function useRealTransactions() {
                     }
                     solAmount = receivedAmount;
                     console.log(`[parse] ${sig}: SELL ${tokenSymbol}: ${tokenAmount} for ${receivedAmount.toFixed(4)} SOL`);
+                  } else if (sentStable.length > 0) {
+                    // Sold stablecoin for SOL → SELL stablecoin
+                    action = "SELL";
+                    solFlow = "in";
+                    const sentToken = sentStable.reduce((max: any, t: any) => {
+                      return (Number(t?.tokenAmount ?? 0) > Number(max?.tokenAmount ?? 0)) ? t : max;
+                    });
+                    tokenMint = sentToken.tokenAddress || sentToken.mint;
+                    const rawAmount = Number(sentToken.tokenAmount ?? 0);
+                    const decimals = STABLECOIN_DECIMALS[tokenMint] || Number(sentToken.decimals ?? 0);
+                    tokenAmount = rawAmount / Math.pow(10, decimals);
+                    tokenSymbol = sentToken.tokenSymbol || KNOWN_TOKEN_SYMBOLS[tokenMint] || tokenMint.slice(0, 6).toUpperCase();
+                    solAmount = receivedAmount;
+                    console.log(`[parse] ${sig}: SELL ${tokenSymbol}: ${tokenAmount} for ${receivedAmount.toFixed(4)} SOL`);
                   } else {
-                    // Bought SOL (from stablecoin or another SOL) → BUY SOL
+                    // Bought SOL (no clear outgoing token/stablecoin) → BUY SOL
                     action = "BUY";
                     solFlow = "in";
                     tokenMint = receivedMint;
