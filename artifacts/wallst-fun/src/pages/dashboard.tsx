@@ -478,6 +478,7 @@ function DashboardContent() {
                       <TableHead className="w-[75px] text-xs">ACTION</TableHead>
                       <TableHead className="text-xs">ASSET</TableHead>
                       <TableHead className="text-right text-xs">AMOUNT</TableHead>
+                      <TableHead className="text-right text-xs">SOL</TableHead>
                       <TableHead className="text-right text-xs">TX</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -535,6 +536,9 @@ function DashboardContent() {
                                 ? `${(trade.tokenAmount / 1000).toFixed(2)}K ${trade.enrichedSymbol || trade.tokenSymbol}`
                                 : `${trade.tokenAmount.toFixed(2)} ${trade.enrichedSymbol || trade.tokenSymbol}`
                             ) : '—'}
+                          </TableCell>
+                          <TableCell className="text-right text-xs">
+                            {trade.solAmount > 0 ? `${trade.solAmount.toFixed(3)} SOL` : '—'}
                           </TableCell>
                           <TableCell className="text-right">
                             <a

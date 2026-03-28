@@ -196,6 +196,7 @@ export default function LiveTradesPage() {
                   <TableHead className="w-[90px]">ACTION</TableHead>
                   <TableHead>ASSET</TableHead>
                   <TableHead className="text-right">TOKEN AMOUNT</TableHead>
+                  <TableHead className="text-right">SOL</TableHead>
                   <TableHead className="text-right">TX</TableHead>
                 </TableRow>
               </TableHeader>
@@ -259,6 +260,9 @@ export default function LiveTradesPage() {
                       ) : (
                         <span className="text-muted-foreground">—</span>
                       )}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {trade.solAmount > 0 ? `${trade.solAmount.toFixed(3)} SOL` : '—'}
                     </TableCell>
                     <TableCell className="text-right">
                       {trade.signature && trade.txUrl ? (
