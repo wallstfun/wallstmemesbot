@@ -130,6 +130,8 @@ export function useRealTransactions() {
             let tokenMint = "";
             let tokenSymbol = "";
             let solFlow: RealTrade["solFlow"] = "none";
+            let receivedMint = "";
+            let receivedSymbol = "";
 
             // For Jupiter fills or swap-like txs without top-level swap event, parse from token changes
             if (!swap && (isJupiter || hasTransfers)) {
@@ -242,12 +244,12 @@ export function useRealTransactions() {
               }
               
               if (receivedToken && (receivedToken.tokenAddress || receivedToken.mint)) {
-                const receivedMint = receivedToken.tokenAddress || receivedToken.mint;
+                receivedMint = receivedToken.tokenAddress || receivedToken.mint;
                 const receivedRawAmount = Number(receivedToken.tokenAmount ?? 0);
                 const receivedDecimals = Number(receivedToken.decimals ?? 0);
                 const receivedAmount = receivedRawAmount / Math.pow(10, receivedDecimals);
                 // Symbol: Helius metadata → known map → mint (auto-fetches from Jupiter at holdings time)
-                const receivedSymbol = receivedToken.tokenSymbol || KNOWN_TOKEN_SYMBOLS[receivedMint] || receivedMint.slice(0, 6).toUpperCase();
+                receivedSymbol = receivedToken.tokenSymbol || KNOWN_TOKEN_SYMBOLS[receivedMint] || receivedMint.slice(0, 6).toUpperCase();
                 if (!receivedToken.tokenSymbol && receivedMint !== SOL_MINT) {
                   console.log(`[parse] ${sig}: New token detected: ${receivedMint.slice(0, 8)}... (will fetch symbol from holdings API)`);
                 }
