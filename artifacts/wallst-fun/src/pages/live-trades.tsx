@@ -252,10 +252,10 @@ export default function LiveTradesPage() {
                     <TableCell className="text-right">
                       {trade.tokenAmount > 0 ? (
                         trade.tokenAmount >= 1000000
-                          ? `${(trade.tokenAmount / 1000000).toFixed(2)}M`
+                          ? `${(trade.tokenAmount / 1000000).toFixed(2)}M ${trade.enrichedSymbol || trade.tokenSymbol}`
                           : trade.tokenAmount >= 1000
-                          ? `${(trade.tokenAmount / 1000).toFixed(2)}K`
-                          : trade.tokenAmount.toFixed(2)
+                          ? `${(trade.tokenAmount / 1000).toFixed(2)}K ${trade.enrichedSymbol || trade.tokenSymbol}`
+                          : `${trade.tokenAmount.toFixed(2)} ${trade.enrichedSymbol || trade.tokenSymbol}`
                       ) : (
                         <span className="text-muted-foreground">—</span>
                       )}

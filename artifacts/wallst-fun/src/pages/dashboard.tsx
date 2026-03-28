@@ -528,7 +528,13 @@ function DashboardContent() {
                             {trade.enrichedSymbol || trade.tokenSymbol}
                           </TableCell>
                           <TableCell className="text-right text-xs">
-                            {trade.solAmount > 0 ? `${trade.solAmount.toFixed(3)} ${trade.receivedCurrency || 'SOL'}` : '—'}
+                            {trade.tokenAmount > 0 ? (
+                              trade.tokenAmount >= 1000000
+                                ? `${(trade.tokenAmount / 1000000).toFixed(2)}M ${trade.enrichedSymbol || trade.tokenSymbol}`
+                                : trade.tokenAmount >= 1000
+                                ? `${(trade.tokenAmount / 1000).toFixed(2)}K ${trade.enrichedSymbol || trade.tokenSymbol}`
+                                : `${trade.tokenAmount.toFixed(2)} ${trade.enrichedSymbol || trade.tokenSymbol}`
+                            ) : '—'}
                           </TableCell>
                           <TableCell className="text-right">
                             <a
