@@ -483,7 +483,7 @@ function DashboardContent() {
                   </TableHeader>
                   <TableBody>
                     <AnimatePresence>
-                      {enrichedTrades.slice(0, 8).map((trade) => (
+                      {enrichedTrades.slice(-8).map((trade) => (
                         <motion.tr
                           key={trade.id}
                           initial={{ opacity: 0, y: -10 }}
