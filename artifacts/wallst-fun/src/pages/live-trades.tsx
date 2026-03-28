@@ -69,13 +69,15 @@ export default function LiveTradesPage() {
     }
   }, [trades]);
 
-  const filtered = enrichedTrades.filter((t) => {
-    if (filter === "all") return true;
-    if (filter === "buy") return t.action === "BUY";
-    if (filter === "sell") return t.action === "SELL";
-    if (filter === "swap") return t.action === "SWAP";
-    return true;
-  });
+  const filtered = enrichedTrades
+    .filter((t) => {
+      if (filter === "all") return true;
+      if (filter === "buy") return t.action === "BUY";
+      if (filter === "sell") return t.action === "SELL";
+      if (filter === "swap") return t.action === "SWAP";
+      return true;
+    })
+    .slice(-20); // Show only last 20 recent trades
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
@@ -156,7 +158,7 @@ export default function LiveTradesPage() {
             </Button>
           </div>
           <div className="text-xs text-muted-foreground font-mono">
-            {loading ? "Fetching..." : `${filtered.length} transactions`}
+            {loading ? "Fetching..." : `${filtered.length} of ${enrichedTrades.length} transactions (latest 20)`}
           </div>
         </CardHeader>
 

@@ -69,7 +69,7 @@ router.post("/helius-transactions", async (req: Request, res: Response) => {
     let allRateLimited = true;
 
     for (const key of keys) {
-      const url = `${HELIUS_V0_URL}/addresses/${walletAddress}/transactions?api-key=${key}&limit=500`;
+      const url = `${HELIUS_V0_URL}/addresses/${walletAddress}/transactions?api-key=${key}&limit=100`;
       try {
         const response = await throttledHeliusFetch(url);
 
@@ -104,7 +104,7 @@ router.post("/helius-transactions", async (req: Request, res: Response) => {
     // 2. Fetch from Jupiter (supplementary, non-blocking, rate-limited to 1 RPS)
     let jupiterData: any[] = [];
     try {
-      const jupUrl = `${JUPITER_SWAP_HISTORY_URL}?wallet=${walletAddress}&limit=500`;
+      const jupUrl = `${JUPITER_SWAP_HISTORY_URL}?wallet=${walletAddress}&limit=100`;
       const jupRes = await throttledJupiterFetch(jupUrl);
       if (jupRes.ok) {
         const jupJson = await jupRes.json();

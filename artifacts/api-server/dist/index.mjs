@@ -52477,7 +52477,7 @@ router3.post("/helius-transactions", async (req, res) => {
     const keys2 = [KEY_PRIMARY, KEY_FALLBACK];
     let allRateLimited = true;
     for (const key2 of keys2) {
-      const url = `${HELIUS_V0_URL}/addresses/${walletAddress}/transactions?api-key=${key2}&limit=500`;
+      const url = `${HELIUS_V0_URL}/addresses/${walletAddress}/transactions?api-key=${key2}&limit=100`;
       try {
         const response = await throttledHeliusFetch(url);
         if (response.ok) {
@@ -52506,7 +52506,7 @@ router3.post("/helius-transactions", async (req, res) => {
     }
     let jupiterData = [];
     try {
-      const jupUrl = `${JUPITER_SWAP_HISTORY_URL}?wallet=${walletAddress}&limit=500`;
+      const jupUrl = `${JUPITER_SWAP_HISTORY_URL}?wallet=${walletAddress}&limit=100`;
       const jupRes = await throttledJupiterFetch(jupUrl);
       if (jupRes.ok) {
         const jupJson = await jupRes.json();
