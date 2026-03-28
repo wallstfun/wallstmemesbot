@@ -283,7 +283,8 @@ export function useRealTransactions() {
                     if (!sentToken.tokenSymbol && !KNOWN_TOKEN_SYMBOLS[tokenMint]) {
                       console.log(`[parse] ${sig}: New token detected (sent): ${tokenMint.slice(0, 8)}... (will fetch symbol from holdings API)`);
                     }
-                    solAmount = 0; // Stablecoin trades have no SOL value
+                    // Estimate SOL value from stablecoin (1 stablecoin ≈ 0.012 SOL at ~$83/SOL)
+                    solAmount = receivedAmount * 0.012;
                     console.log(`[parse] ${sig}: SELL ${tokenSymbol}: ${tokenAmount} for ${receivedAmount.toFixed(4)} ${receivedSymbol}`);
                   } else {
                     // No clear asset, skip
