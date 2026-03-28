@@ -59,6 +59,8 @@ export interface RealTrade {
   solFlow: "in" | "out" | "none";
   /** Mint of the token that was sent (only set when solFlow="in") — used to match closed positions */
   sentMint?: string;
+  /** Currency symbol that was received (e.g., "SOL", "USD1", "USDC") — for correct display */
+  receivedCurrency?: string;
 }
 
 const extractSymbolFromDescription = (desc: string, mint: string): string => {
@@ -395,6 +397,16 @@ export function useRealTransactions() {
                   timestamp = new Date();
                 }
                 
+                // Determine what currency was actually received
+                let receivedCurrency = "SOL"; // default
+                if (receivedMint === SOL_MINT) {
+                  receivedCurrency = "SOL";
+                } else if (STABLECOIN_MINTS.includes(receivedMint)) {
+                  receivedCurrency = receivedSymbol || "???";
+                } else {
+                  receivedCurrency = receivedSymbol || "???";
+                }
+                
                 return {
                   id: tx?.signature ?? "",
                   signature: tx?.signature ?? "",
@@ -410,6 +422,7 @@ export function useRealTransactions() {
                   txUrl: `https://solscan.io/tx/${tx?.signature ?? ""}`,
                   solFlow,
                   sentMint: (tx as any)?.__sentMint__ || undefined,
+                  receivedCurrency,
                 } as RealTrade;
               }
             }
