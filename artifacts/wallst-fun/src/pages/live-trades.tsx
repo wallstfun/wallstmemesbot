@@ -158,7 +158,7 @@ export default function LiveTradesPage() {
               Token→Token
             </Button>
             </div>
-            <p className="text-xs text-muted-foreground mt-2">Only showing latest 20 trades</p>
+            <p className="text-xs text-muted-foreground mt-2">showing latest 20 trades</p>
           </div>
           <div className="text-xs text-muted-foreground font-mono">
             {loading ? "Fetching..." : `${filtered.length} of ${enrichedTrades.length} transactions`}
