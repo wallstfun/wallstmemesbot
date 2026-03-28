@@ -74,44 +74,21 @@ export default function PortfolioPage() {
 
   const solUsdValue = (solBalance ?? 0) * solPrice;
 
-  // Merge API holdings with derived holdings from trades + enrich metadata
+  // Use ONLY API holdings (Alchemy) for actual on-chain state + enrich metadata
   useEffect(() => {
     const enrichHoldings = async () => {
       console.log('[portfolio] Holdings from API:', holdings);
       console.log('[portfolio] Trades from API:', trades);
       
-      const derivedHoldings = computeDerivedHoldings(trades);
-      console.log('[portfolio] Derived holdings:', derivedHoldings);
-      
-      // Start with API holdings
+      // Use ONLY API holdings — these reflect actual on-chain token accounts
+      // DO NOT use derived holdings from trades (they show sold tokens as 0 balance)
       let merged = [...holdings];
       
-      // Add/merge derived holdings (excluding SOL, which we handle natively)
+      // Filter out SOL from token holdings (we handle natively)
       const SOL_MINT = "So11111111111111111111111111111111111111112";
-      Object.entries(derivedHoldings).forEach(([mint, derived]) => {
-        // Skip native SOL in token holdings
-        if (mint === SOL_MINT) return;
-        
-        const existing = merged.find(h => h.mint === mint);
-        if (!existing) {
-          // Add new token from derived
-          merged.push({
-            mint,
-            symbol: derived.tokenSymbol,
-            name: derived.tokenSymbol,
-            balance: derived.tokenAmount,
-            decimals: 0,
-            logo: undefined,
-            priceUsd: undefined,
-            valueUsd: undefined,
-          });
-        }
-      });
-      
-      // Filter out SOL from token holdings (deduplicate)
       merged = merged.filter(h => h.mint !== SOL_MINT);
       
-      console.log('[portfolio] After deduplication:', merged);
+      console.log('[portfolio] After filtering SOL:', merged);
       
       // Fetch metadata and prices for all tokens
       const mints = merged.map(h => h.mint);
