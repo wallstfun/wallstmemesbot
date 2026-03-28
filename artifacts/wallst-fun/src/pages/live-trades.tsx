@@ -123,7 +123,8 @@ export default function LiveTradesPage() {
 
       <Card className="border-border/50 shadow-sm">
         <CardHeader className="flex flex-row justify-between items-center bg-muted/20 border-b border-border/50 pb-4">
-          <div className="flex gap-2">
+          <div>
+            <div className="flex gap-2">
             <Button
               variant={filter === "all" ? "default" : "outline"}
               size="sm"
@@ -156,9 +157,11 @@ export default function LiveTradesPage() {
             >
               Token→Token
             </Button>
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">Only showing latest 20 trades</p>
           </div>
           <div className="text-xs text-muted-foreground font-mono">
-            {loading ? "Fetching..." : `${filtered.length} of ${enrichedTrades.length} transactions (latest 20)`}
+            {loading ? "Fetching..." : `${filtered.length} of ${enrichedTrades.length} transactions`}
           </div>
         </CardHeader>
 
