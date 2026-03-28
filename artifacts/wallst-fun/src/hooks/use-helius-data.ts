@@ -2,17 +2,19 @@ import { useState, useEffect, useCallback, useRef } from "react";
 
 export const AGENT_WALLET = "Hw7yc27h6Lws6YsQmdLoj4M7psyFHRhosFwoGuSESmTh";
 
-// Known stablecoin mints (USDC, USDT, etc.)
+// Known stablecoin mints (USDC, USDT, USD1, etc.)
 // Note: Used for stablecoin→SOL swap detection (when no incoming tokens found)
 const STABLECOIN_MINTS = [
   "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", // USDC (6 decimals)
   "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenEsw", // USDT (6 decimals)
+  "USD1ttGY1N17NEEHLmELoaybftRBUSErhqYiQzvEmuB", // USD1 (World Liberty USD) - treat as stablecoin
 ];
 
 // Stablecoin decimals mapping for safe amount calculations
 const STABLECOIN_DECIMALS: Record<string, number> = {
   "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v": 6, // USDC
   "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenEsw": 6, // USDT
+  "USD1ttGY1N17NEEHLmELoaybftRBUSErhqYiQzvEmuB": 6, // USD1
 };
 
 // Known token symbols for common mints

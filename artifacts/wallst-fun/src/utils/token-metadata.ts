@@ -41,6 +41,16 @@ const COMMON_TOKENS: Record<string, TokenMetadata> = {
     name: "Unknown Token",
     logoURI: "https://dd.dexscreener.com/ds-data/tokens/solana/2RheNTdvps3kM2Gdu45jKH2oTH3a6gnYLK6GwwNXymv9.png",
   },
+  "DezXAZ8z7PnrnRJjz3wXBoRgixVqXaSMstEaKC5gKPE9": {
+    symbol: "BONK",
+    name: "Bonk",
+    logoURI: "https://dd.dexscreener.com/ds-data/tokens/solana/DezXAZ8z7PnrnRJjz3wXBoRgixVqXaSMstEaKC5gKPE9.png",
+  },
+  "USD1ttGY1N17NEEHLmELoaybftRBUSErhqYiQzvEmuB": {
+    symbol: "USD1",
+    name: "World Liberty Financial USD",
+    logoURI: "https://dd.dexscreener.com/ds-data/tokens/solana/USD1ttGY1N17NEEHLmELoaybftRBUSErhqYiQzvEmuB.png",
+  },
 };
 
 /**
