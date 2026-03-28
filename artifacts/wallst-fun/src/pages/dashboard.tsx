@@ -459,7 +459,7 @@ function DashboardContent() {
             <CardHeader className="flex flex-row items-center justify-between pb-4 border-b border-border/50 bg-muted/20">
               <div>
                 <CardTitle className="text-lg font-serif">Live Execution Log</CardTitle>
-                <p className="text-xs text-muted-foreground mt-1">showing latest 8 trades</p>
+                <p className="text-xs text-muted-foreground mt-1">Showing latest 8 trades.</p>
               </div>
               <LiveIndicator text="HELIUS MAINNET" />
             </CardHeader>
