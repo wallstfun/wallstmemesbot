@@ -111,11 +111,12 @@ async function fetchTokenMetadata(mint: string): Promise<any> {
   return metadata;
 }
 
-router.post("/token-metadata", async (req: Request, res: Response) => {
+router.post("/token-metadata", async (req: Request, res: Response): Promise<void> => {
   try {
     const { mints } = req.body;
     if (!Array.isArray(mints) || mints.length === 0) {
-      return res.status(400).json({ error: "mints array required" });
+      res.status(400).json({ error: "mints array required" });
+      return;
     }
 
     const metadata: Record<string, any> = {};
@@ -127,7 +128,7 @@ router.post("/token-metadata", async (req: Request, res: Response) => {
 
     res.json({ data: metadata });
   } catch (error) {
-    logger.error("[token-metadata] Error:", error);
+    logger.error({ error }, "[token-metadata] Failed to fetch metadata");
     res.status(500).json({ error: "Failed to fetch metadata" });
   }
 });

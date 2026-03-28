@@ -19849,9 +19849,9 @@ var require_is_promise = __commonJS({
   }
 });
 
-// ../../node_modules/.pnpm/path-to-regexp@8.3.0/node_modules/path-to-regexp/dist/index.js
+// ../../node_modules/.pnpm/path-to-regexp@8.4.0/node_modules/path-to-regexp/dist/index.js
 var require_dist = __commonJS({
-  "../../node_modules/.pnpm/path-to-regexp@8.3.0/node_modules/path-to-regexp/dist/index.js"(exports) {
+  "../../node_modules/.pnpm/path-to-regexp@8.4.0/node_modules/path-to-regexp/dist/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.PathError = exports.TokenData = void 0;
@@ -19864,19 +19864,8 @@ var require_dist = __commonJS({
     var NOOP_VALUE = (value) => value;
     var ID_START = /^[$_\p{ID_Start}]$/u;
     var ID_CONTINUE = /^[$\u200c\u200d\p{ID_Continue}]$/u;
-    var SIMPLE_TOKENS = {
-      // Groups.
-      "{": "{",
-      "}": "}",
-      // Reserved.
-      "(": "(",
-      ")": ")",
-      "[": "[",
-      "]": "]",
-      "+": "+",
-      "?": "?",
-      "!": "!"
-    };
+    var ID = /^[$_\p{ID_Start}][$\u200c\u200d\p{ID_Continue}]*$/u;
+    var SIMPLE_TOKENS = "{}()[]+?!";
     function escapeText2(str) {
       return str.replace(/[{}()\[\]+?!:*\\]/g, "\\$&");
     }
@@ -19915,8 +19904,8 @@ var require_dist = __commonJS({
           } while (ID_CONTINUE.test(chars[index2]));
         } else if (chars[index2] === '"') {
           let quoteStart = index2;
-          while (index2++ < chars.length) {
-            if (chars[index2] === '"') {
+          while (index2 < chars.length) {
+            if (chars[++index2] === '"') {
               index2++;
               quoteStart = 0;
               break;
@@ -19935,18 +19924,17 @@ var require_dist = __commonJS({
         return value;
       }
       while (index2 < chars.length) {
-        const value = chars[index2];
-        const type = SIMPLE_TOKENS[value];
-        if (type) {
-          tokens.push({ type, index: index2++, value });
+        const value = chars[index2++];
+        if (SIMPLE_TOKENS.includes(value)) {
+          tokens.push({ type: value, index: index2, value });
         } else if (value === "\\") {
-          tokens.push({ type: "escape", index: index2++, value: chars[index2++] });
+          tokens.push({ type: "escape", index: index2, value: chars[index2++] });
         } else if (value === ":") {
-          tokens.push({ type: "param", index: index2++, value: name() });
+          tokens.push({ type: "param", index: index2, value: name() });
         } else if (value === "*") {
-          tokens.push({ type: "wildcard", index: index2++, value: name() });
+          tokens.push({ type: "wildcard", index: index2, value: name() });
         } else {
-          tokens.push({ type: "char", index: index2++, value });
+          tokens.push({ type: "char", index: index2, value });
         }
       }
       tokens.push({ type: "end", index: index2, value: "" });
@@ -20082,107 +20070,158 @@ var require_dist = __commonJS({
     }
     function pathToRegexp(path, options = {}) {
       const { delimiter = DEFAULT_DELIMITER, end = true, sensitive = false, trailing = true } = options;
+      const root = new SourceNode("^");
+      const paths = [path];
+      let combinations = 0;
+      while (paths.length) {
+        const path2 = paths.shift();
+        if (Array.isArray(path2)) {
+          paths.push(...path2);
+          continue;
+        }
+        const data = typeof path2 === "object" ? path2 : parse6(path2, options);
+        flatten(data.tokens, 0, [], (tokens) => {
+          if (combinations++ >= 256) {
+            throw new PathError("Too many path combinations", data.originalPath);
+          }
+          let node = root;
+          for (const part of toRegExpSource(tokens, delimiter, data.originalPath)) {
+            node = node.add(part.source, part.key);
+          }
+          node.add("");
+        });
+      }
       const keys2 = [];
-      const flags = sensitive ? "" : "i";
-      const sources = [];
-      for (const input of pathsToArray(path, [])) {
-        const data = typeof input === "object" ? input : parse6(input, options);
-        for (const tokens of flatten(data.tokens, 0, [])) {
-          sources.push(toRegExpSource(tokens, delimiter, keys2, data.originalPath));
-        }
-      }
-      let pattern = `^(?:${sources.join("|")})`;
+      let pattern = toRegExp(root, keys2);
       if (trailing)
-        pattern += `(?:${escape4(delimiter)}$)?`;
-      pattern += end ? "$" : `(?=${escape4(delimiter)}|$)`;
-      const regexp = new RegExp(pattern, flags);
-      return { regexp, keys: keys2 };
+        pattern += "(?:" + escape4(delimiter) + "$)?";
+      pattern += end ? "$" : "(?=" + escape4(delimiter) + "|$)";
+      return { regexp: new RegExp(pattern, sensitive ? "" : "i"), keys: keys2 };
     }
-    function pathsToArray(paths, init) {
-      if (Array.isArray(paths)) {
-        for (const p of paths)
-          pathsToArray(p, init);
-      } else {
-        init.push(paths);
-      }
-      return init;
+    function toRegExp(node, keys2) {
+      if (node.key)
+        keys2.push(node.key);
+      const children = Object.keys(node.children);
+      const text = children.map((id) => toRegExp(node.children[id], keys2)).join("|");
+      return node.source + (children.length < 2 ? text : `(?:${text})`);
     }
-    function* flatten(tokens, index2, init) {
-      if (index2 === tokens.length) {
-        return yield init;
+    var SourceNode = class _SourceNode {
+      constructor(source, key2) {
+        this.source = source;
+        this.key = key2;
+        this.children = /* @__PURE__ */ Object.create(null);
       }
-      const token = tokens[index2];
-      if (token.type === "group") {
-        for (const seq of flatten(token.tokens, 0, init.slice())) {
-          yield* flatten(tokens, index2 + 1, seq);
+      add(source, key2) {
+        var _a4;
+        const id = source + ":" + (key2 ? key2.name : "");
+        return (_a4 = this.children)[id] || (_a4[id] = new _SourceNode(source, key2));
+      }
+    };
+    function flatten(tokens, index2, result, callback) {
+      while (index2 < tokens.length) {
+        const token = tokens[index2++];
+        if (token.type === "group") {
+          flatten(token.tokens, 0, result.slice(), (seq) => flatten(tokens, index2, seq, callback));
+          continue;
         }
-      } else {
-        init.push(token);
+        result.push(token);
       }
-      yield* flatten(tokens, index2 + 1, init);
+      callback(result);
     }
-    function toRegExpSource(tokens, delimiter, keys2, originalPath) {
-      let result = "";
+    function toRegExpSource(tokens, delimiter, originalPath) {
+      let result = [];
       let backtrack = "";
-      let isSafeSegmentParam = true;
-      for (const token of tokens) {
+      let wildcardBacktrack = "";
+      let prevCaptureType = 0;
+      let hasSegmentCapture = 0;
+      let index2 = 0;
+      function hasInSegment(index3, type) {
+        while (index3 < tokens.length) {
+          const token = tokens[index3++];
+          if (token.type === type)
+            return true;
+          if (token.type === "text") {
+            if (token.value.includes(delimiter))
+              break;
+          }
+        }
+        return false;
+      }
+      function peekText(index3) {
+        let result2 = "";
+        while (index3 < tokens.length) {
+          const token = tokens[index3++];
+          if (token.type !== "text")
+            break;
+          result2 += token.value;
+        }
+        return result2;
+      }
+      while (index2 < tokens.length) {
+        const token = tokens[index2++];
         if (token.type === "text") {
-          result += escape4(token.value);
+          result.push({ source: escape4(token.value) });
           backtrack += token.value;
-          isSafeSegmentParam || (isSafeSegmentParam = token.value.includes(delimiter));
+          if (prevCaptureType === 2)
+            wildcardBacktrack += token.value;
+          if (token.value.includes(delimiter))
+            hasSegmentCapture = 0;
           continue;
         }
         if (token.type === "param" || token.type === "wildcard") {
-          if (!isSafeSegmentParam && !backtrack) {
+          if (prevCaptureType && !backtrack) {
             throw new PathError(`Missing text before "${token.name}" ${token.type}`, originalPath);
           }
           if (token.type === "param") {
-            result += `(${negate(delimiter, isSafeSegmentParam ? "" : backtrack)}+)`;
+            result.push({
+              source: hasSegmentCapture ? `(${negate(delimiter, backtrack)}+?)` : hasInSegment(index2, "wildcard") ? `(${negate(delimiter, peekText(index2))}+?)` : `(${negate(delimiter, "")}+?)`,
+              key: token
+            });
+            hasSegmentCapture |= prevCaptureType = 1;
           } else {
-            result += `([\\s\\S]+)`;
+            result.push({
+              source: hasSegmentCapture & 2 ? `(${negate(backtrack, "")}+?)` : hasSegmentCapture & 1 ? `(${negate(wildcardBacktrack, "")}+?)` : wildcardBacktrack ? `(${negate(wildcardBacktrack, "")}+?|${negate(delimiter, "")}+?)` : `([^]+?)`,
+              key: token
+            });
+            wildcardBacktrack = "";
+            hasSegmentCapture |= prevCaptureType = 2;
           }
-          keys2.push(token);
           backtrack = "";
-          isSafeSegmentParam = false;
           continue;
         }
+        throw new TypeError(`Unknown token type: ${token.type}`);
       }
       return result;
     }
-    function negate(delimiter, backtrack) {
-      if (backtrack.length < 2) {
-        if (delimiter.length < 2)
-          return `[^${escape4(delimiter + backtrack)}]`;
-        return `(?:(?!${escape4(delimiter)})[^${escape4(backtrack)}])`;
-      }
-      if (delimiter.length < 2) {
-        return `(?:(?!${escape4(backtrack)})[^${escape4(delimiter)}])`;
-      }
-      return `(?:(?!${escape4(backtrack)}|${escape4(delimiter)})[\\s\\S])`;
+    function negate(a, b) {
+      if (b.length > a.length)
+        return negate(b, a);
+      if (a === b)
+        b = "";
+      if (b.length > 1)
+        return `(?:(?!${escape4(a)}|${escape4(b)})[^])`;
+      if (a.length > 1)
+        return `(?:(?!${escape4(a)})[^${escape4(b)}])`;
+      return `[^${escape4(a + b)}]`;
     }
-    function stringifyTokens(tokens) {
+    function stringifyTokens(tokens, index2) {
       let value = "";
-      let i = 0;
-      function name(value2) {
-        const isSafe = isNameSafe(value2) && isNextNameSafe(tokens[i]);
-        return isSafe ? value2 : JSON.stringify(value2);
-      }
-      while (i < tokens.length) {
-        const token = tokens[i++];
+      while (index2 < tokens.length) {
+        const token = tokens[index2++];
         if (token.type === "text") {
           value += escapeText2(token.value);
           continue;
         }
         if (token.type === "group") {
-          value += `{${stringifyTokens(token.tokens)}}`;
+          value += "{" + stringifyTokens(token.tokens, 0) + "}";
           continue;
         }
         if (token.type === "param") {
-          value += `:${name(token.name)}`;
+          value += ":" + stringifyName(token.name, tokens[index2]);
           continue;
         }
         if (token.type === "wildcard") {
-          value += `*${name(token.name)}`;
+          value += "*" + stringifyName(token.name, tokens[index2]);
           continue;
         }
         throw new TypeError(`Unknown token type: ${token.type}`);
@@ -20190,16 +20229,15 @@ var require_dist = __commonJS({
       return value;
     }
     function stringify2(data) {
-      return stringifyTokens(data.tokens);
+      return stringifyTokens(data.tokens, 0);
     }
-    function isNameSafe(name) {
-      const [first, ...rest] = name;
-      return ID_START.test(first) && rest.every((char) => ID_CONTINUE.test(char));
-    }
-    function isNextNameSafe(token) {
-      if (token && token.type === "text")
-        return !ID_CONTINUE.test(token.value[0]);
-      return true;
+    function stringifyName(name, next) {
+      if (!ID.test(name))
+        return JSON.stringify(name);
+      if ((next === null || next === void 0 ? void 0 : next.type) === "text" && ID_CONTINUE.test(next.value[0])) {
+        return JSON.stringify(name);
+      }
+      return name;
     }
   }
 });
@@ -52904,7 +52942,8 @@ router7.post("/token-metadata", async (req, res) => {
   try {
     const { mints } = req.body;
     if (!Array.isArray(mints) || mints.length === 0) {
-      return res.status(400).json({ error: "mints array required" });
+      res.status(400).json({ error: "mints array required" });
+      return;
     }
     const metadata = {};
     for (const mint of mints) {
@@ -52914,7 +52953,7 @@ router7.post("/token-metadata", async (req, res) => {
     }
     res.json({ data: metadata });
   } catch (error) {
-    logger.error("[token-metadata] Error:", error);
+    logger.error({ error }, "[token-metadata] Failed to fetch metadata");
     res.status(500).json({ error: "Failed to fetch metadata" });
   }
 });

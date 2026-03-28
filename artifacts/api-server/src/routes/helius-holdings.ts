@@ -86,7 +86,7 @@ router.post("/helius-holdings", async (req: Request, res: Response) => {
           uiAmount,
         };
       })
-      .filter((t): t is TokenAccount => t !== null);
+      .filter((t: any): t is TokenAccount => t !== null);
 
     console.log(`[holdings] Found ${tokenAccounts.length} SPL tokens with balance > 0`);
     if (tokenAccounts.length === 0) {
