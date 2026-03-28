@@ -312,7 +312,16 @@ export function useRealTransactions() {
                     if (!sentToken.tokenSymbol && !KNOWN_TOKEN_SYMBOLS[tokenMint]) {
                       console.log(`[parse] ${sig}: New token detected (sold for SOL): ${tokenMint.slice(0, 8)}... (will fetch symbol from holdings API)`);
                     }
+                    
+                    // Check for SOL fees that may have been sent
+                    const solFees = outgoingTransfers
+                      .filter((t: any) => (t?.tokenAddress || t?.mint) === SOL_MINT)
+                      .reduce((sum: number, t: any) => sum + Number(t?.tokenAmount ?? 0) / 1e9, 0);
+                    
                     solAmount = receivedAmount;
+                    if (solFees > 0.0001) {
+                      console.log(`[parse] ${sig}: Note: ${solFees.toFixed(6)} SOL in fees detected`);
+                    }
                     console.log(`[parse] ${sig}: SELL ${tokenSymbol}: ${tokenAmount} for ${receivedAmount.toFixed(4)} SOL`);
                   } else if (sentStable.length > 0) {
                     // Sold stablecoin for SOL → SELL stablecoin
@@ -329,14 +338,17 @@ export function useRealTransactions() {
                     solAmount = receivedAmount;
                     console.log(`[parse] ${sig}: SELL ${tokenSymbol}: ${tokenAmount} for ${receivedAmount.toFixed(4)} SOL`);
                   } else {
-                    // Bought SOL (no clear outgoing token/stablecoin) → BUY SOL
-                    action = "BUY";
+                    // Received SOL but no clear outgoing token found in transfers
+                    // This likely means a token was sold for SOL, but Helius didn't capture it in changes
+                    // Log for debugging and mark as SELL unknown token
+                    console.log(`[parse] ${sig}: ⚠️ SOLD unknown token for ${receivedAmount.toFixed(4)} SOL (token transfer not captured by Helius). Outgoing transfers: ${JSON.stringify(outgoingTransfers.slice(0, 2))}`);
+                    action = "SELL";
                     solFlow = "in";
-                    tokenMint = receivedMint;
-                    tokenAmount = receivedAmount;
-                    tokenSymbol = receivedSymbol;
+                    tokenMint = "unknown";
+                    tokenAmount = 0;
+                    tokenSymbol = "???";
                     solAmount = receivedAmount;
-                    console.log(`[parse] ${sig}: BUY SOL: ${receivedAmount.toFixed(4)} SOL`);
+                    console.log(`[parse] ${sig}: SELL ???: (unknown amount) for ${receivedAmount.toFixed(4)} SOL`);
                   }
                 } else {
                   // Received other token → BUY that token
