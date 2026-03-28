@@ -397,14 +397,19 @@ export function useRealTransactions() {
                   timestamp = new Date();
                 }
                 
-                // Determine what currency was actually received
+                // Determine what currency was actually received (within scope of receivedMint/receivedSymbol)
                 let receivedCurrency = "SOL"; // default
-                if (receivedMint === SOL_MINT) {
-                  receivedCurrency = "SOL";
-                } else if (STABLECOIN_MINTS.includes(receivedMint)) {
-                  receivedCurrency = receivedSymbol || "???";
-                } else {
-                  receivedCurrency = receivedSymbol || "???";
+                try {
+                  if (receivedMint === SOL_MINT) {
+                    receivedCurrency = "SOL";
+                  } else if (STABLECOIN_MINTS.includes(receivedMint)) {
+                    receivedCurrency = receivedSymbol || receivedMint.slice(0, 6).toUpperCase();
+                  } else {
+                    receivedCurrency = receivedSymbol || receivedMint.slice(0, 6).toUpperCase();
+                  }
+                } catch (e) {
+                  // If anything goes wrong, just use symbol or SOL
+                  receivedCurrency = receivedSymbol || "SOL";
                 }
                 
                 return {
@@ -501,6 +506,13 @@ export function useRealTransactions() {
               timestamp = new Date();
             }
 
+            // Determine received currency for display (safe with null checks)
+            const receivedCurrency = !tokenMint 
+              ? "???" 
+              : tokenMint === "So11111111111111111111111111111111111111112" 
+                ? "SOL" 
+                : (tokenSymbol || tokenMint.slice(0, 6).toUpperCase());
+            
             return {
               id: tx?.signature ?? "",
               signature: tx?.signature ?? "",
@@ -516,6 +528,7 @@ export function useRealTransactions() {
               txUrl: `https://solscan.io/tx/${tx?.signature ?? ""}`,
               solFlow,
               sentMint: (tx as any)?.__sentMint__ || undefined,
+              receivedCurrency,
             } as RealTrade;
           } catch (err) {
             console.error(`[parse] Error processing tx ${idx}:`, err);
