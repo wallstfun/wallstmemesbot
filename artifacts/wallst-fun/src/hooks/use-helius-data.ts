@@ -442,14 +442,18 @@ export function useRealTransactions() {
               const hasTokenIn = (swap?.tokenInputs?.length ?? 0) > 0;
               
               if (hasNativeOut && hasTokenIn) {
-                action = "BUY";
-                solFlow = "in";
-                solAmount = Number(swap.nativeOutput.amount) / 1e9;
-                tokenMint = "So11111111111111111111111111111111111111112";
-                tokenSymbol = "SOL";
-                tokenAmount = solAmount;
+                // Received SOL, sent token → SELL that token
                 const sentTok = swap.tokenInputs?.[0];
-                if (sentTok?.mint) (tx as any).__sentMint__ = sentTok.mint;
+                if (sentTok?.mint) {
+                  (tx as any).__sentMint__ = sentTok.mint;
+                  tokenMint = sentTok.mint;
+                  tokenAmount = Number(sentTok.rawTokenAmount?.tokenAmount ?? 0) / Math.pow(10, sentTok.rawTokenAmount?.decimals ?? 6);
+                  action = "SELL";
+                  solFlow = "in";
+                  solAmount = Number(swap.nativeOutput.amount) / 1e9;
+                } else {
+                  return null;
+                }
               } else if (hasNativeIn && hasTokenOut) {
                 const out = swap.tokenOutputs?.[0];
                 if (out?.mint) {
