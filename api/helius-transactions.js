@@ -49,7 +49,7 @@ module.exports = async function handler(req, res) {
   let allRateLimited = true;
 
   for (const key of keys) {
-    const url = HELIUS_V0_URL + "/addresses/" + walletAddress + "/transactions?api-key=" + key + "&limit=200";
+    const url = HELIUS_V0_URL + "/addresses/" + walletAddress + "/transactions?api-key=" + key + "&limit=100";
     try {
       lastHeliusRequestTime = Date.now();
       const r = await fetch(url);
@@ -87,7 +87,7 @@ module.exports = async function handler(req, res) {
     if (gap < MIN_JUPITER_INTERVAL) await delay(MIN_JUPITER_INTERVAL - gap);
     lastJupiterRequestTime = Date.now();
     
-    const jupRes = await fetch(JUPITER_SWAP_HISTORY_URL + "?wallet=" + walletAddress + "&limit=200");
+    const jupRes = await fetch(JUPITER_SWAP_HISTORY_URL + "?wallet=" + walletAddress + "&limit=100");
     if (jupRes.ok) {
       const jupJson = await jupRes.json();
       jupiterData = Array.isArray(jupJson) ? jupJson : (jupJson?.swaps ?? jupJson?.history ?? []);
