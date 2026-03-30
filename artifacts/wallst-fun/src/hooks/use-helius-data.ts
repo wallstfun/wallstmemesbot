@@ -139,9 +139,10 @@ export function useRealTransactions() {
               const changes = tx?.tokenTransfers ?? [];
               const nativeBalanceChange = tx?.nativeBalanceChange;
               
-              // Check if we have enough data: 2+ token transfers OR 1 token transfer + native SOL change
-              const hasEnoughData = (Array.isArray(changes) && changes.length >= 2) || 
-                                   (Array.isArray(changes) && changes.length >= 1 && nativeBalanceChange && nativeBalanceChange !== 0);
+              // More lenient filter: Accept transactions with 1+ token transfers OR native balance changes
+              // This catches multi-hop swaps, complex patterns, and edge cases
+              const hasEnoughData = (Array.isArray(changes) && changes.length >= 1) || 
+                                   (nativeBalanceChange && nativeBalanceChange !== 0);
               
               if (!hasEnoughData) {
                 console.log(`[parse] ${sig}: DROPPED - insufficient transfers (changes=${changes.length}, native=${nativeBalanceChange ?? 0})`);
@@ -543,11 +544,19 @@ export function useRealTransactions() {
           }
         })
         .filter((t): t is RealTrade => t !== null);
+      
+      // Filter out dust trades (very small trades < 0.01 SOL equivalent)
+      // This reduces noise while preserving all meaningful swaps including multi-hop patterns
+      const meaningfulTrades = parsed.filter((t) => {
+        const MIN_SOL_THRESHOLD = 0.01;
+        // Keep if SOL amount is above threshold OR token amount received is significant
+        return t.solAmount >= MIN_SOL_THRESHOLD || t.tokenAmount >= 1;
+      });
 
       // ── Win Rate: match opened positions (spent SOL on non-stablecoin) with
       //    closed positions (received SOL by sending that same non-stablecoin back).
       //    Trades oldest-first so we can FIFO-match positions chronologically.
-      const chronological = [...parsed].reverse();
+      const chronological = [...meaningfulTrades].reverse();
       const openPositions: Record<string, number[]> = {}; // mint → [solSpent, ...]
       const wins: boolean[] = [];
 
@@ -574,15 +583,15 @@ export function useRealTransactions() {
       let wr: number | null = null;
       if (wins.length > 0) {
         wr = (wins.filter((w) => w).length / wins.length) * 100;
-      } else if (parsed.length > 0) {
-        const solIn = parsed.filter((t) => t.solFlow === "in").length;
-        const solOut = parsed.filter((t) => t.solFlow === "out").length;
+      } else if (meaningfulTrades.length > 0) {
+        const solIn = meaningfulTrades.filter((t) => t.solFlow === "in").length;
+        const solOut = meaningfulTrades.filter((t) => t.solFlow === "out").length;
         const total = solIn + solOut;
         wr = total > 0 ? (solIn / total) * 100 : 100;
       }
 
-      setTrades(parsed);
-      setTotalTrades(parsed.length);
+      setTrades(meaningfulTrades);
+      setTotalTrades(meaningfulTrades.length);
       setWinRate(wr);
       setError(null);
     } catch (err) {

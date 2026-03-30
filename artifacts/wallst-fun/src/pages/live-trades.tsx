@@ -77,7 +77,7 @@ export default function LiveTradesPage() {
       if (filter === "swap") return t.action === "SWAP";
       return true;
     })
-    .slice(-20); // Show only last 20 recent trades
+    .slice(-50); // Show up to 50 most recent trades
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
