@@ -128,7 +128,7 @@ export function RootLayout({ children }: { children: React.ReactNode }) {
               rel="noopener noreferrer"
               className="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors text-muted-foreground hover:bg-muted hover:text-foreground"
             >
-              <span>🚀</span>
+              <span className="inline-flex items-center justify-center w-4 h-4">🚀</span>
               Launch
             </a>
           </nav>
@@ -167,7 +167,7 @@ export function RootLayout({ children }: { children: React.ReactNode }) {
                 rel="noopener noreferrer"
                 className="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors text-muted-foreground hover:bg-muted hover:text-foreground"
               >
-                <span>🚀</span>
+                <span className="inline-flex items-center justify-center w-4 h-4">🚀</span>
                 Launch
               </a>
             </nav>
