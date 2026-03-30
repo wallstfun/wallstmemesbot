@@ -122,6 +122,15 @@ export function RootLayout({ children }: { children: React.ReactNode }) {
             <NavLink href="/scope" icon={TrendingUp}>Scope</NavLink>
             <NavLink href="/x-feed" icon={MessageSquare}>X Feed</NavLink>
             <NavLink href="/agent-bio" icon={User}>Agent Bio</NavLink>
+            <a
+              href="https://wallst-launchpad.vercel.app/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors text-muted-foreground hover:bg-muted hover:text-foreground"
+            >
+              <span>🚀</span>
+              Launch
+            </a>
           </nav>
 
           <div className="flex items-center gap-4">
@@ -152,6 +161,15 @@ export function RootLayout({ children }: { children: React.ReactNode }) {
               <NavLink href="/scope" icon={TrendingUp}>Scope</NavLink>
               <NavLink href="/x-feed" icon={MessageSquare}>X Feed</NavLink>
               <NavLink href="/agent-bio" icon={User}>Agent Bio</NavLink>
+              <a
+                href="https://wallst-launchpad.vercel.app/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors text-muted-foreground hover:bg-muted hover:text-foreground"
+              >
+                <span>🚀</span>
+                Launch
+              </a>
             </nav>
           </div>
         )}
