@@ -79,6 +79,8 @@ module.exports = async function handler(req, res) {
     return;
   }
 
+  console.log(`[helius-tx] Fetched ${heliusData.length} transactions from Helius for ${walletAddress.slice(0, 8)}...`);
+
   // Fetch from Jupiter (supplementary, non-blocking, rate-limited to 1 RPS)
   let jupiterData = [];
   try {
@@ -106,6 +108,7 @@ module.exports = async function handler(req, res) {
   });
   const merged = [...heliusData, ...uniqueJupiterTxs];
 
-  responseCache.set(cacheKey, { data: merged, expiresAt: Date.now() + 30000 });
+  console.log(`[helius-tx] Merged result: ${heliusData.length} Helius + ${uniqueJupiterTxs.length} unique Jupiter = ${merged.length} total`);
+  responseCache.set(cacheKey, { data: merged, expiresAt: Date.now() + 10000 });
   res.json(merged);
 };
