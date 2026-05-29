@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 
-export const AGENT_WALLET = "Hw7yc27h6Lws6YsQmdLoj4M7psyFHRhosFwoGuSESmTh";
+export const AGENT_WALLET = "SIMULATED_WALLET_ADDRESS";
 
 // Known stablecoin mints (USDC, USDT, USD1, etc.)
 // Note: Used for stablecoin→SOL swap detection (when no incoming tokens found)
@@ -430,7 +430,7 @@ export function useRealTransactions() {
                   solAmount,
                   description: tx?.description ?? "",
                   source: isJupiter ? "JUPITER" : (tx?.source ?? "DEX"),
-                  txUrl: `https://solscan.io/tx/${tx?.signature ?? ""}`,
+                  txUrl: `#`,
                   solFlow,
                   sentMint: (tx as any)?.__sentMint__ || undefined,
                   receivedCurrency,
@@ -535,7 +535,7 @@ export function useRealTransactions() {
               tokenAmount,
               description: tx?.description ?? "",
               source: isJupiter ? "JUPITER" : (tx?.source ?? "DEX"),
-              txUrl: `https://solscan.io/tx/${tx?.signature ?? ""}`,
+              txUrl: `#`,
               solFlow,
               sentMint: (tx as any)?.__sentMint__ || undefined,
               receivedCurrency,

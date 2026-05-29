@@ -317,8 +317,8 @@ function DashboardContent() {
               (solBalance ?? 0).toFixed(4)
             )}
           </div>
-          <div className="text-xs text-gains font-mono mt-2 flex items-center gap-1">
-            ● Helius Mainnet · live
+          <div className="text-xs text-muted-foreground font-mono mt-2 flex items-center gap-1">
+            ● Simulated balance
           </div>
         </div>
       </section>
@@ -376,7 +376,7 @@ function DashboardContent() {
               </div>
             </div>
             <div className="text-xs mt-4 font-medium text-gains">
-              {tradesLoading ? 'Loading...' : `${totalTrades} swap${totalTrades !== 1 ? 's' : ''} on-chain`}
+              {tradesLoading ? 'Loading...' : `${totalTrades} simulated trade${totalTrades !== 1 ? 's' : ''}`}
             </div>
           </CardContent>
         </Card>
@@ -461,7 +461,7 @@ function DashboardContent() {
                 <CardTitle className="text-lg font-serif">Live Execution Log</CardTitle>
                 <p className="text-xs text-muted-foreground mt-1">Showing latest 8 trades.</p>
               </div>
-              <LiveIndicator text="HELIUS MAINNET" />
+              <LiveIndicator text="SIMULATED" />
             </CardHeader>
             <div className="p-0 relative">
               {tradesLoading ? (
@@ -561,7 +561,7 @@ function DashboardContent() {
               )}
             </div>
             <div className="p-3 border-t border-border/50 bg-muted/10 text-center">
-              <span className="text-xs text-gains font-mono">● Live data from Helius Enhanced TX API</span>
+              <span className="text-xs text-muted-foreground font-mono">● Simulated data</span>
             </div>
           </Card>
 

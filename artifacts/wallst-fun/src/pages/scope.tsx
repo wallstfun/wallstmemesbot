@@ -313,14 +313,14 @@ export default function ScopePage() {
                     </div>
                   </div>
 
-                  {/* Trade on Terminal Button */}
+                  {/* Trade on DexScreener */}
                   <a
-                    href="https://trade.padre.gg/rk/wallstsmith"
+                    href={token.url || `https://dexscreener.com/solana/${token.tokenAddress}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center justify-center gap-2 w-full mt-4 px-3 py-2 bg-primary/10 text-primary hover:bg-primary/20 rounded-lg transition-colors font-medium text-sm"
                   >
-                    Trade on Terminal
+                    Trade on DexScreener
                     <ExternalLink className="w-3 h-3" />
                   </a>
                 </div>

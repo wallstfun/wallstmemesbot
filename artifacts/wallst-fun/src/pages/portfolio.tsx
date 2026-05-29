@@ -2,8 +2,8 @@ import React, { useMemo, useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip } from "recharts";
-import { RefreshCw, ExternalLink, AlertCircle, Loader2 } from "lucide-react";
-import { useWalletSolBalance, useTokenHoldings, useRealTransactions, AGENT_WALLET } from "@/hooks/use-helius-data";
+import { RefreshCw, AlertCircle, Loader2 } from "lucide-react";
+import { useWalletSolBalance, useTokenHoldings, useRealTransactions } from "@/hooks/use-helius-data";
 import { fetchTokenMetadata, fetchTokenPrices } from "@/utils/token-metadata";
 
 const CHART_COLORS = [
@@ -186,15 +186,7 @@ export default function PortfolioPage() {
         <div>
           <h1 className="text-3xl font-serif font-bold text-foreground">Agent Portfolio</h1>
           <p className="text-muted-foreground mt-1">
-            Live holdings from{" "}
-            <a
-              href={`https://solscan.io/account/${AGENT_WALLET}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="font-mono text-xs text-primary hover:underline"
-            >
-              {AGENT_WALLET}
-            </a>
+            Simulated portfolio view
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -303,13 +295,13 @@ export default function PortfolioPage() {
                 </span>
               )}
             </CardTitle>
-            <span className="text-xs text-gains font-mono font-medium">● Live on-chain</span>
+            <span className="text-xs text-muted-foreground font-mono font-medium">● Simulated</span>
           </CardHeader>
           <CardContent className="p-0">
             {holdingsLoading ? (
               <div className="flex items-center justify-center gap-3 py-16 text-muted-foreground">
                 <Loader2 className="w-5 h-5 animate-spin" />
-                <span className="text-sm">Loading token balances from Helius...</span>
+                <span className="text-sm">Loading simulated portfolio...</span>
               </div>
             ) : (
               <Table>
@@ -319,7 +311,6 @@ export default function PortfolioPage() {
                     <TableHead className="text-right">BALANCE</TableHead>
                     <TableHead className="text-right">VALUE (USD)</TableHead>
                     <TableHead className="text-right">PRICE</TableHead>
-                    <TableHead className="text-right">SOLSCAN</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody className="font-mono">
@@ -328,14 +319,9 @@ export default function PortfolioPage() {
                     <TableRow className="border-border/40 hover:bg-muted/20">
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          <img
-                            src="https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png"
-                            alt="SOL"
-                            className="w-6 h-6 rounded-full object-cover"
-                            onError={(e) => {
-                              (e.target as HTMLImageElement).style.display = "none";
-                            }}
-                          />
+                          <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center text-xs font-bold text-muted-foreground">
+                            ◎
+                          </div>
                           <div>
                             <div className="font-bold font-sans">SOL</div>
                             <div className="text-[10px] text-muted-foreground font-sans">Solana</div>
@@ -345,19 +331,6 @@ export default function PortfolioPage() {
                       <TableCell className="text-right">{(solBalance ?? 0).toFixed(4)}</TableCell>
                       <TableCell className="text-right">
                         {solUsdValue > 0 ? `$${solUsdValue.toFixed(2)}` : <span className="text-muted-foreground">—</span>}
-                      </TableCell>
-                      <TableCell className="text-right text-muted-foreground">
-                        {solPrice > 0 ? `$${solPrice.toFixed(2)}` : <span>—</span>}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <a
-                          href={`https://solscan.io/account/${AGENT_WALLET}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 text-primary hover:underline bg-primary/5 px-2 py-1 rounded text-xs"
-                        >
-                          wallet <ExternalLink className="w-2.5 h-2.5" />
-                        </a>
                       </TableCell>
                     </TableRow>
                   )}
@@ -391,9 +364,9 @@ export default function PortfolioPage() {
                           : asset.balance.toFixed(asset.decimals > 4 ? 2 : asset.decimals)}
                       </TableCell>
                       <TableCell className="text-right">
-                        {asset.valueUsd != null
-                          ? `$${asset.valueUsd < 0.01 ? asset.valueUsd.toFixed(6) : asset.valueUsd.toFixed(2)}`
-                          : <span className="text-muted-foreground">—</span>}
+                        {asset.priceUsd != null
+                          ? `$${asset.priceUsd < 0.0001 ? asset.priceUsd.toExponential(2) : asset.priceUsd.toFixed(6)}`
+                          : <span>—</span>}
                       </TableCell>
                       <TableCell className="text-right text-muted-foreground">
                         {asset.priceUsd != null
@@ -401,14 +374,7 @@ export default function PortfolioPage() {
                           : <span>—</span>}
                       </TableCell>
                       <TableCell className="text-right">
-                        <a
-                          href={`https://solscan.io/token/${asset.mint}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 text-primary hover:underline bg-primary/5 px-2 py-1 rounded text-xs"
-                        >
-                          {asset.mint.slice(0, 6)}... <ExternalLink className="w-2.5 h-2.5" />
-                        </a>
+
                       </TableCell>
                     </TableRow>
                   ))}
@@ -439,14 +405,7 @@ export default function PortfolioPage() {
             </div>
           </div>
         </div>
-        <a
-          href={`https://solscan.io/account/${AGENT_WALLET}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center gap-1 text-xs text-primary hover:underline"
-        >
-          View full wallet on Solscan <ExternalLink className="w-3 h-3" />
-        </a>
+
       </div>
     </div>
   );

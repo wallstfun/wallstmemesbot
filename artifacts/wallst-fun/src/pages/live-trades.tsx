@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { useRealTransactions, AGENT_WALLET } from "@/hooks/use-helius-data";
+import { useRealTransactions } from "@/hooks/use-helius-data";
 import { LiveIndicator } from "@/components/ui/LiveIndicator";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ExternalLink, Filter, RefreshCw, AlertCircle, Loader2 } from "lucide-react";
+import { Filter, RefreshCw, AlertCircle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { fetchTokenMetadata } from "@/utils/token-metadata";
 
@@ -85,15 +85,7 @@ export default function LiveTradesPage() {
         <div>
           <h1 className="text-3xl font-serif font-bold text-foreground">Live Execution Log</h1>
           <p className="text-muted-foreground mt-1">
-            Real on-chain swap history for{" "}
-            <a
-              href={`https://solscan.io/account/${AGENT_WALLET}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="font-mono text-xs text-primary hover:underline"
-            >
-              {AGENT_WALLET}
-            </a>
+            Simulated trade history
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -106,7 +98,7 @@ export default function LiveTradesPage() {
             Refresh
           </button>
           <div className="flex items-center gap-3 bg-card px-4 py-2 rounded-lg border border-border shadow-sm">
-            <LiveIndicator text="HELIUS MAINNET" />
+            <LiveIndicator text="DEMO" />
           </div>
         </div>
       </div>
@@ -170,8 +162,8 @@ export default function LiveTradesPage() {
             <div className="flex flex-col items-center justify-center py-20 gap-4 text-muted-foreground">
               <Loader2 className="w-8 h-8 animate-spin text-primary" />
               <div className="text-center">
-                <p className="text-sm font-medium">Fetching on-chain transactions...</p>
-                <p className="text-xs mt-1">Querying Helius Enhanced Transaction API</p>
+                <p className="text-sm font-medium">Fetching transactions...</p>
+                <p className="text-xs mt-1">Loading trade data</p>
               </div>
             </div>
           ) : filtered.length === 0 ? (
@@ -180,16 +172,9 @@ export default function LiveTradesPage() {
               <p className="text-xs">
                 {filter !== "all"
                   ? "Try a different filter."
-                  : "This wallet has no recorded DEX swaps yet."}
+                  : "No trades recorded yet."}
               </p>
-              <a
-                href={`https://solscan.io/account/${AGENT_WALLET}#transactions`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1 text-xs text-primary hover:underline"
-              >
-                View all transactions on Solscan <ExternalLink className="w-3 h-3" />
-              </a>
+
             </div>
           ) : (
             <Table>
@@ -290,8 +275,7 @@ export default function LiveTradesPage() {
       </Card>
 
       <div className="text-center text-xs text-muted-foreground">
-        Data sourced from{" "}
-        <span className="text-primary font-medium">Helius Enhanced Transaction API</span>
+        <span className="text-primary font-medium">Simulated data</span>
       </div>
     </div>
   );

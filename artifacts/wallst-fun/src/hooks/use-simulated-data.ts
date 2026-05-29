@@ -81,7 +81,7 @@ export function useSolPrice() {
     const fetchPrice = async () => {
       try {
         // Jupiter API endpoint with API key
-        const url = "https://price.jup.ag/v6/price?ids=SOL&api_key=429e13f2-25f8-4706-9326-24287fa313d4";
+        const url = "https://price.jup.ag/v6/price?ids=SOL";
         console.log("[wallst.fun] Fetching SOL price from Jupiter API...");
         
         const res = await fetch(url, {

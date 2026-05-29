@@ -4,9 +4,8 @@ import { Moon, Sun, Terminal, Activity, Briefcase, MessageSquare, TrendingUp, Us
 import { useLiveMetrics } from "@/hooks/use-simulated-data";
 import { useWalletSolBalance, useRealTransactions, useNetworkCongestion } from "@/hooks/use-helius-data";
 
-// Replace with actual Solana wallet address (public-facing, masked)
-export const WALLET_FULL = "Hw7yc27h6Lws6YsQmdLoj4M7psyFHRhosFwoGuSESmTh";
-export const WALLET = "Hw7yc2...SESmTh";
+export const WALLET_FULL = "Simulated Wallet";
+export const WALLET = "Simulated...allet";
 
 const NavLink = ({ href, icon: Icon, children }: { href: string; icon: React.ElementType; children: React.ReactNode }) => {
   const [location] = useLocation();
@@ -122,15 +121,7 @@ export function RootLayout({ children }: { children: React.ReactNode }) {
             <NavLink href="/scope" icon={TrendingUp}>Scope</NavLink>
             <NavLink href="/x-feed" icon={MessageSquare}>X Feed</NavLink>
             <NavLink href="/agent-bio" icon={User}>Agent Bio</NavLink>
-            <a
-              href="https://wallst-launchpad.vercel.app/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors text-muted-foreground hover:bg-muted hover:text-foreground"
-            >
-              <span>🚀</span>
-              Launch
-            </a>
+
           </nav>
 
           <div className="flex items-center gap-4">
@@ -161,15 +152,7 @@ export function RootLayout({ children }: { children: React.ReactNode }) {
               <NavLink href="/scope" icon={TrendingUp}>Scope</NavLink>
               <NavLink href="/x-feed" icon={MessageSquare}>X Feed</NavLink>
               <NavLink href="/agent-bio" icon={User}>Agent Bio</NavLink>
-              <a
-                href="https://wallst-launchpad.vercel.app/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors text-muted-foreground hover:bg-muted hover:text-foreground"
-              >
-                <span>🚀</span>
-                Launch
-              </a>
+
             </nav>
           </div>
         )}
